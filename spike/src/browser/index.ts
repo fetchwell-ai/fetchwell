@@ -35,5 +35,5 @@ export async function createBrowserProvider(
   return provider;
 }
 
-export { BrowserProvider } from "./interface.js";
+export type { BrowserProvider } from "./interface.js";
 export type { ObserveResult, WaitCondition, ElementHandle } from "./interface.js";

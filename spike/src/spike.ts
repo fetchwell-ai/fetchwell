@@ -12,7 +12,8 @@
  * - "local"           — plain Playwright, no AI (selectors only)
  */
 
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ override: true });
 import { z } from "zod";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -55,10 +56,13 @@ const MYCHART_URL = process.env.MYCHART_URL!;
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-const rl = readline.createInterface({ input, output });
-
 async function prompt(message: string): Promise<string> {
-  return rl.question(message);
+  const rl = readline.createInterface({ input, output });
+  try {
+    return await rl.question(message);
+  } finally {
+    rl.close();
+  }
 }
 
 /** Poll for an element matching a description via observe(), retrying up to maxAttempts */
@@ -116,8 +120,8 @@ async function main() {
     console.log("   They are NOT stored or logged anywhere.");
     console.log();
 
-    const username = await prompt("   Enter MyChart username: ");
-    const password = await prompt("   Enter MyChart password: ");
+    const username = process.env.MYCHART_USERNAME ?? await prompt("   Enter MyChart username: ");
+    const password = process.env.MYCHART_PASSWORD ?? await prompt("   Enter MyChart password: ");
     console.log();
 
     // Step 4: Fill in login form via act()
@@ -125,6 +129,11 @@ async function main() {
 
     await browser.act(`Type "${username}" into the username or email input field`);
     console.log("   Username entered.");
+
+    // MyChart login is two-step: submit username first, then enter password on next page
+    await browser.act("Click the Next or Continue button to proceed to the password page");
+    console.log("   Clicked Next.");
+    await new Promise((r) => setTimeout(r, 2000));
 
     await browser.act(`Type "${password}" into the password input field`);
     console.log("   Password entered.");
@@ -152,6 +161,14 @@ async function main() {
 
     if (twoFaObservations.length > 0) {
       console.log("2FA/MFA detected!");
+      // If there's a delivery method selection screen, choose email
+      try {
+        await browser.act("If there is a choice between SMS/phone and email for the verification code, click 'Send to my email' or the email option");
+        console.log("   Selected email delivery for 2FA code.");
+        await new Promise((r) => setTimeout(r, 2000));
+      } catch {
+        // No delivery choice screen — already showing code input
+      }
       console.log();
 
       if (debugUrl) {
@@ -263,7 +280,6 @@ async function main() {
   } finally {
     // Cleanup
     console.log("Cleaning up session...");
-    rl.close();
     await browser.close();
     console.log("Done.");
   }
