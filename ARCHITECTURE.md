@@ -44,8 +44,8 @@ A TypeScript agent that uses cloud browsers (Browserbase) to navigate Epic MyCha
 │  │                 │   │                                              │  │
 │  │ Opens debug URL │   │  ┌──────────────┐    ┌───────────────────┐  │  │
 │  │ to type 2FA     │   │  │ API Service   │    │ Agent Worker       │  │  │
-│  │ code directly   │   │  │ (Hono)        │───▶│ (Stagehand +      │  │  │
-│  │ in cloud browser│   │  │               │◀───│  Claude SDK)       │  │  │
+│  │ code directly   │   │  │ (Hono)        │───▶│ (Claude SDK +      │  │  │
+│  │ in cloud browser│   │  │               │◀───│  BrowserProvider)  │  │  │
 │  │                 │   │  │ /sync         │    │                   │  │  │
 │  └───────┬─────────┘   │  │ /job/:id      │    │ Extracts records  │  │  │
 │          │              │  │ /download     │    │ Builds zip        │  │  │
@@ -192,7 +192,7 @@ A TypeScript agent that uses cloud browsers (Browserbase) to navigate Epic MyCha
                          ▼                          │
               ┌─────────────────────┐               │
               │ Navigate to section │               │
-              │ (labs, meds, etc.)  │               │
+              │ (labs for MVP)      │               │
               └──────────┬──────────┘               │
                          │                          │
                          ▼                          │
@@ -269,6 +269,7 @@ cp .env.example .env
 #   ANTHROPIC_API_KEY=sk-ant-...
 #   BROWSERBASE_API_KEY=bb_...
 #   BROWSERBASE_PROJECT_ID=...
+#   BROWSER_PROVIDER=stagehand-local  # "browserbase" for cloud, "stagehand-local" for local AI, "local" for no AI
 
 # Run
 pnpm dev   # starts Hono on http://localhost:3000
@@ -423,6 +424,71 @@ async function pollForLoginComplete(page: Page, opts: PollOptions): Promise<void
 }
 ```
 
+#### Detecting Login Success: `isMyChartDashboard()`
+
+The `pollForLoginComplete` function needs to know when the user has successfully entered 2FA and landed on the MyChart dashboard. This detection must be tuned per health system since MyChart deployments vary, but there are common patterns:
+
+```typescript
+// src/worker/tools/twofa.ts
+
+/**
+ * Heuristic detection of a logged-in MyChart dashboard.
+ * MyChart deployments vary by health system, but share common patterns.
+ * This will need tuning per target institution.
+ */
+function isMyChartDashboard(url: string, title: string): boolean {
+  const urlLower = url.toLowerCase();
+  const titleLower = title.toLowerCase();
+
+  // URL patterns seen across Epic MyChart deployments
+  const dashboardUrlPatterns = [
+    '/mychart/home',
+    '/mychart/dashboard',
+    '/mychart/default.asp',
+    '/mychart/inside.asp',
+    '/mychart/activity',
+  ];
+
+  // Title patterns (MyChart shows patient name or "MyChart - Home" after login)
+  const dashboardTitlePatterns = [
+    'mychart - home',
+    'my chart - home',
+    'welcome',
+    'health summary',
+    'test results',       // some systems land on results
+  ];
+
+  const urlMatch = dashboardUrlPatterns.some(p => urlLower.includes(p));
+  const titleMatch = dashboardTitlePatterns.some(p => titleLower.includes(p));
+
+  // Also check we've left the login/2FA pages
+  const leftLogin = !urlLower.includes('/mychart/authentication')
+    && !urlLower.includes('/mychart/login')
+    && !urlLower.includes('/mychart/accesscheck');
+
+  return (urlMatch || titleMatch) && leftLogin;
+}
+```
+
+**Fallback: Stagehand `observe()`**
+
+If heuristic detection fails for a particular health system, use Stagehand's AI to assess the page:
+
+```typescript
+async function isMyChartDashboardAI(stagehand: Stagehand): Promise<boolean> {
+  const observation = await stagehand.observe(
+    'Is this a logged-in patient dashboard or portal home page? ' +
+    'Look for navigation menus, patient name, health summary sections, ' +
+    'or appointment/message links. Not a login page or 2FA prompt.'
+  );
+  return observation.length > 0; // observe() returns elements matching the description
+}
+```
+
+This AI fallback costs one extra LLM call per poll iteration, so use it only after the heuristic check returns false — e.g., after 30 seconds of heuristic-only polling, add the AI check every other iteration.
+
+**Per-institution tuning**: The heuristic patterns above cover the most common MyChart deployments. For a specific health system, inspect the post-login URL and title once manually (via the Browserbase debug URL), then add the exact patterns. The `config.json` could also accept custom `dashboardUrlPattern` and `dashboardTitlePattern` overrides.
+
 #### Why Debug URL, Not WebSocket Relay
 
 | | Debug URL (chosen) | WebSocket relay |
@@ -471,34 +537,461 @@ Upgrade path for hands-free operation:
 │            Tool Execution Layer                   │
 │                                                   │
 │  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
-│  │ Stagehand  │  │ Record     │  │ 2FA        │ │
-│  │ + Browser- │  │ Collector  │  │ Handler    │ │
-│  │ base Cloud │  │ (extract → │  │ (debug URL │ │
+│  │ Browser    │  │ Record     │  │ 2FA        │ │
+│  │ Provider   │  │ Collector  │  │ Handler    │ │
+│  │ (abstract) │  │ (extract → │  │ (debug URL │ │
 │  │            │  │  temp dir) │  │  + poll)   │ │
-│  └────────────┘  └────────────┘  └────────────┘ │
+│  └──────┬─────┘  └────────────┘  └────────────┘ │
+│         │                                        │
+│    ┌────┴─────────────────────┐                  │
+│    │ StagehandBrowserbase     │  (production)    │
+│    │ StagehandLocal           │  (dev, full AI)  │
+│    │ PlaywrightLocal          │  (no AI)         │
+│    │ <future providers>       │  (Skyvern, etc.) │
+│    └──────────────────────────┘                  │
 └─────────────────────────────────────────────────┘
+```
+
+### Browser Provider Abstraction
+
+The agent never imports Stagehand or Browserbase directly. All browser interaction goes through a `BrowserProvider` interface. Switching browser backends is a config change + a new provider implementation, not a refactor.
+
+#### `BrowserProvider` Interface
+
+```typescript
+// src/browser/interface.ts
+import { z, ZodSchema } from 'zod';
+
+export interface BrowserProvider {
+  /** Navigate to a URL */
+  navigate(url: string): Promise<void>;
+
+  /** Perform a high-level action described in natural language (AI-powered) */
+  act(instruction: string): Promise<void>;
+
+  /** Extract structured data from the current page using a Zod schema */
+  extract<T>(schema: ZodSchema<T>, instruction: string): Promise<T>;
+
+  /** Observe the page and return elements matching a natural language description */
+  observe(instruction: string): Promise<ObserveResult[]>;
+
+  /** Take a screenshot, return base64-encoded image */
+  screenshot(): Promise<string>;
+
+  /** Fill a form field */
+  fill(selector: string, value: string): Promise<void>;
+
+  /** Wait for a condition: navigation, selector, or network idle */
+  waitFor(condition: WaitCondition): Promise<void>;
+
+  /** Get an interactive debug URL for human-in-the-loop (e.g. 2FA).
+   *  Returns null if the provider doesn't support it. */
+  getDebugUrl(): Promise<string | null>;
+
+  /** Get the current page URL */
+  url(): Promise<string>;
+
+  /** Get the current page title */
+  title(): Promise<string>;
+
+  /** Query a CSS selector, return element handle or null */
+  querySelector(selector: string): Promise<ElementHandle | null>;
+
+  /** Destroy the browser session and clean up resources */
+  close(): Promise<void>;
+}
+
+export interface ObserveResult {
+  selector: string;
+  description: string;
+}
+
+export type WaitCondition =
+  | { type: 'navigation' }
+  | { type: 'selector'; selector: string; timeout?: number }
+  | { type: 'networkIdle'; timeout?: number };
+
+export interface ElementHandle {
+  textContent(): Promise<string | null>;
+}
+```
+
+#### `StagehandBrowserbaseProvider` (MVP)
+
+```typescript
+// src/browser/providers/stagehand-browserbase.ts
+import { Stagehand } from '@browserbasehq/stagehand';
+import Browserbase from '@browserbasehq/sdk';
+import { BrowserProvider, WaitCondition, ObserveResult } from '../interface';
+
+export class StagehandBrowserbaseProvider implements BrowserProvider {
+  private stagehand!: Stagehand;
+  private bb: Browserbase;
+  private sessionId!: string;
+
+  constructor() {
+    this.bb = new Browserbase({ apiKey: process.env.BROWSERBASE_API_KEY! });
+  }
+
+  async init(): Promise<void> {
+    this.stagehand = new Stagehand({
+      env: 'BROWSERBASE',
+      apiKey: process.env.BROWSERBASE_API_KEY!,
+      projectId: process.env.BROWSERBASE_PROJECT_ID!,
+      modelName: 'claude-sonnet-4-6',
+      modelApiKey: process.env.ANTHROPIC_API_KEY!,
+    });
+    await this.stagehand.init();
+    this.sessionId = this.stagehand.browserbaseSessionID!;
+  }
+
+  async navigate(url: string) {
+    await this.stagehand.page.goto(url, { waitUntil: 'networkidle' });
+  }
+
+  async act(instruction: string) {
+    await this.stagehand.act(instruction);
+  }
+
+  async extract<T>(schema: ZodSchema<T>, instruction: string): Promise<T> {
+    return this.stagehand.extract({ instruction, schema });
+  }
+
+  async observe(instruction: string): Promise<ObserveResult[]> {
+    return this.stagehand.observe(instruction);
+  }
+
+  async screenshot(): Promise<string> {
+    const buffer = await this.stagehand.page.screenshot();
+    return buffer.toString('base64');
+  }
+
+  async fill(selector: string, value: string) {
+    await this.stagehand.page.fill(selector, value);
+  }
+
+  async waitFor(condition: WaitCondition) {
+    switch (condition.type) {
+      case 'navigation':
+        await this.stagehand.page.waitForNavigation();
+        break;
+      case 'selector':
+        await this.stagehand.page.waitForSelector(condition.selector,
+          { timeout: condition.timeout ?? 30_000 });
+        break;
+      case 'networkIdle':
+        await this.stagehand.page.waitForLoadState('networkidle');
+        break;
+    }
+  }
+
+  async getDebugUrl(): Promise<string | null> {
+    const debug = await this.bb.sessions.debug(this.sessionId);
+    return debug.debuggerFullscreenUrl;
+  }
+
+  async url() { return this.stagehand.page.url(); }
+  async title() { return this.stagehand.page.title(); }
+
+  async querySelector(selector: string) {
+    const el = await this.stagehand.page.$(selector);
+    if (!el) return null;
+    return { textContent: () => el.textContent() };
+  }
+
+  async close() {
+    await this.stagehand.close();
+  }
+}
+```
+
+#### `PlaywrightLocalProvider` (Dev/Testing)
+
+For local development without Browserbase, or for testing with a visible browser:
+
+```typescript
+// src/browser/providers/playwright-local.ts
+import { chromium, Browser, Page } from 'playwright';
+import { BrowserProvider, WaitCondition, ObserveResult } from '../interface';
+
+export class PlaywrightLocalProvider implements BrowserProvider {
+  private browser!: Browser;
+  private page!: Page;
+  private headless: boolean;
+
+  constructor(opts: { headless?: boolean } = {}) {
+    this.headless = opts.headless ?? false;
+  }
+
+  async init(): Promise<void> {
+    this.browser = await chromium.launch({ headless: this.headless });
+    const context = await this.browser.newContext();
+    this.page = await context.newPage();
+  }
+
+  async navigate(url: string) {
+    await this.page.goto(url, { waitUntil: 'networkidle' });
+  }
+
+  async act(_instruction: string) {
+    // No AI — throw with guidance to use fill/click directly,
+    // or integrate a local LLM for act() in the future
+    throw new Error(
+      'PlaywrightLocalProvider does not support AI-powered act(). ' +
+      'Use fill() and direct selectors, or switch to browserbase provider.'
+    );
+  }
+
+  async extract<T>(_schema: ZodSchema<T>, _instruction: string): Promise<T> {
+    // No AI extraction — could be implemented with local LLM or
+    // page.evaluate() + manual parsing for testing
+    throw new Error(
+      'PlaywrightLocalProvider does not support AI-powered extract(). ' +
+      'Switch to browserbase provider for production use.'
+    );
+  }
+
+  async observe(_instruction: string): Promise<ObserveResult[]> {
+    throw new Error('PlaywrightLocalProvider does not support observe().');
+  }
+
+  async screenshot(): Promise<string> {
+    const buffer = await this.page.screenshot();
+    return buffer.toString('base64');
+  }
+
+  async fill(selector: string, value: string) {
+    await this.page.fill(selector, value);
+  }
+
+  async waitFor(condition: WaitCondition) {
+    switch (condition.type) {
+      case 'navigation':
+        await this.page.waitForNavigation();
+        break;
+      case 'selector':
+        await this.page.waitForSelector(condition.selector,
+          { timeout: condition.timeout ?? 30_000 });
+        break;
+      case 'networkIdle':
+        await this.page.waitForLoadState('networkidle');
+        break;
+    }
+  }
+
+  async getDebugUrl(): Promise<string | null> {
+    // No remote debug URL — user sees the local browser window directly
+    return null;
+  }
+
+  async url() { return this.page.url(); }
+  async title() { return this.page.title(); }
+
+  async querySelector(selector: string) {
+    const el = await this.page.$(selector);
+    if (!el) return null;
+    return { textContent: () => el.textContent() };
+  }
+
+  async close() {
+    await this.browser.close();
+  }
+}
+```
+
+**Note**: `PlaywrightLocalProvider` does not support AI-powered `act()`, `extract()`, or `observe()` — those are Stagehand features. This provider is for:
+- Testing login/navigation flows with known selectors
+- Local debugging with a visible browser window
+- Fallback if Browserbase is down (for deterministic-only flows)
+
+For full AI capabilities locally, use `StagehandLocalProvider` below.
+
+#### `StagehandLocalProvider` (Dev/Testing with AI)
+
+Stagehand can run against a local Playwright browser without Browserbase — full AI-powered `act()`/`extract()`/`observe()` with no cloud browser dependency. This is the most useful dev/testing option.
+
+```typescript
+// src/browser/providers/stagehand-local.ts
+import { Stagehand } from '@browserbasehq/stagehand';
+import { BrowserProvider, WaitCondition, ObserveResult } from '../interface';
+
+export class StagehandLocalProvider implements BrowserProvider {
+  private stagehand!: Stagehand;
+  private headless: boolean;
+
+  constructor(opts: { headless?: boolean } = {}) {
+    this.headless = opts.headless ?? false;
+  }
+
+  async init(): Promise<void> {
+    this.stagehand = new Stagehand({
+      env: 'LOCAL',
+      modelName: 'claude-sonnet-4-6',
+      modelApiKey: process.env.ANTHROPIC_API_KEY!,
+      headless: this.headless,
+    });
+    await this.stagehand.init();
+  }
+
+  // navigate, act, extract, observe, fill, waitFor, url, title, querySelector, close
+  // — all identical to StagehandBrowserbaseProvider (delegates to this.stagehand)
+
+  async navigate(url: string) {
+    await this.stagehand.page.goto(url, { waitUntil: 'networkidle' });
+  }
+  async act(instruction: string) { await this.stagehand.act(instruction); }
+  async extract<T>(schema: ZodSchema<T>, instruction: string): Promise<T> {
+    return this.stagehand.extract({ instruction, schema });
+  }
+  async observe(instruction: string): Promise<ObserveResult[]> {
+    return this.stagehand.observe(instruction);
+  }
+  async screenshot(): Promise<string> {
+    return (await this.stagehand.page.screenshot()).toString('base64');
+  }
+  async fill(selector: string, value: string) {
+    await this.stagehand.page.fill(selector, value);
+  }
+  async waitFor(condition: WaitCondition) { /* same as other providers */ }
+  async url() { return this.stagehand.page.url(); }
+  async title() { return this.stagehand.page.title(); }
+  async querySelector(selector: string) {
+    const el = await this.stagehand.page.$(selector);
+    if (!el) return null;
+    return { textContent: () => el.textContent() };
+  }
+
+  async getDebugUrl(): Promise<string | null> {
+    return null; // User sees the local browser window directly
+  }
+
+  async close() { await this.stagehand.close(); }
+}
+```
+
+**When to use which provider:**
+
+| Provider | AI features | Browser | Debug URL | Use case |
+|----------|------------|---------|-----------|----------|
+| `StagehandBrowserbaseProvider` | Full | Cloud (Browserbase) | Yes | Production, cloud deployment |
+| `StagehandLocalProvider` | Full | Local Chromium | No (visible window) | **Dev/testing — recommended default** |
+| `PlaywrightLocalProvider` | None | Local Chromium | No (visible window) | Deterministic-only flows, no LLM cost |
+
+#### Provider Factory
+
+```typescript
+// src/browser/index.ts
+import { BrowserProvider } from './interface';
+import { StagehandBrowserbaseProvider } from './providers/stagehand-browserbase';
+import { StagehandLocalProvider } from './providers/stagehand-local';
+import { PlaywrightLocalProvider } from './providers/playwright-local';
+
+export type ProviderType = 'browserbase' | 'stagehand-local' | 'local';
+
+export async function createBrowserProvider(
+  type?: ProviderType
+): Promise<BrowserProvider> {
+  const providerType = type ?? (process.env.BROWSER_PROVIDER as ProviderType) ?? 'browserbase';
+  const headless = process.env.HEADLESS !== 'false';
+
+  let provider: BrowserProvider & { init(): Promise<void> };
+
+  switch (providerType) {
+    case 'browserbase':
+      provider = new StagehandBrowserbaseProvider();
+      break;
+    case 'stagehand-local':
+      provider = new StagehandLocalProvider({ headless });
+      break;
+    case 'local':
+      provider = new PlaywrightLocalProvider({ headless });
+      break;
+    default:
+      throw new Error(`Unknown browser provider: ${providerType}`);
+  }
+
+  await provider.init();
+  return provider;
+}
+
+export { BrowserProvider } from './interface';
+```
+
+#### Agent Consumes Only the Interface
+
+```typescript
+// src/worker/agent.ts — the agent NEVER imports Stagehand or Browserbase
+import { BrowserProvider } from '../browser';
+import { z } from 'zod';
+
+const LabResultSchema = z.object({
+  testName: z.string(),
+  value: z.string(),
+  units: z.string(),
+  referenceRange: z.string(),
+  date: z.string(),
+});
+
+async function extractLabs(browser: BrowserProvider): Promise<LabResult[]> {
+  await browser.navigate('https://mychart.example.org/MyChart/TestResults');
+  await browser.waitFor({ type: 'networkIdle' });
+
+  const labs = await browser.extract(
+    z.array(LabResultSchema),
+    'Extract all lab test results from this page including test name, value, units, reference range, and date'
+  );
+
+  return labs;
+}
+```
+
+```typescript
+// src/worker/index.ts — provider injected, not imported
+import { createBrowserProvider } from '../browser';
+
+async function runSyncJob(jobId: string, payload: SyncPayload) {
+  const browser = await createBrowserProvider();
+  // BROWSER_PROVIDER=browserbase → StagehandBrowserbaseProvider
+  // BROWSER_PROVIDER=local      → PlaywrightLocalProvider
+
+  try {
+    await login(browser, payload.credentials);
+    const labs = await extractLabs(browser);
+    const zipPath = await buildZip(jobId, { labs });
+    return { zipPath };
+  } finally {
+    await browser.close();
+  }
+}
 ```
 
 ### Tool Definitions
 
-| Tool | Description |
-|------|-------------|
-| `navigate(url)` | Navigate Browserbase session to a URL |
-| `click(selector_or_description)` | Click element via Stagehand `act()` |
-| `fill(selector, value)` | Fill a form field |
-| `extract(schema)` | Extract structured data via Stagehand `extract()` with Zod |
-| `screenshot()` | Capture page state for Claude to analyze |
-| `wait(condition)` | Wait for navigation, element, or network idle |
-| `save_record(data, type, filename)` | Write extracted record to job temp directory |
-| `download_file(url, filename)` | Download a file (PDF, etc.) from MyChart |
-| `handle_2fa()` | Pause agent, surface debug URL, poll for login completion |
+The Claude agent's tools map directly to `BrowserProvider` methods:
 
-### Service Separation (Clean Boundary for Railway)
+| Tool | Maps To | Description |
+|------|---------|-------------|
+| `navigate(url)` | `browser.navigate(url)` | Navigate to a URL |
+| `click(instruction)` | `browser.act(instruction)` | AI-powered click/interaction |
+| `fill(selector, value)` | `browser.fill(selector, value)` | Fill a form field |
+| `extract(schema, instruction)` | `browser.extract(schema, instruction)` | Extract structured data with Zod |
+| `screenshot()` | `browser.screenshot()` | Capture page state for Claude |
+| `wait(condition)` | `browser.waitFor(condition)` | Wait for navigation/element/network |
+| `save_record(data, type, filename)` | N/A (file I/O) | Write record to temp directory |
+| `download_file(url, filename)` | N/A (file I/O) | Download file from MyChart |
+| `handle_2fa()` | `browser.getDebugUrl()` + polling | Surface debug URL, poll for completion |
 
-Even running in one process locally, the code is structured as two logical services:
+### Project File Structure
 
 ```
 src/
+├── browser/                # Browser provider abstraction
+│   ├── interface.ts        # BrowserProvider interface + types
+│   ├── index.ts            # createBrowserProvider() factory
+│   └── providers/
+│       ├── stagehand-browserbase.ts  # Production: Stagehand + Browserbase cloud
+│       ├── stagehand-local.ts        # Dev/testing: Stagehand + local Chromium (full AI)
+│       └── playwright-local.ts       # Deterministic-only: local Chromium (no AI)
 ├── api/                    # API service (Hono routes)
 │   ├── index.ts            # Hono app setup
 │   ├── routes/
@@ -507,28 +1000,38 @@ src/
 │   │   └── download.ts     # GET /job/:id/download
 │   └── middleware/
 │       └── sanitize.ts     # Strip credentials from logs
-├── worker/                 # Agent worker (Stagehand + Claude SDK)
-│   ├── index.ts            # Job processor entry point
-│   ├── agent.ts            # Claude tool-use loop
+├── worker/                 # Agent worker (Claude SDK — no browser imports)
+│   ├── index.ts            # Job processor: creates provider, runs agent
+│   ├── agent.ts            # Claude tool-use loop (consumes BrowserProvider)
 │   ├── tools/              # Tool implementations
-│   │   ├── browser.ts      # navigate, click, fill, extract, screenshot, wait
+│   │   ├── browser.ts      # Tools that delegate to BrowserProvider methods
 │   │   ├── records.ts      # save_record, download_file
-│   │   └── twofa.ts        # handle_2fa (debug URL + poll)
+│   │   └── twofa.ts        # handle_2fa (getDebugUrl + poll)
 │   └── zip.ts              # Zip builder
-├── shared/                 # Shared types, config, job queue interface
+├── shared/                 # Shared types, config, interfaces
 │   ├── types.ts
-│   ├── config.ts           # Reads from env vars
+│   ├── config.ts           # Reads from env vars (BROWSER_PROVIDER, etc.)
 │   └── queue.ts            # JobQueue interface (in-memory local, BullMQ on Railway)
 └── index.ts                # Entry point: starts API, wires up in-process queue
 ```
 
-**Key**: `shared/queue.ts` exports a `JobQueue` interface. Local MVP uses `InMemoryQueue`; Railway deployment swaps in `BullMQQueue`. No other code changes.
+**Key abstractions** (both follow the same pattern):
+- `browser/index.ts` → `createBrowserProvider()` — selected via `BROWSER_PROVIDER` env var
+- `shared/queue.ts` → `createQueue()` — selected via `REDIS_URL` env var
 
-### Why Browserbase / Not LangChain / Not Computer Use
+### Adding a New Browser Provider
 
-- **Browserbase**: Stealth mode, captcha solving, session replay, **interactive debug URL for 2FA**, Stagehand-native, no browser infra to manage
+Three providers ship out of the box (`browserbase`, `stagehand-local`, `local`). To add Skyvern, Steel, or any other backend:
+
+1. Create `src/browser/providers/skyvern.ts` implementing `BrowserProvider`
+2. Add `'skyvern'` case to `createBrowserProvider()` in `src/browser/index.ts`
+3. Set `BROWSER_PROVIDER=skyvern` in env
+4. No changes to agent code, tools, or API
+
+### Why Not LangChain / Not Computer Use
+
 - **Not LangChain**: Overhead without benefit for single-purpose agent; Anthropic SDK suffices
-- **Not Computer Use**: Screenshot-based loop is slower, more expensive, less precise than DOM-level Stagehand
+- **Not Computer Use**: Screenshot-based loop is slower, more expensive, less precise than DOM-level providers
 
 ---
 
@@ -545,25 +1048,34 @@ Job completes → zip built in /tmp → served at localhost:3000/download/{jobId
 
 ### Zip Structure
 
+**MVP (Phase 1 — labs only):**
 ```
 mychart-export-2026-04-12/
 ├── summary.json                     # Export metadata
+└── labs/
+    ├── 2025-06-15_cbc.json          # Structured lab data
+    ├── 2025-06-15_cbc.pdf           # PDF if available from MyChart
+    └── 2025-03-10_metabolic.json
+```
+
+**Phase 3+ (additional record types added as directories):**
+```
+mychart-export-2026-04-12/
+├── summary.json
 ├── labs/
-│   ├── 2025-06-15_cbc.json
-│   ├── 2025-06-15_cbc.pdf
-│   └── 2025-03-10_metabolic.json
-├── medications/
+│   └── ...
+├── medications/                     # Phase 3
 │   ├── current.json
 │   └── history.json
-├── visits/
+├── visits/                          # Phase 3
 │   ├── 2025-07-20_primary-care.json
 │   └── 2025-07-20_primary-care.pdf
-├── messages/
+├── messages/                        # Phase 3
 │   └── 2025-08-01_dr-smith.json
-├── immunizations.json
-├── allergies.json
-├── vitals.json
-└── documents/
+├── immunizations.json               # Phase 3
+├── allergies.json                   # Phase 3
+├── vitals.json                      # Phase 3
+└── documents/                       # Phase 3
     └── 2025-05-12_radiology-report.pdf
 ```
 
@@ -573,8 +1085,8 @@ mychart-export-2026-04-12/
 {
   "exported_at": "2026-04-12T15:30:00Z",
   "mychart_url": "https://mychart.example.org",
-  "record_types": ["labs", "medications", "visits", "messages", "immunizations", "allergies", "vitals"],
-  "record_counts": { "labs": 12, "medications": 5, "visits": 8 },
+  "record_types": ["labs"],
+  "record_counts": { "labs": 12 },
   "errors": []
 }
 ```
@@ -631,6 +1143,7 @@ CMD ["node", "dist/index.js"]
 Set these in Railway dashboard or via CLI:
 
 ```
+BROWSER_PROVIDER=browserbase
 ANTHROPIC_API_KEY=sk-ant-...
 BROWSERBASE_API_KEY=bb_...
 BROWSERBASE_PROJECT_ID=...
@@ -802,10 +1315,12 @@ railway up
 ### Phase 1: Local MVP
 
 - [ ] Project scaffold (TypeScript, pnpm, Hono)
-- [ ] Stagehand + Browserbase: MyChart login flow
+- [ ] BrowserProvider interface + StagehandBrowserbaseProvider implementation
+- [ ] PlaywrightLocalProvider for dev/testing (deterministic flows only)
+- [ ] MyChart login flow via BrowserProvider
 - [ ] 2FA via Browserbase debug URL (pause + poll)
 - [ ] Claude agent tool-use loop for navigation
-- [ ] Record extraction: labs, medications, allergies (3 types to start)
+- [ ] Record extraction: labs (single record type for MVP)
 - [ ] Zip builder + local file serving
 - [ ] Simple API: `POST /sync`, `GET /job/:id/status`, `GET /job/:id/download`
 - [ ] Credential sanitization in all logs
@@ -820,7 +1335,7 @@ railway up
 
 ### Phase 3: Full Record Types
 
-- [ ] All record types: visits, messages, immunizations, vitals, documents
+- [ ] All record types: medications, allergies, visits, messages, immunizations, vitals, documents
 - [ ] PDF downloads from MyChart where available
 - [ ] Retry logic for flaky navigation steps
 - [ ] Session replay integration for debugging
@@ -849,6 +1364,7 @@ railway up
     "@anthropic-ai/sdk": "latest",
     "@browserbasehq/stagehand": "latest",
     "@browserbasehq/sdk": "latest",
+    "playwright": "latest",
     "hono": "latest",
     "zod": "latest",
     "archiver": "latest"
@@ -923,7 +1439,7 @@ railway up
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | MVP runtime | Local Node.js | Fastest iteration; no infra to manage; Railway is just containerizing the same code |
-| Cloud browser | Browserbase | Stealth, captcha solving, session replay, interactive debug URL; Stagehand-native |
+| Cloud browser | Browserbase (via `BrowserProvider` abstraction) | Stealth, captcha solving, session replay, debug URL; swappable via env var |
 | Credential storage | Ephemeral per-run | User requirement; simplest and most secure |
 | 2FA | Browserbase debug URL (user types directly in cloud browser) | Zero relay code; works identically local and cloud; user can also solve captchas |
 | File delivery | Local zip (MVP) → R2 (Railway) | Simplest local; R2 free tier for cloud |

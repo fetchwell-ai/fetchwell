@@ -78,7 +78,7 @@ No APIs or FHIR connectors — browser automation only.
 
 ### 6.1 Credentials (MVP)
 - **No persistent credential storage.** User provides username and password each run.
-- Prefer a browser automation solution with built-in credential/session management (e.g., Browserbase contexts) to avoid writing custom credential storage code.
+- The browser provider is selected via configuration — no custom credential storage code is required for MVP.
 - Credentials are held in memory only for the duration of the session and never written to disk or logs.
 
 ### 6.2 Two-Factor Authentication (MVP)
