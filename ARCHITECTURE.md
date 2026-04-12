@@ -4,7 +4,7 @@
 
 A TypeScript agent that uses cloud browsers (Browserbase) to navigate Epic MyChart, authenticate as the patient, extract health records, and deliver them as a downloadable zip file. **Runs locally for MVP**, with a clear migration path to Railway for cloud deployment.
 
-**MVP philosophy**: Run locally, no persistent credential storage, no session persistence, no HIPAA over-engineering. The user provides credentials each run, manually enters 2FA codes, and gets a zip back.
+**MVP philosophy**: Run locally, no persistent credential storage, no session persistence, no HIPAA over-engineering. The user provides credentials each run, manually enters 2FA codes directly in the live cloud browser, and gets a zip back.
 
 ---
 
@@ -13,15 +13,237 @@ A TypeScript agent that uses cloud browsers (Browserbase) to navigate Epic MyCha
 | Layer | Choice | Rationale |
 |-------|--------|-----------|
 | **Language** | TypeScript (Node.js) | Best ecosystem for browser automation (Stagehand); single language for agent + API |
-| **Cloud browser** | Browserbase (Developer plan) | Stagehand-native; stealth mode; captcha solving; session replay for debugging |
+| **Cloud browser** | Browserbase (Developer plan) | Stagehand-native; stealth mode; captcha solving; session replay; **interactive live view for 2FA** |
 | **AI agent framework** | Anthropic SDK + tool-use loop | Direct Claude API with tool-use; no LangChain overhead |
 | **AI browser layer** | Stagehand (cloud mode via Browserbase) | Deterministic Playwright for known flows + AI fallback for dynamic UI; Zod-based extraction |
 | **Credentials** | User-provided per run (ephemeral, in-memory only) | Simplest; nothing to breach |
-| **2FA handling** | Manual entry via terminal (local) or WebSocket (Railway) | User pastes code when prompted |
+| **2FA handling** | Browserbase live debug URL — user types code directly in cloud browser | No relay code needed; user interacts with the real MyChart 2FA page |
 | **File delivery** | Zip file served locally (MVP) or via pre-signed R2 URL (Railway) | Agent builds zip; user downloads |
 | **API layer** | Hono | Lightweight, TypeScript-native; same code runs local and on Railway |
 | **Runtime** | Local Node.js (MVP) → Railway (fast-follow) | Develop and run locally first; containerize for Railway when ready |
 | **Package manager** | pnpm | Fast, disk-efficient |
+
+---
+
+## 1.1 System Block Diagram
+
+```
+┌───────────────────────────────────────────────────────��─────────────────┐
+│                         Developer's Machine                              │
+│                                                                          │
+│  ┌────────────────┐                                                      │
+│  │ Terminal / CLI  │                                                     │
+│  │                 │  POST /sync {creds, types}                          │
+│  │  $ pnpm dev     │────────────────────┐                                │
+│  │                 │                    │                                │
+│  │  Downloads zip  │◀──────────┐        │                                │
+│  └────────────────┘           │        │                                │
+│                                │        ▼                                │
+│  ┌────────────────┐   ┌──────────────────────────────────────────────┐  │
+│  │ User's Browser  │   │           Local Node.js Process              │  │
+│  │                 │   │                                              │  │
+│  │ Opens debug URL │   │  ┌──────────────┐    ┌───────────────────┐  │  │
+│  │ to type 2FA     │   │  │ API Service   │    │ Agent Worker       │  │  │
+│  │ code directly   │   │  │ (Hono)        │───▶│ (Stagehand +      │  │  │
+│  │ in cloud browser│   │  │               │◀───│  Claude SDK)       │  │  │
+│  │                 │   │  │ /sync         │    │                   │  │  │
+│  └───────┬─────────┘   │  │ /job/:id      │    │ Extracts records  │  │  │
+│          │              │  │ /download     │    │ Builds zip        │  │  │
+│          │              │  └──────┬───────┘    └────────┬──────────┘  │  │
+│          │              │         │ Serve zip           │              │  │
+│          │              │         ▼                     │              │  │
+│          │              │  ┌─────────────┐              │              │  │
+│          │              │  │ /tmp (zip)   │              │              │  │
+│          │              │  └─────────────┘              │              │  │
+│          │              └──────────────────────────────────────────────┘  │
+└──────────┼──────────────────────────────────────────────┼────────────────┘
+           │                                              │
+           │ HTTPS (debug URL)                            │ HTTPS (API calls)
+           │                                              │
+           ▼                                              ▼
+┌──────────────────────────┐              ┌──────────────────────────────┐
+│   Browserbase             │              │     Anthropic API            │
+│   (Cloud Browser)         │              │     (Claude Sonnet 4.6)      │
+│                           │              │                              │
+│  ┌─────────────────────┐ │              │  Tool-use loop:              │
+│  │ Live Browser Session │ │    HTTPS     │  - Receives page context     │
+│  │                      │─┼────────────▶│  - Decides next action       │
+│  │ • Agent controls via │ │             │  - Returns tool calls        │
+│  │   Stagehand API      │ │              └──────────────────────────────┘
+│  │ • User sees/types    │ │
+│  │   via debug URL      │ │
+│  │ • Navigates MyChart  │─┼────────▶ Epic MyChart (HTTPS)
+│  └─────────────────────┘ │
+│                           │
+│  debuggerFullscreenUrl ───┼────▶ User's browser (interactive 2FA)
+│  Session replay     ──────┼────▶ Post-run debugging
+└──────────────────────────┘
+```
+
+**Key data flows:**
+- **Credentials**: User → Local API → Stagehand `fill()` → Browserbase session → MyChart login form (all TLS)
+- **2FA code**: Browserbase debug URL → User's browser → User types directly into MyChart 2FA page in the live cloud browser
+- **Health records**: MyChart pages → Stagehand `extract()` → Local `/tmp` → Zip → User downloads from localhost
+- **AI reasoning**: Page context → Anthropic API → Tool call decisions → Stagehand executes in Browserbase
+
+---
+
+## 1.2 Sync Job Flow Chart
+
+```
+                              ┌─────────────────┐
+                              │  User triggers   │
+                              │  POST /sync      │
+                              │  {url, user,     │
+                              │   pass, types}   │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │ Create job,      │
+                              │ create Browser-  │
+                              │ base session     │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │ Get debug URL    │
+                              │ bb.sessions      │
+                              │ .debug(id)       │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │ Print debug URL  │
+                              │ to terminal /    │
+                              │ return in API    │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │ Navigate to      │
+                              │ MyChart login    │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │ Fill username +  │
+                              │ password via     │
+                              │ Stagehand fill() │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────┐
+                              │ Click sign-in    │
+                              └────────┬─────────┘
+                                       │
+                                       ▼
+                           ┌──────────────────────┐
+                           │ 2FA prompt detected?  │
+                           └───┬──────────────┬────┘
+                           Yes │              │ No
+                               ▼              │
+                  ┌──────────────────────┐    │
+                  │ PAUSE agent.         │    │
+                  │ Notify user:         │    │
+                  │ "Open debug URL and  │    │
+                  │  enter your 2FA code │    │
+                  │  in the browser"     │    │
+                  └──────────┬───────────┘    │
+                             │                │
+                             ▼                │
+                  ┌──────────────────────┐    │
+                  │ Poll page for 2FA    │    │
+                  │ completion (check if │    │
+                  │ login succeeded or   │    │
+                  │ dashboard loaded)    │    │
+                  │                      │    │
+                  │ Timeout: 5 minutes   │    │
+                  └──────┬─────────┬─────┘    │
+                  Success│         │Timeout    │
+                         │         ▼           │
+                         │  ┌────────────┐     │
+                         │  │ FAIL: 2FA  │     │
+                         │  │ timeout.   │     │
+                         │  │ Destroy    │     │
+                         │  │ session.   │     │
+                         │  │ Return err │     │
+                         │  └────────────┘     │
+                         │                     │
+                         ▼                     ▼
+                  ┌──────────────────────────────┐
+                  │ Verify login success          │
+                  │ (check for dashboard/landing) │
+                  └──────┬──────────────┬────────┘
+                  Success│              │Failure
+                         │              ▼
+                         │     ┌────────────────┐
+                         │     │ FAIL: Login     │
+                         │     │ failed. Destroy │
+                         │     │ session. Return │
+                         │     │ error + reason  │
+                         │     └────────────────┘
+                         ▼
+              ┌─────────────────────┐
+              │ For each requested  │
+              │ record type:        │◀──────────────┐
+              └──────────┬──────────┘               │
+                         │                          │
+                         ▼                          │
+              ┌─────────────────────┐               │
+              │ Navigate to section │               │
+              │ (labs, meds, etc.)  │               │
+              └──────────┬──────────┘               │
+                         │                          │
+                         ▼                          │
+              ┌─────────────────────┐               │
+              │ Extract records via │               │
+              │ Stagehand extract() │               │
+              │ with Zod schema     │               │
+              └──────────┬──────────┘               │
+                         │                          │
+                         ▼                          │
+              ┌─────────────────────┐               │
+              │ Save JSON to temp   │               │
+              │ dir. Download PDFs  │               │
+              │ if available.       │               │
+              └──────────┬──────────┘               │
+                         │                          │
+                         ▼                          │
+              ┌─────────────────────┐    Yes        │
+              │ More record types?  │───────────────┘
+              └──────────┬──────────┘
+                         │ No
+                         ▼
+              ┌─────────────────────┐
+              │ Build zip from      │
+              │ temp directory      │
+              │ (archiver)          │
+              └──────────┬──────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │ Destroy Browserbase │
+              │ session             │
+              └──────────┬──────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │ Serve zip at        │
+              │ /download/{jobId}   │
+              │                     │
+              │ Return download URL │
+              │ to user             │
+              └──────────┬──────────┘
+                         │
+                         ▼
+              ┌─────────────────────┐
+              │ DONE                │
+              │ Clean up temp files │
+              │ after download or   │
+              │ timeout (1 hour)    │
+              └─────────────────────┘
+```
 
 ---
 
@@ -30,42 +252,6 @@ A TypeScript agent that uses cloud browsers (Browserbase) to navigate Epic MyCha
 ### How It Works
 
 The agent runs as a local Node.js process on the developer's machine. Browserbase is the only cloud dependency — it provides the browser session via API. Everything else runs locally.
-
-```
-┌───────────────────────────────────────────────────┐
-│                  Developer's Machine               │
-│                                                     │
-│  Terminal                                           │
-│  $ pnpm dev                                        │
-│                                                     │
-│  ┌───────────────────────────────────────────────┐ │
-│  │              Local Node.js Process             │ │
-│  │                                                │ │
-│  │  ┌─────────────┐    ┌──────────────────────┐  │ │
-│  │  │ API Service  │    │ Agent Worker          │  │ │
-│  │  │ (Hono on     │───▶│ (Stagehand + Claude  │  │ │
-│  │  │  localhost)   │    │  SDK, in-process)    │  │ │
-│  │  │              │◀───│                       │  │ │
-│  │  │ GET /sync    │    │ Extracts records      │  │ │
-│  │  │ WS  /events  │    │ Builds zip            │  │ │
-│  │  │ GET /download│    │                       │  │ │
-│  │  └─────────────┘    └──────────────────────┘  │ │
-│  │         │                      │               │ │
-│  │         │ Serve zip            │ HTTPS          │ │
-│  │         ▼                      ▼               │ │
-│  │  ┌─────────────┐    ┌──────────────────────┐  │ │
-│  │  │ Local /tmp   │    │ Browserbase API      │  │ │
-│  │  │ (zip file)   │    │ (cloud browser)      │──┼─┼──▶ MyChart
-│  │  └─────────────┘    └──────────────────────┘  │ │
-│  │                              │                 │ │
-│  │                              ▼                 │ │
-│  │                     ┌──────────────────┐       │ │
-│  │                     │ Anthropic API    │       │ │
-│  │                     │ (Claude)         │       │ │
-│  │                     └──────────────────┘       │ │
-│  └───────────────────────────────────────────────┘ │
-└───────────────────────────────────────────────────┘
-```
 
 ### Local Dev Setup
 
@@ -91,16 +277,19 @@ pnpm dev   # starts Hono on http://localhost:3000
 ### Local Sync Flow
 
 ```
-1. User opens http://localhost:3000 (simple web UI) or calls API via curl/httpie
-2. User submits: MyChart URL, username, password, record types
-3. Agent creates Browserbase session, navigates to MyChart login
-4. Agent enters credentials, triggers 2FA
-5. Terminal/UI prompts: "Enter 2FA code: ______"
-6. User pastes code; agent completes login
-7. Agent navigates record sections, extracts data via Stagehand
-8. Records collected to /tmp, zipped
-9. Zip served at http://localhost:3000/download/{jobId}
-10. User downloads zip; temp files cleaned up
+1. User calls POST /sync with MyChart URL, username, password, record types
+2. Agent creates Browserbase session + retrieves debug URL
+3. Agent prints: "Open this URL to monitor (and enter 2FA): <debuggerFullscreenUrl>"
+4. Agent navigates to MyChart login, enters credentials via Stagehand fill()
+5. MyChart sends 2FA code to user's email
+6. Agent detects 2FA prompt, pauses, notifies user:
+   "2FA required — open the debug URL and type your verification code directly in the browser"
+7. User opens debug URL in their browser, sees the live MyChart 2FA page, types code
+8. Agent detects login completion (polls for dashboard), resumes
+9. Agent navigates record sections, extracts data via Stagehand
+10. Records collected to /tmp, zipped
+11. Zip served at http://localhost:3000/download/{jobId}
+12. User downloads zip; temp files cleaned up
 ```
 
 ### In-Process Architecture (MVP)
@@ -119,14 +308,14 @@ app.post('/sync', async (c) => {
   const jobId = crypto.randomUUID();
   const payload = await c.req.json();
   jobs.set(jobId, { status: 'running' });
-  
+
   // Run agent in background (same process)
   runSyncJob(jobId, payload, jobs);
-  
-  return c.json({ jobId, eventsUrl: `/events/${jobId}` });
+
+  return c.json({ jobId, debugUrl: jobs.get(jobId)?.debugUrl });
 });
 
-// ... status, download, WebSocket endpoints
+// ... status, download endpoints
 ```
 
 This same code structure deploys to Railway — the only change is adding a Redis-backed queue when you need to separate API and worker into distinct services.
@@ -161,35 +350,100 @@ The user provides MyChart credentials at the start of each sync. **Nothing is pe
 
 ## 4. 2FA Handling
 
-### MVP: Manual Entry
+### MVP: Browserbase Debug URL (Human-in-the-Loop)
 
-**Local mode**: Terminal prompt or simple web UI input field.
+The user types their 2FA code **directly into the live cloud browser** via Browserbase's interactive debug URL. No WebSocket relay, no code forwarding — the user interacts with the real MyChart 2FA page.
+
+#### How It Works
 
 ```
-1. Agent navigates to MyChart login, enters username/password
-2. MyChart sends 2FA code to user's email
-3. Agent detects 2FA prompt, pauses
-4. Web UI shows: "Enter the verification code sent to your email: [______]"
-   (or terminal prompt if running headless)
-5. User checks email, pastes code
-6. Agent enters code, completes login
+1. Agent creates Browserbase session
+2. Agent retrieves interactive debug URL:
+      const debugInfo = await bb.sessions.debug(session.id);
+      const debugUrl = debugInfo.debuggerFullscreenUrl;
+3. Agent navigates to MyChart, fills credentials, submits login
+4. MyChart sends 2FA code to user's email
+5. Agent detects 2FA prompt on page, pauses navigation
+6. Agent notifies user (terminal output / API response):
+      ┌─────────────────────────────────────────────────────────┐
+      │  2FA required. Open this URL in your browser and enter  │
+      │  the verification code directly in the MyChart page:    │
+      │                                                         │
+      │  https://www.browserbase.com/devtools/live/abc123...    │
+      └─────────────────────────────────────────────────────────┘
+7. User opens URL → sees the live MyChart 2FA page in their browser
+8. User types 2FA code directly into the MyChart input field, clicks submit
+9. Agent polls the page for login completion (dashboard loaded, URL changed)
+10. Agent detects success, resumes record extraction
 ```
 
-**Implementation**: WebSocket (SSE for simpler alternative) between UI and agent:
+#### Implementation
 
 ```typescript
-// Agent side — same interface works local and on Railway
-const code = await waitFor2FACode(jobId, { timeout: 300_000 }); // 5 min
+// src/worker/tools/twofa.ts
+import Browserbase from '@browserbasehq/sdk';
 
-// API side (WebSocket handler)
-ws.on('2fa_response', ({ jobId, code }) => {
-  resolve2FACode(jobId, code);
-});
+const bb = new Browserbase({ apiKey: process.env.BROWSERBASE_API_KEY });
+
+async function handle2FA(sessionId: string, jobId: string): Promise<void> {
+  // Get interactive debug URL
+  const debugInfo = await bb.sessions.debug(sessionId);
+  const debugUrl = debugInfo.debuggerFullscreenUrl;
+
+  // Notify user to open the debug URL
+  console.log(`\n🔐 2FA required for job ${jobId}`);
+  console.log(`   Open this URL and enter your code in the browser:`);
+  console.log(`   ${debugUrl}\n`);
+
+  // Also update job state so API can return it
+  updateJobStatus(jobId, { status: '2fa_required', debugUrl });
+
+  // Poll for login completion (user will type code in the live browser)
+  await pollForLoginComplete(page, {
+    timeout: 300_000,  // 5 minutes
+    interval: 2_000,   // check every 2 seconds
+  });
+}
+
+async function pollForLoginComplete(page: Page, opts: PollOptions): Promise<void> {
+  const deadline = Date.now() + opts.timeout;
+  while (Date.now() < deadline) {
+    // Check if we've left the 2FA/login page
+    const url = page.url();
+    const title = await page.title();
+    if (isMyChartDashboard(url, title)) return;
+
+    // Check for error states
+    const error = await page.$('.login-error, .error-message');
+    if (error) throw new Error('Login failed after 2FA');
+
+    await new Promise(r => setTimeout(r, opts.interval));
+  }
+  throw new Error('2FA timeout — user did not enter code within 5 minutes');
+}
 ```
 
-### Future: Automated Gmail IMAP/OAuth (Phase 3)
+#### Why Debug URL, Not WebSocket Relay
 
-Clearly defined upgrade path:
+| | Debug URL (chosen) | WebSocket relay |
+|---|---|---|
+| **Code complexity** | ~20 lines (get URL, poll for completion) | ~100+ lines (WS server, client, message protocol) |
+| **User experience** | Types in the real MyChart page | Types in our custom UI, code gets relayed |
+| **Reliability** | User interacts with actual page; no relay bugs | Message ordering, reconnection, timeout sync |
+| **Works on Railway** | Yes — URL is a Browserbase URL, not localhost | Needs keepalive pings, proxy-aware config |
+| **Captcha handling** | User can solve captchas too | Can't relay captchas |
+| **Dependencies** | None extra | `ws` package, client-side JS |
+
+#### Edge Cases
+
+- **User doesn't open URL in time**: 5-minute timeout, job fails with clear error
+- **MyChart shows captcha**: User solves it in the debug URL (free human-in-the-loop)
+- **Multiple 2FA methods**: User picks their method directly in the live browser
+- **Session expires**: Browserbase sessions last up to 6 hours on Developer plan
+
+### Future: Automated 2FA (Phase 4)
+
+Upgrade path for hands-free operation:
 
 | Method | Approach | User Setup Required |
 |--------|----------|-------------------|
@@ -197,7 +451,7 @@ Clearly defined upgrade path:
 | **Gmail OAuth** | Watch for new messages via Gmail API | OAuth consent flow |
 | **TOTP** | Generate codes server-side with `otpauth` | TOTP secret from MyChart |
 
-> **Integration point**: `read_2fa_code()` is abstracted behind an interface. MVP prompts user; future swaps in IMAP/OAuth/TOTP without changing agent logic.
+> **Integration point**: The `handle2FA()` function is the abstraction boundary. MVP opens debug URL + polls; future implementations read the code from email/TOTP and enter it via Stagehand `fill()` — the rest of the agent doesn't change.
 
 ---
 
@@ -219,8 +473,8 @@ Clearly defined upgrade path:
 │  ┌────────────┐  ┌────────────┐  ┌────────────┐ │
 │  │ Stagehand  │  │ Record     │  │ 2FA        │ │
 │  │ + Browser- │  │ Collector  │  │ Handler    │ │
-│  │ base Cloud │  │ (extract → │  │ (prompt    │ │
-│  │            │  │  temp dir) │  │  user)     │ │
+│  │ base Cloud │  │ (extract → │  │ (debug URL │ │
+│  │            │  │  temp dir) │  │  + poll)   │ │
 │  └────────────┘  └────────────┘  └────────────┘ │
 └─────────────────────────────────────────────────┘
 ```
@@ -237,7 +491,7 @@ Clearly defined upgrade path:
 | `wait(condition)` | Wait for navigation, element, or network idle |
 | `save_record(data, type, filename)` | Write extracted record to job temp directory |
 | `download_file(url, filename)` | Download a file (PDF, etc.) from MyChart |
-| `read_2fa_code()` | Request 2FA code from user via WebSocket/terminal |
+| `handle_2fa()` | Pause agent, surface debug URL, poll for login completion |
 
 ### Service Separation (Clean Boundary for Railway)
 
@@ -245,13 +499,12 @@ Even running in one process locally, the code is structured as two logical servi
 
 ```
 src/
-├── api/                    # API service (Hono routes + WebSocket)
+├── api/                    # API service (Hono routes)
 │   ├── index.ts            # Hono app setup
 │   ├── routes/
 │   │   ├── sync.ts         # POST /sync
-│   │   ├── status.ts       # GET /job/:id/status
-│   │   ├── download.ts     # GET /job/:id/download
-│   │   └── events.ts       # WS /job/:id/events (2FA relay, progress)
+│   │   ├── status.ts       # GET /job/:id/status (includes debugUrl when 2FA required)
+│   │   └── download.ts     # GET /job/:id/download
 │   └── middleware/
 │       └── sanitize.ts     # Strip credentials from logs
 ├── worker/                 # Agent worker (Stagehand + Claude SDK)
@@ -260,7 +513,7 @@ src/
 │   ├── tools/              # Tool implementations
 │   │   ├── browser.ts      # navigate, click, fill, extract, screenshot, wait
 │   │   ├── records.ts      # save_record, download_file
-│   │   └── twofa.ts        # read_2fa_code
+│   │   └── twofa.ts        # handle_2fa (debug URL + poll)
 │   └── zip.ts              # Zip builder
 ├── shared/                 # Shared types, config, job queue interface
 │   ├── types.ts
@@ -273,7 +526,7 @@ src/
 
 ### Why Browserbase / Not LangChain / Not Computer Use
 
-- **Browserbase**: Stealth mode, captcha solving, session replay, Stagehand-native, no browser infra to manage
+- **Browserbase**: Stealth mode, captcha solving, session replay, **interactive debug URL for 2FA**, Stagehand-native, no browser infra to manage
 - **Not LangChain**: Overhead without benefit for single-purpose agent; Anthropic SDK suffices
 - **Not Computer Use**: Screenshot-based loop is slower, more expensive, less precise than DOM-level Stagehand
 
@@ -479,7 +732,7 @@ railway up
 - [ ] Add R2 upload to `zip.ts` (behind env var check)
 - [ ] Create Cloudflare R2 bucket with 24-hour lifecycle rule
 - [ ] `railway up` or connect GitHub repo for auto-deploy
-- [ ] Test: trigger sync, verify 2FA WebSocket works, download zip
+- [ ] Test: trigger sync, verify 2FA debug URL accessible from internet, download zip
 
 ---
 
@@ -488,33 +741,17 @@ railway up
 | Concern | Local | Railway | What to Watch |
 |---------|-------|---------|---------------|
 | **Port** | Hardcoded 3000 | `process.env.PORT` (Railway assigns) | Always use `PORT` env var with fallback |
-| **WebSocket** | Direct connection, no proxy | Railway proxy; **60s idle timeout** | Must send ping/pong every 30s to keep alive |
-| **HTTP timeout** | No limit | **15 min max** per request | Syncs should complete within 15 min; use WebSocket for status, not long-polling |
+| **2FA debug URL** | Works — user opens Browserbase URL | Works identically — URL is on Browserbase, not our server | No difference; debug URL is always a Browserbase-hosted URL |
+| **HTTP timeout** | No limit | **15 min max** per request | Syncs should complete within 15 min; return jobId immediately, poll for status |
 | **File system** | Persistent `/tmp` | **Ephemeral** — wiped on redeploy/restart | Never rely on local files persisting; use R2 for zips on Railway |
 | **DNS** | `localhost:3000` | `*.up.railway.app` (HTTPS auto) | Railway provides free HTTPS subdomain |
 | **Redis** | Not needed (in-memory queue) | Required for multi-service | BullMQ `family: 0` for IPv4/IPv6 |
 | **Secrets** | `.env` file (gitignored) | Railway encrypted variables | Use sealed variables for API keys |
-| **Cold start** | None (already running) | ~2-5s (Fargate-style) | Not an issue for this use case |
+| **Cold start** | None (already running) | ~2-5s | Not an issue for this use case |
 | **Concurrent users** | Single user | Multiple (with queue) | In-memory queue doesn't scale; BullMQ does |
 | **Debugging** | Full local access, console.log | Railway logs + Browserbase session replay | Session replay is invaluable for debugging cloud browser issues |
 
-### WebSocket Keepalive (Critical for Railway)
-
-Railway's proxy kills idle WebSocket connections after 60 seconds. Since 2FA can take minutes (user checking email), implement keepalive:
-
-```typescript
-// Server-side ping every 30 seconds
-const KEEPALIVE_INTERVAL = 30_000;
-
-ws.on('open', () => {
-  const keepalive = setInterval(() => {
-    if (ws.readyState === ws.OPEN) ws.ping();
-  }, KEEPALIVE_INTERVAL);
-  ws.on('close', () => clearInterval(keepalive));
-});
-```
-
-This is a no-op locally but **required** on Railway. Include it from day one to avoid surprises.
+**Note**: Unlike WebSocket-based 2FA relay, the debug URL approach has **no behavioral differences** between local and Railway. The URL is always served by Browserbase, so connectivity, timeouts, and interactivity are identical regardless of where the agent runs. This was a key reason to choose this approach.
 
 ---
 
@@ -566,11 +803,11 @@ This is a no-op locally but **required** on Railway. Include it from day one to 
 
 - [ ] Project scaffold (TypeScript, pnpm, Hono)
 - [ ] Stagehand + Browserbase: MyChart login flow
-- [ ] Manual 2FA via WebSocket (with keepalive from day one)
+- [ ] 2FA via Browserbase debug URL (pause + poll)
 - [ ] Claude agent tool-use loop for navigation
 - [ ] Record extraction: labs, medications, allergies (3 types to start)
 - [ ] Zip builder + local file serving
-- [ ] Simple web UI: enter creds, see progress, enter 2FA, download zip
+- [ ] Simple API: `POST /sync`, `GET /job/:id/status`, `GET /job/:id/download`
 - [ ] Credential sanitization in all logs
 
 ### Phase 2: Railway Deployment
@@ -579,7 +816,6 @@ This is a no-op locally but **required** on Railway. Include it from day one to 
 - [ ] Add Redis + BullMQ for job queue (with `family: 0`)
 - [ ] Add R2 upload for zip delivery
 - [ ] Configure Railway variables (sealed for secrets)
-- [ ] Verify WebSocket keepalive works through Railway proxy
 - [ ] Deploy and test end-to-end
 
 ### Phase 3: Full Record Types
@@ -612,19 +848,20 @@ This is a no-op locally but **required** on Railway. Include it from day one to 
   "dependencies": {
     "@anthropic-ai/sdk": "latest",
     "@browserbasehq/stagehand": "latest",
+    "@browserbasehq/sdk": "latest",
     "hono": "latest",
     "zod": "latest",
-    "archiver": "latest",
-    "ws": "latest"
+    "archiver": "latest"
   },
   "devDependencies": {
     "typescript": "latest",
     "tsx": "latest",
-    "@types/node": "latest",
-    "@types/ws": "latest"
+    "@types/node": "latest"
   }
 }
 ```
+
+**Note**: No `ws` package needed for MVP — 2FA uses Browserbase debug URL, not WebSocket relay.
 
 **Added for Railway (Phase 2)**:
 ```json
@@ -674,9 +911,9 @@ This is a no-op locally but **required** on Railway. Include it from day one to 
 |------|-----------|------------|
 | Epic blocks automated access | Medium | Browserbase stealth mode; human-like timing; fallback to FHIR API |
 | MyChart UI changes break navigation | High | Stagehand AI layer adapts; session replay for debugging |
-| 2FA timeout (user too slow) | Medium | 5-min timeout with clear prompts; retry mechanism |
+| 2FA timeout (user too slow to open debug URL) | Medium | 5-min timeout with clear prompts; URL printed immediately at job start |
 | Credential exposure | Low | Ephemeral only; TLS everywhere; no logging of PII |
-| WebSocket drops on Railway | Medium | Keepalive pings every 30s; reconnect logic in UI |
+| Browserbase debug URL inaccessible | Low | URL is hosted by Browserbase infrastructure; no dependency on our server |
 | Browserbase outage | Low | Retry; could fall back to local Playwright for dev |
 
 ---
@@ -686,9 +923,9 @@ This is a no-op locally but **required** on Railway. Include it from day one to 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
 | MVP runtime | Local Node.js | Fastest iteration; no infra to manage; Railway is just containerizing the same code |
-| Cloud browser | Browserbase | Stealth, captcha solving, session replay; Stagehand-native |
+| Cloud browser | Browserbase | Stealth, captcha solving, session replay, interactive debug URL; Stagehand-native |
 | Credential storage | Ephemeral per-run | User requirement; simplest and most secure |
-| 2FA | Manual entry | User requirement for MVP; automated clearly scoped for Phase 4 |
+| 2FA | Browserbase debug URL (user types directly in cloud browser) | Zero relay code; works identically local and cloud; user can also solve captchas |
 | File delivery | Local zip (MVP) → R2 (Railway) | Simplest local; R2 free tier for cloud |
 | Job queue | In-memory (MVP) → BullMQ + Redis (Railway) | No infra for local; clean swap via `JobQueue` interface |
 | Service separation | Logical (same process) → physical (Railway services) | Code structured for separation from day one; split is config, not refactor |
@@ -702,6 +939,8 @@ This is a no-op locally but **required** on Railway. Include it from day one to 
 - [Epic on FHIR](https://fhir.epic.com/) — Official Epic FHIR APIs
 - [Stagehand SDK](https://github.com/browserbase/stagehand) — AI browser automation
 - [Browserbase](https://www.browserbase.com/) — Cloud browsers with stealth and session replay
+- [Browserbase Live View](https://docs.browserbase.com/features/session-live-view) — Interactive debug URL docs
+- [Browserbase Session Live URLs API](https://docs.browserbase.com/reference/api/session-live-urls) — `debuggerFullscreenUrl` API
 - [Browserbase Pricing](https://www.browserbase.com/pricing) — Developer $20/mo; Scale for HIPAA
 - [Railway Docs: Dockerfiles](https://docs.railway.com/builds/dockerfiles) — Dockerfile requirements
 - [Railway Docs: Variables](https://docs.railway.com/variables) — Env vars, sealed variables, shared variables
