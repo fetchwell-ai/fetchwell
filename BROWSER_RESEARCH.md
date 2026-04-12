@@ -8,17 +8,17 @@
 
 ## Executive Summary
 
-> **UPDATE 2026-04-12 (v3):** Revised for MVP constraints: HIPAA risk accepted, manual 2FA entry, no session persistence needed, built-in credential management preferred, zip file output. Cloud-first required.
+> **UPDATE 2026-04-12 (v3):** Revised for MVP constraints: HIPAA risk accepted, manual 2FA entry, no session persistence needed, ephemeral credentials (entered each run, never persisted), zip file output. Cloud-first required.
 
 After evaluating 10+ browser automation tools across 7 criteria and applying MVP constraints, our **primary recommendation is Browserbase + Stagehand**, with **Skyvern as the upgrade path** when HIPAA compliance becomes required.
 
-For an MVP cloud-deployed MyChart agent with manual 2FA, built-in credential management, and zip file output:
+For an MVP cloud-deployed MyChart agent with manual 2FA, ephemeral credentials, and zip file output:
 
 | Layer | Tool | Why |
 |-------|------|-----|
-| Cloud browser | **Browserbase** | Most mature cloud browser infra, built-in credential management, Contexts for future session persistence, CAPTCHA solving, encrypted at rest |
+| Cloud browser | **Browserbase** | Most mature cloud browser infra, Contexts for future session persistence, CAPTCHA solving, encrypted at rest |
 | AI orchestration | **Stagehand** (by Browserbase) | `act`/`extract`/`observe`/`agent` primitives, native Claude support via Vercel AI SDK, 500k+ weekly downloads |
-| Credential storage | **Browserbase Contexts** | Built-in — no custom credential code needed |
+| Credentials | **Ephemeral (runtime only)** | User provides credentials each run; passed to Stagehand `act()` calls; never persisted |
 | File output | **Browserbase Downloads API** | Cloud-stored downloads, accessible via API; agent bundles into zip |
 | Future upgrade | **Skyvern** (self-hosted) | When HIPAA/BAA becomes required — already proven on Epic portals, SOC2 Type II |
 
@@ -28,7 +28,7 @@ The user's MVP constraints remove Skyvern's key advantages and favor Browserbase
 
 1. **HIPAA risk accepted for MVP.** Skyvern's main differentiator was HIPAA/SOC2/BAA. With compliance deferred, the self-hosted Docker overhead isn't justified. Browserbase's managed infrastructure is faster to ship.
 
-2. **Built-in credential management preferred.** Browserbase Contexts store credentials, cookies, and auth state natively — no custom code, no external vault integration needed. This directly matches the user's preference.
+2. **Ephemeral credentials — no storage needed.** User provides MyChart credentials at runtime each session. Credentials are passed directly to Stagehand's `act()` fill calls and never persisted anywhere. Browserbase Contexts remain available for future session/cookie persistence but are not used for credential storage.
 
 3. **Manual 2FA for MVP.** No need for email API integration or TOTP automation. The agent pauses, surfaces a live browser view, user enters the code. Browserbase supports this via session connect/debug URLs. Stagehand's `observe` primitive can detect the 2FA prompt and pause.
 
@@ -240,14 +240,14 @@ Stagehand (AI orchestration — act/extract/observe/agent primitives)
     |
 Browserbase (cloud-hosted Chromium — managed infrastructure)
     |
-Browserbase Contexts (built-in credential & cookie storage)
+Ephemeral credentials (user provides at runtime, never persisted)
     |
 Browserbase Downloads API → zip bundling → user download
 ```
 
 **Why this stack for MVP:**
 
-1. **Built-in credential management — no custom code.** Browserbase Contexts store credentials, cookies, localStorage, and auth state natively. Create a Context, store MyChart credentials in it, reuse across sessions. This is the user's stated preference: "built-in credential management rather than writing custom storage code."
+1. **Ephemeral credentials — simple and secure.** User provides MyChart username/password at runtime each session. Stagehand fills the login form via `act()`. Credentials are never stored in Contexts, vaults, or anywhere else. This eliminates credential storage as an attack surface entirely.
 
 2. **Manual 2FA with live browser view.** Browserbase provides session debug/connect URLs that surface a live view of the cloud browser. When the agent detects a 2FA prompt, it pauses and presents the URL to the user. User enters the 2FA code manually, agent continues. Stagehand's `observe` primitive can detect the 2FA input field and trigger the pause. No email API integration needed for MVP.
 
@@ -257,15 +257,15 @@ Browserbase Downloads API → zip bundling → user download
 
 5. **File downloads via API.** Browserbase stores downloaded files in cloud storage with timestamps, accessible via their Downloads API. The orchestration layer collects all downloaded files and bundles them into a zip for the user.
 
-6. **Session persistence available when needed.** Not required for MVP, but Browserbase Contexts already support it — cookies persist indefinitely until deleted or expired. When session persistence becomes a priority, it's a configuration change, not a migration.
+6. **Session persistence available when needed.** Not required for MVP, but Browserbase Contexts support cookie/session persistence for the future — cookies persist indefinitely until deleted or expired. When session persistence becomes a priority, it's a configuration change, not a migration. (Note: Contexts would be used for cookies/session state only, not credential storage.)
 
 7. **Most mature cloud browser infrastructure.** $40M Series B, trusted by Vercel/Perplexity/Clay, excellent docs, CAPTCHA solving, stealth mode, session recording for debugging.
 
 ### MVP 2FA Flow (Manual Entry)
 
 ```
-Agent starts → navigates to MyChart login
-    → enters credentials from Browserbase Context
+Agent starts → receives credentials from user at runtime
+    → navigates to MyChart login → fills credentials via Stagehand act()
     → MyChart sends email 2FA code
     → Agent detects 2FA prompt (Stagehand observe)
     → Agent PAUSES — surfaces Browserbase session debug URL to user
@@ -317,9 +317,9 @@ The migration is moderate effort — Skyvern and Stagehand both extend Playwrigh
 
 | Approach | Recommendation | Notes |
 |----------|---------------|-------|
-| **Browserbase Contexts** | **MVP choice** | Built-in. Store credentials + cookies in encrypted Context. No external vault needed. |
+| **Ephemeral (runtime input)** | **MVP choice** | User provides credentials each run. Passed to Stagehand `act()` fill calls. Never persisted anywhere. |
 | **1Password / Bitwarden** | Future (Skyvern) | For HIPAA phase when credentials need vault-grade management. |
-| **Cloud Secrets Manager** | Future (Skyvern) | AWS Secrets Manager / GCP Secret Manager for self-hosted deployment. |
+| **Browserbase Contexts** | Future (cookies only) | For session/cookie persistence when that phase arrives. Not for credential storage. |
 
 ### 2FA Strategy (Phased)
 
@@ -335,7 +335,7 @@ The migration is moderate effort — Skyvern and Stagehand both extend Playwrigh
 |------|------|-------|
 | Download individual files | Stagehand `act()` + Browserbase Downloads API | Each record type downloaded separately |
 | Retrieve from cloud storage | Browserbase Downloads API | Files accessible via API after session |
-| Bundle into zip | Application code (Python `zipfile` or Node `archiver`) | Runs in the orchestration layer, not the browser |
+| Bundle into zip | Application code (Node `archiver` or similar) | Runs in the orchestration layer, not the browser |
 | Deliver to user | Presigned URL or direct response | Time-limited download link |
 
 ### Health Data Privacy
@@ -353,11 +353,11 @@ The migration is moderate effort — Skyvern and Stagehand both extend Playwrigh
 
 ## Implementation Notes for the MVP Cloud MyChart Agent
 
-1. **Setup:** Create a Browserbase account and API key. Install Stagehand SDK. Create a Browserbase Context to store MyChart credentials.
+1. **Setup:** Create a Browserbase account and API key. Install Stagehand SDK.
 
-2. **Credential storage:** Store MyChart username/password in a Browserbase Context. The Context encrypts data at rest and makes it available to subsequent sessions without custom code.
+2. **Credentials (ephemeral):** User provides MyChart username/password at the start of each run (e.g., via a prompt, API request, or secure form). Credentials are held in memory only for the duration of the session and never written to Browserbase Contexts, disk, or any persistent store.
 
-3. **Login flow:** Create a Browserbase session with the credential Context. Stagehand navigates to MyChart login, enters credentials from the Context. When the 2FA prompt appears, `observe` detects it and the agent pauses, returning the session debug URL to the user.
+3. **Login flow:** Create a Browserbase session (no Context needed for MVP). Stagehand navigates to MyChart login, fills username/password via `act()` using the runtime-provided credentials. When the 2FA prompt appears, `observe` detects it and the agent pauses, returning the session debug URL to the user.
 
 4. **Manual 2FA:** User opens the debug URL in their browser, sees the live MyChart 2FA page, enters the code from their email. Agent detects successful auth and resumes.
 

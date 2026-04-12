@@ -1,0 +1,54 @@
+import { z, ZodSchema } from "zod";
+
+export interface BrowserProvider {
+  /** Navigate to a URL */
+  navigate(url: string): Promise<void>;
+
+  /** Perform a high-level action described in natural language (AI-powered) */
+  act(instruction: string): Promise<void>;
+
+  /** Extract structured data from the current page using a Zod schema */
+  extract<T>(schema: ZodSchema<T>, instruction: string): Promise<T>;
+
+  /** Observe the page and return elements matching a natural language description */
+  observe(instruction: string): Promise<ObserveResult[]>;
+
+  /** Take a screenshot, return base64-encoded image */
+  screenshot(): Promise<string>;
+
+  /** Fill a form field */
+  fill(selector: string, value: string): Promise<void>;
+
+  /** Wait for a condition: navigation, selector, or network idle */
+  waitFor(condition: WaitCondition): Promise<void>;
+
+  /** Get an interactive debug URL for human-in-the-loop (e.g. 2FA).
+   *  Returns null if the provider doesn't support it. */
+  getDebugUrl(): Promise<string | null>;
+
+  /** Get the current page URL */
+  url(): Promise<string>;
+
+  /** Get the current page title */
+  title(): Promise<string>;
+
+  /** Query a CSS selector, return element handle or null */
+  querySelector(selector: string): Promise<ElementHandle | null>;
+
+  /** Destroy the browser session and clean up resources */
+  close(): Promise<void>;
+}
+
+export interface ObserveResult {
+  selector: string;
+  description: string;
+}
+
+export type WaitCondition =
+  | { type: "navigation" }
+  | { type: "selector"; selector: string; timeout?: number }
+  | { type: "networkIdle"; timeout?: number };
+
+export interface ElementHandle {
+  textContent(): Promise<string | null>;
+}
