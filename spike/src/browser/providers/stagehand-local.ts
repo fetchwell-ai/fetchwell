@@ -1,4 +1,5 @@
-import { Stagehand } from "@browserbasehq/stagehand";
+import { Stagehand, AISdkClient } from "@browserbasehq/stagehand";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { ZodSchema } from "zod";
 import {
   BrowserProvider,
@@ -16,15 +17,19 @@ export class StagehandLocalProvider implements BrowserProvider {
   }
 
   async init(): Promise<void> {
+    // Use AISdkClient with @ai-sdk/anthropic to bypass Stagehand's model whitelist,
+    // allowing us to use current Claude models (claude-sonnet-4-6, etc.)
+    const anthropic = createAnthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY!,
+    });
+    const llmClient = new AISdkClient({
+      model: anthropic("claude-sonnet-4-6"),
+    });
+
     this.stagehand = new Stagehand({
       env: "LOCAL",
-      modelName: "claude-sonnet-4-6",
-      modelClientOptions: {
-        apiKey: process.env.ANTHROPIC_API_KEY!,
-      },
-      localBrowserLaunchOptions: {
-        headless: this.headless,
-      },
+      llmClient,
+      headless: this.headless,
       verbose: 1,
       disablePino: true,
     });
