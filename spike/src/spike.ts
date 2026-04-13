@@ -179,7 +179,7 @@ async function fetchGmailVerificationCode(timeoutMs = 5 * 60 * 1000): Promise<st
 
         for (const uid of newUids) {
           checkedUids.add(uid);
-          const msg = await client.fetchOne(String(uid), { source: true, envelope: true });
+          const msg = await client.fetchOne(String(uid), { source: true, envelope: true }) as any;
           if (!msg?.source) continue;
 
           // Only consider emails from the last 30 minutes
@@ -442,6 +442,32 @@ function sectionDone(dir: string, ext = ".md"): boolean {
   }
 }
 
+/**
+ * Navigate with one automatic retry on timeout/network errors.
+ * Waits 5 seconds before retrying.
+ */
+async function navigateWithRetry(browser: BrowserProvider, url: string): Promise<void> {
+  try {
+    await browser.navigate(url);
+  } catch (err: any) {
+    const isNetworkError = /ERR_TIMED_OUT|ERR_CONNECTION|net::ERR/i.test(err?.message ?? "");
+    if (!isNetworkError) throw err;
+    console.log(`   Navigation failed (${err.message?.slice(0, 60)}...) — retrying in 5s`);
+    await new Promise((r) => setTimeout(r, 5000));
+    await browser.navigate(url);
+  }
+}
+
+/** Check if the item at index i already has an HTML file saved in dir */
+function itemAlreadySaved(dir: string, index: number): boolean {
+  const prefix = String(index + 1).padStart(3, "0") + "_";
+  try {
+    return fs.existsSync(dir) && fs.readdirSync(dir).some((f) => f.startsWith(prefix) && f.endsWith(".html"));
+  } catch {
+    return false;
+  }
+}
+
 /** Minimal CSS injected into every saved document page */
 const DOC_CSS = `
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -583,6 +609,12 @@ async function extractLabsDocs(browser: BrowserProvider): Promise<void> {
 
   for (let i = 0; i < maxPanels; i++) {
     const link = panelLinks[i];
+
+    if (itemAlreadySaved(labsDir, i)) {
+      console.log(`   Doc ${i + 1}/${maxPanels}: already saved — skipping`);
+      continue;
+    }
+
     console.log(`   Doc ${i + 1}/${maxPanels}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
@@ -596,7 +628,7 @@ async function extractLabsDocs(browser: BrowserProvider): Promise<void> {
         .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
       const filename = `${String(i + 1).padStart(3, "0")}_${slugify(cleanDesc || link.description)}.html`;
       await savePageAsHtml(browser, labsDir, filename);
-      index.push({ filename, title, url: docUrl });
+      index.push({ filename, title: cleanDesc || link.description, url: docUrl });
       console.log(`      → saved ${filename}`);
     } catch (err: any) {
       console.log(`      → error: ${err?.message ?? err}`);
@@ -608,7 +640,7 @@ async function extractLabsDocs(browser: BrowserProvider): Promise<void> {
         );
       } catch {}
     }
-    await browser.navigate(listUrl);
+    await navigateWithRetry(browser, listUrl);
     await new Promise((r) => setTimeout(r, 1500));
   }
 
@@ -661,6 +693,12 @@ async function extractVisits(browser: BrowserProvider): Promise<void> {
 
   for (let i = 0; i < maxVisits; i++) {
     const link = visitLinks[i];
+
+    if (itemAlreadySaved(visitsDir, i)) {
+      console.log(`   Visit ${i + 1}/${maxVisits}: already saved — skipping`);
+      continue;
+    }
+
     console.log(`   Visit ${i + 1}/${maxVisits}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
@@ -696,7 +734,7 @@ async function extractVisits(browser: BrowserProvider): Promise<void> {
         fs.writeFileSync(path.join(visitsDir, `visit-${i + 1}-error.png`), Buffer.from(ss, "base64"));
       } catch {}
     }
-    await browser.navigate(listUrl);
+    await navigateWithRetry(browser, listUrl);
     await new Promise((r) => setTimeout(r, 1500));
   }
 
@@ -756,12 +794,10 @@ async function extractMessages(browser: BrowserProvider): Promise<void> {
   const msgsDir = path.join(OUTPUT_DIR, "messages");
   fs.mkdirSync(msgsDir, { recursive: true });
 
-  if (sectionDone(msgsDir, ".html") && process.env.FORCE_MSGS !== "1") {
-    const count = fs.readdirSync(msgsDir).filter((f) => f.endsWith(".html")).length;
-    console.log(
-      `Step 11: Messages already extracted (${count} .html files) — skipping (FORCE_MSGS=1 to re-run).`,
-    );
-    return;
+  // Complete skip only if FORCE_MSGS is not set — partial runs resume per-thread
+  if (process.env.FORCE_MSGS === "1") {
+    // Clear dir for full re-run
+    fs.readdirSync(msgsDir).forEach((f) => fs.unlinkSync(path.join(msgsDir, f)));
   }
 
   console.log("Step 11: Navigating to messages...");
@@ -791,6 +827,13 @@ async function extractMessages(browser: BrowserProvider): Promise<void> {
 
   for (let i = 0; i < maxThreads; i++) {
     const link = threadLinks[i];
+
+    // Resume support: skip threads already saved from a prior partial run
+    if (itemAlreadySaved(msgsDir, i)) {
+      console.log(`   Thread ${i + 1}/${maxThreads}: already saved — skipping`);
+      continue;
+    }
+
     console.log(`   Thread ${i + 1}/${maxThreads}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
@@ -826,7 +869,7 @@ async function extractMessages(browser: BrowserProvider): Promise<void> {
         fs.writeFileSync(path.join(msgsDir, `thread-${i + 1}-error.png`), Buffer.from(ss, "base64"));
       } catch {}
     }
-    await browser.navigate(listUrl);
+    await navigateWithRetry(browser, listUrl);
     await new Promise((r) => setTimeout(r, 1500));
   }
 
@@ -999,7 +1042,7 @@ async function main() {
           errors.push(msg);
         }
 
-        await browser.navigate(listUrl);
+        await navigateWithRetry(browser, listUrl);
         await new Promise((r) => setTimeout(r, 1500));
       }
 
