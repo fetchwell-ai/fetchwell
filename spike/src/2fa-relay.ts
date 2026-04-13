@@ -13,6 +13,7 @@ dotenv.config({ override: true });
 import { ImapFlow } from "imapflow";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { extractVerificationCode } from "./imap.js";
 
 const OUTPUT_DIR = path.join(import.meta.dirname, "..", "output");
 const neededFile = path.join(OUTPUT_DIR, "2fa.needed");
@@ -39,27 +40,19 @@ async function fetchLatestCode(): Promise<string | null> {
     await client.connect();
     await client.mailboxOpen("INBOX");
 
-    const all = await client.search({ all: true });
+    const allResult = await client.search({ all: true });
+    const all: number[] = Array.isArray(allResult) ? allResult : [];
     // Check the last 20 messages, newest first
-    for (const uid of [...all].slice(-20).reverse()) {
+    for (const uid of all.slice(-20).reverse()) {
       const msg = await client.fetchOne(String(uid), { source: true, envelope: true });
-      if (!msg?.source) continue;
+      if (!msg || !msg.source) continue;
 
       // Only emails from the last 5 minutes
       const emailDate = msg.envelope?.date ? new Date(msg.envelope.date) : null;
       if (emailDate && Date.now() - emailDate.getTime() > 5 * 60_000) continue;
 
-      const raw = (msg.source as Buffer).toString("utf8");
-      // Skip email headers to avoid matching routing IDs
-      const bodyStart = raw.indexOf("\r\n\r\n");
-      const body = bodyStart >= 0 ? raw.slice(bodyStart + 4) : raw;
-      const contextMatch =
-        body.match(/code[:\s]+(\d{6})/i) ??
-        body.match(/verification code is:?\s*(\d{6})/i) ??
-        body.match(/(\d{6})\s+This code will expire/i);
-      const match = contextMatch ?? body.match(/(?<![0-9])(\d{6})(?![0-9])/);
-      if (match) {
-        const code = match[1];
+      const code = extractVerificationCode((msg.source as Buffer).toString("utf8"));
+      if (code) {
         const subject = msg.envelope?.subject ?? "(no subject)";
         console.log(`[2fa-relay] Found code ${code} in email: "${subject}"`);
         await client.logout();

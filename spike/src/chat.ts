@@ -81,8 +81,9 @@ function loadRecords(): { context: string; stats: SectionStats[] } {
     const dir = path.join(OUTPUT_DIR, subdir);
     if (!fs.existsSync(dir)) continue;
 
-    const htmlFiles = fs.readdirSync(dir).filter((f) => f.endsWith(".html")).sort();
-    const jsonFiles = fs.readdirSync(dir).filter((f) => f.endsWith(".json") && f !== "index.json").sort();
+    const allFiles = fs.readdirSync(dir);
+    const htmlFiles = allFiles.filter((f) => f.endsWith(".html")).sort();
+    const jsonFiles = allFiles.filter((f) => f.endsWith(".json") && f !== "index.json").sort();
 
     // Prefer HTML files (richer content); fall back to JSON if no HTML yet
     const files = htmlFiles.length > 0 ? htmlFiles : jsonFiles;
@@ -123,6 +124,17 @@ function loadRecords(): { context: string; stats: SectionStats[] } {
 // ---------------------------------------------------------------------------
 function estimateTokens(text: string): number {
   return Math.round(text.length / 4);
+}
+
+async function streamToStdout(stream: AsyncIterable<any>): Promise<string> {
+  let text = "";
+  for await (const event of stream) {
+    if (event.type === "content_block_delta" && event.delta.type === "text_delta") {
+      process.stdout.write(event.delta.text);
+      text += event.delta.text;
+    }
+  }
+  return text;
 }
 
 // ---------------------------------------------------------------------------
@@ -186,23 +198,12 @@ async function main() {
   messages.push({ role: "user", content: SUMMARY_PROMPT });
   process.stdout.write(`${C}`);
 
-  const summaryStream = client.messages.stream({
+  const summaryText = await streamToStdout(client.messages.stream({
     model: "claude-sonnet-4-6",
     max_tokens: 1024,
     system: systemPrompt,
     messages,
-  });
-
-  let summaryText = "";
-  for await (const event of summaryStream) {
-    if (
-      event.type === "content_block_delta" &&
-      event.delta.type === "text_delta"
-    ) {
-      process.stdout.write(event.delta.text);
-      summaryText += event.delta.text;
-    }
-  }
+  }));
   process.stdout.write(R + "\n");
   messages.push({ role: "assistant", content: summaryText });
 
@@ -252,23 +253,12 @@ async function main() {
     process.stdout.write(`\n${B}${C}Claude:${R} `);
 
     try {
-      const stream = client.messages.stream({
+      const assistantText = await streamToStdout(client.messages.stream({
         model: "claude-sonnet-4-6",
         max_tokens: 4096,
         system: systemPrompt,
         messages,
-      });
-
-      let assistantText = "";
-      for await (const event of stream) {
-        if (
-          event.type === "content_block_delta" &&
-          event.delta.type === "text_delta"
-        ) {
-          process.stdout.write(event.delta.text);
-          assistantText += event.delta.text;
-        }
-      }
+      }));
       process.stdout.write("\n\n");
       messages.push({ role: "assistant", content: assistantText });
     } catch (err: any) {

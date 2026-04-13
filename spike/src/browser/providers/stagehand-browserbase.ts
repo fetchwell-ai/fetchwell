@@ -7,6 +7,7 @@ import {
   ObserveResult,
   ElementHandle,
 } from "../interface.js";
+import { getPageText, getPageHtml } from "../page-eval.js";
 
 export class StagehandBrowserbaseProvider implements BrowserProvider {
   private stagehand!: Stagehand;
@@ -95,25 +96,11 @@ export class StagehandBrowserbaseProvider implements BrowserProvider {
   }
 
   async pageText(): Promise<string> {
-    return this.stagehand.page.evaluate(() => {
-      const el =
-        document.querySelector("main") ??
-        document.querySelector("[role='main']") ??
-        document.querySelector("#mainContent") ??
-        document.body;
-      return (el as HTMLElement).innerText ?? "";
-    });
+    return this.stagehand.page.evaluate(getPageText);
   }
 
   async pageHtml(): Promise<string> {
-    return this.stagehand.page.evaluate(() => {
-      const el =
-        document.querySelector("main") ??
-        document.querySelector("[role='main']") ??
-        document.querySelector("#mainContent") ??
-        document.body;
-      return (el as HTMLElement).innerHTML ?? "";
-    });
+    return this.stagehand.page.evaluate(getPageHtml);
   }
 
   async close(): Promise<void> {
