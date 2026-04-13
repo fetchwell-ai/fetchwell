@@ -406,6 +406,33 @@ function slugify(s: string): string {
     .slice(0, 60) || "unknown";
 }
 
+/**
+ * Navigate to the MyChart home page and re-authenticate if the session has
+ * expired (detected by landing on the login/authentication URL).  Called
+ * before each extraction section so a long-running labs crawl doesn't leave
+ * subsequent sections hitting the login page.
+ */
+async function ensureLoggedIn(browser: BrowserProvider): Promise<void> {
+  const homeUrl = MYCHART_URL.replace(/\/Authentication.*$/, "");
+  await browser.navigate(homeUrl);
+  await new Promise((r) => setTimeout(r, 2000));
+  const url = await browser.url();
+  const expired =
+    url.toLowerCase().includes("authentication") ||
+    url.toLowerCase().includes("login");
+  if (!expired) return;
+
+  console.log("   Session expired — re-authenticating...");
+  clearSession();
+  await browser.navigate(MYCHART_URL);
+  await new Promise((r) => setTimeout(r, 2000));
+  await doLogin(browser, null);
+  if (browser.saveSession) {
+    saveSession(await browser.saveSession());
+    console.log("   Session re-saved.");
+  }
+}
+
 /** Check whether a section's output directory already has files of the given extension */
 function sectionDone(dir: string, ext = ".md"): boolean {
   try {
@@ -529,6 +556,7 @@ async function extractLabsDocs(browser: BrowserProvider): Promise<void> {
   }
 
   console.log("Step 6b: Navigating to lab/test results for full-document extraction...");
+  await ensureLoggedIn(browser);
   await browser.act(
     'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
     'labeled "Test Results", "Labs", "Lab Results", or similar.',
@@ -606,9 +634,10 @@ async function extractVisits(browser: BrowserProvider): Promise<void> {
   }
 
   console.log("Step 9: Navigating to visits...");
+  await ensureLoggedIn(browser);
   await browser.act(
-    'Navigate to the Visits section. Look for a link or menu item labeled ' +
-    '"Visits", "Past Visits", "Appointments", or similar in the main navigation.',
+    'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
+    '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.',
   );
   await new Promise((r) => setTimeout(r, 3000));
 
@@ -688,13 +717,9 @@ async function extractMedications(browser: BrowserProvider): Promise<void> {
   }
 
   console.log("Step 10: Navigating to medications...");
-  // Navigate to MyChart home first so relative nav works consistently
-  const homeUrl = MYCHART_URL.replace(/\/Authentication.*$/, "");
-  await browser.navigate(homeUrl);
-  await new Promise((r) => setTimeout(r, 2000));
-
+  await ensureLoggedIn(browser);
   await browser.act(
-    'Find and click the Medications link in the navigation menu or on the home page. ' +
+    'Click the Medications link in the navigation menu or on the home page. ' +
     'Look for text that says "Medications", "My Medications", or "Medication List".',
   );
   await new Promise((r) => setTimeout(r, 3000));
@@ -740,9 +765,10 @@ async function extractMessages(browser: BrowserProvider): Promise<void> {
   }
 
   console.log("Step 11: Navigating to messages...");
+  await ensureLoggedIn(browser);
   await browser.act(
-    'Navigate to the Messages or Inbox section. Look for a link or menu item labeled ' +
-    '"Messages", "Inbox", "MyChart Messages", or similar in the navigation.',
+    'Click the Messages or Inbox link in the navigation menu. ' +
+    'It may be labeled "Messages", "Inbox", or "MyChart Messages".',
   );
   await new Promise((r) => setTimeout(r, 3000));
 
