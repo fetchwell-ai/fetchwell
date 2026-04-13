@@ -6,6 +6,7 @@ import {
   WaitCondition,
   ObserveResult,
   ElementHandle,
+  SerializedSession,
 } from "../interface.js";
 
 export class StagehandLocalProvider implements BrowserProvider {
@@ -22,14 +23,26 @@ export class StagehandLocalProvider implements BrowserProvider {
     const anthropic = createAnthropic({
       apiKey: process.env.ANTHROPIC_API_KEY!,
     });
-    const llmClient = new AISdkClient({
-      model: anthropic("claude-sonnet-4-6"),
+    // Wrap the model to inject maxTokens — Stagehand's AISdkClient does not
+    // pass maxTokens to generateObject, causing a 4096-token truncation.
+    const baseModel = anthropic("claude-sonnet-4-6");
+    const model = new Proxy(baseModel, {
+      get(target, prop) {
+        if (prop === "doGenerate" || prop === "doStream") {
+          return (opts: any) =>
+            (target as any)[prop]({ maxTokens: 16384, ...opts });
+        }
+        const val = (target as any)[prop];
+        return typeof val === "function" ? val.bind(target) : val;
+      },
     });
+
+    const llmClient = new AISdkClient({ model });
 
     this.stagehand = new Stagehand({
       env: "LOCAL",
       llmClient,
-      headless: this.headless,
+      localBrowserLaunchOptions: { headless: this.headless },
       verbose: 1,
       disablePino: true,
     });
@@ -95,6 +108,15 @@ export class StagehandLocalProvider implements BrowserProvider {
     const el = await this.stagehand.page.$(selector);
     if (!el) return null;
     return { textContent: () => el.textContent() };
+  }
+
+  async saveSession(): Promise<SerializedSession> {
+    const cookies = await this.stagehand.page.context().cookies();
+    return { cookies: cookies as SerializedSession["cookies"], savedAt: new Date().toISOString() };
+  }
+
+  async loadSession(session: SerializedSession): Promise<void> {
+    await this.stagehand.page.context().addCookies(session.cookies as any);
   }
 
   async close(): Promise<void> {
