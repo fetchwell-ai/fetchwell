@@ -1,4 +1,4 @@
-# Handoff — Phase 1: Refactor + Stabilize
+# Handoff — Phase 1 Complete / Phase 2 Prep
 
 **Date:** 2026-04-13  
 **For:** Next Claude Code session
@@ -7,135 +7,97 @@
 
 ## What was accomplished in this session
 
-Phase 0 is complete and validated end-to-end against UCSF MyChart:
+Phase 1 (Refactor + Stabilize) is complete:
 
-- ✅ Login with Gmail auto-2FA (no manual intervention)
-- ✅ Session persistence (12h TTL, skips login on re-run)
-- ✅ Labs: 36 HTML documents extracted (including imaging reports, MRI/CT/ECG narrative)
-- ✅ Visits: 12 HTML + JSON documents
-- ✅ Medications: medications.html (6 active medications)
-- ✅ Messages: 13/28 HTML threads (fails at thread ~14 on network timeout — fix committed, not yet validated)
-- ✅ `output/index.html` browsable local index
-- ✅ `pnpm chat` interactive Claude session (loads all records, ~29K tokens, streaming Q&A)
-- ✅ `ensureLoggedIn()` session recovery before each section (validated catching 3 mid-run expiries)
-- ✅ `navigateWithRetry()` + per-item skip logic committed (not yet validated)
-
----
-
-## What to do next (Phase 1 priority order)
-
-### 1. Run a full validated extraction — BEFORE any refactor or code review
-
-**Do this first, before touching any code.** The messages fix (`navigateWithRetry` + per-thread resume) was committed but never validated end-to-end. Until a clean full run completes, we don't know if the fix holds.
-
-**What a passing run looks like:**
-- Labs: 36 HTML files in `output/labs/` (already saved — will skip)
-- Visits: 12 HTML files in `output/visits/` (already saved — will skip)
-- Medications: `output/medications/medications.html` (already saved — will skip)
-- Messages: **28 HTML files** in `output/messages/` — this is the one to watch. Currently only 13 exist. The run should resume from thread 14 and complete all 28 without crashing.
-- `output/index.html` — rebuilt at the end
-
-**How to run:**
-```bash
-cd spike
-pnpm spike
-```
-The existing session may be expired (12h TTL). If it is, the agent will re-authenticate automatically via Gmail. If Gmail 2FA fails or times out, drop the code manually:
-```bash
-echo "XXXXXX" > output/2fa.code
-```
-
-**Success criteria:** All 28 message HTML files exist in `output/messages/` and `output/index.html` was rebuilt. No crash. If any section fails, diagnose and fix before moving on.
-
-**If messages still fail at thread 13-14:** The network timeout issue may be transient (UCSF server throttling) or the retry logic may need tuning. Check the error, increase the retry delay in `navigateWithRetry`, or add a second retry.
+- ✅ Validation run confirmed: 36 labs, 12 visits, 1 medications, **28 messages** (full extraction clean)
+- ✅ Simplify pass already done last session (commit: "Simplify: extract shared helpers, remove N+1 dir reads, parallelize async calls")
+- ✅ Refactored `spike/` → root `src/` with proper module splits:
+  - `src/extract/{index,labs,visits,medications,messages,helpers}.ts`
+  - `src/{auth,session,chat,imap,schemas,package}.ts`
+  - `src/browser/` (unchanged from spike)
+- ✅ `pnpm extract` replaces `cd spike && pnpm spike`
+- ✅ `pnpm package` creates `mychart-YYYY-MM-DD.zip` with metadata.json (tested: 77 records, 0.7 MB)
+- ✅ Existing extracted records moved from `spike/output/` → `output/`
+- ✅ Zero TypeScript errors, committed
 
 ---
 
-### 2. Code review with /simplify
+## What to do next (Phase 2 priority order)
 
-Once the full run passes, run `/simplify` on `spike/src/` to get a code quality review. Apply reasonable suggestions. The codebase is a ~900-line monolith (`spike.ts`) that grew organically — some cleanup is warranted before the refactor.
+### 1. Delete spike/ (cleanup)
 
-Key areas to look at:
-- `spike.ts` is too long — should be split into extraction modules
-- Gmail IMAP polling could be cleaner
-- The `navigateWithRetry` and `itemAlreadySaved` helpers (just added) are good patterns to keep
-- `chat.ts` is relatively clean (~150 lines)
+The `spike/` directory is still present as a safety backup. Once you've verified `pnpm extract` completes a clean run from the new location, delete it:
 
-### 3. Refactor project structure (spike/ → root)
-
-The "spike" has become the real product. Remove the spike/ indirection:
-
-**Target layout:**
-```
-browser-agent-team/
-├── src/
-│   ├── extract/
-│   │   ├── index.ts          # Main extraction pipeline (was spike.ts)
-│   │   ├── labs.ts           # extractLabsDocs()
-│   │   ├── visits.ts         # extractVisits()
-│   │   ├── medications.ts    # extractMedications()
-│   │   └── messages.ts       # extractMessages()
-│   ├── chat.ts               # Interactive Claude chat (unchanged)
-│   ├── 2fa-relay.ts          # Standalone 2FA helper (unchanged)
-│   ├── schemas.ts            # Zod schemas (unchanged)
-│   ├── session.ts            # Session persistence helpers
-│   ├── auth.ts               # Login + 2FA + ensureLoggedIn
-│   └── browser/              # BrowserProvider (unchanged)
-├── package.json              # (was spike/package.json)
-├── tsconfig.json             # (was spike/tsconfig.json)
-├── .env.example
-├── output/                   # gitignored
-└── [docs]
+```bash
+rm -rf spike/
+git add -A
+git commit -m "Remove spike/ — refactored into root src/"
 ```
 
-**Steps:**
-1. Move `spike/src/` → `src/`
-2. Move `spike/package.json`, `tsconfig.json` → root
-3. Update all import paths
-4. Update `pnpm spike` → `pnpm extract` in package.json scripts
-5. Verify `pnpm extract` and `pnpm chat` still work
-6. Delete `spike/` directory
+**Note:** The new `pnpm extract` will write to `output/` at the root (not `spike/output/`). The session file is now at `output/session.json`. A fresh login will be needed on the first run since the spike session was already expired.
 
-### 4. Zip packaging (P1.3)
+### 2. Full validation run from new location
 
-Add `pnpm package` (or make it automatic at the end of `pnpm extract`) that creates:
+Run `pnpm extract` from the root (not from inside spike/):
+
+```bash
+pnpm extract
 ```
-mychart-2026-04-13.zip
-├── metadata.json    # timestamp, record counts, any errors
-├── labs/
-├── visits/
-├── medications/
-└── messages/
+
+**Passing criteria:**
+- All sections skip (already saved in output/)  
+- `output/index.html` is rebuilt
+- No crash
+
+If the session has expired, the agent will re-authenticate automatically.
+
+### 3. Phase 2 — Cloud Deployment (Browserbase)
+
+The groundwork is already done:
+- `StagehandBrowserbaseProvider` is implemented in `src/browser/providers/stagehand-browserbase.ts`
+- Set `BROWSER_PROVIDER=browserbase` in `.env`
+- Add `BROWSERBASE_API_KEY` and `BROWSERBASE_PROJECT_ID` to `.env`
+- No other code changes needed
+
+Next steps for Phase 2:
+- Deploy orchestrator to Railway (runs locally → runs in cloud)
+- Store session cookies in Browserbase Contexts for persistence
+- Pre-signed S3/R2 URL for zip delivery
+
+### 4. Phase 1.4 — Proper CLI (optional)
+
+```bash
+mychart-agent fetch       # pnpm extract
+mychart-agent chat        # pnpm chat
+mychart-agent package     # pnpm package
+mychart-agent fetch --section labs  # FORCE_LABS=1 pnpm extract
 ```
 
 ---
 
 ## Known issues / gotchas
 
-**Messages network timeout:**
-- The `navigate(listUrl)` call after visiting each thread sometimes times out with `net::ERR_TIMED_OUT`
-- Fix committed: `navigateWithRetry()` wraps navigate with one automatic retry; `itemAlreadySaved()` lets partial runs resume
-- Not yet validated — needs a full messages run to confirm
-
-**Gmail 2FA polling is slow on first poll:**
-- The INBOX can have many old "verification" or "MyChart" emails from prior sessions
-- First IMAP search fetches all matching UIDs, which can take 2-3 minutes if there are 30+ matching emails
-- `checkedUids` tracking prevents re-fetching on subsequent polls, so only the first poll is slow
-- Possible improvement: add a `since` date filter that's more coarse (e.g., last 24h) to limit initial result set
+**spike/ still present:**
+- It's safe to delete after a successful `pnpm extract` run from the root
+- Don't need to migrate anything — records are already in `output/`
 
 **Stagehand model whitelist:**
 - Do NOT update `@browserbasehq/stagehand` without checking if the new version has better model support
-- The `AISdkClient` + proxy pattern must be preserved until Stagehand natively supports `claude-sonnet-4-6`
+- The `AISdkClient` + proxy pattern in `src/browser/providers/stagehand-local.ts` must be preserved until Stagehand natively supports `claude-sonnet-4-6`
 
 **`@ai-sdk/anthropic` version:**
 - Must stay at `@1.x`. The `@3.x` package (AI SDK spec v2) is incompatible with Stagehand's internal `ai@4.x`
+
+**Gmail 2FA polling is slow on first poll:**
+- First IMAP search fetches all matching UIDs — can take 2-3 minutes if there are many old emails
+- `checkedUids` tracking prevents re-fetching on subsequent polls
 
 ---
 
 ## Files to read first in next session
 
-1. `PRD.md` — merged product + engineering doc (requirements, phases, stack, env vars)
-2. `ARCHITECTURE.md` — system architecture and BrowserProvider abstraction detail
-3. `spike/src/spike.ts` — main extraction pipeline (read before refactoring)
-4. `spike/src/chat.ts` — chat interface
-5. `spike/src/browser/interface.ts` — BrowserProvider interface
+1. `PRD.md` — merged product + engineering doc
+2. `ARCHITECTURE.md` — system architecture
+3. `src/extract/index.ts` — main orchestrator (was spike.ts)
+4. `src/extract/labs.ts` / `visits.ts` / `messages.ts` — section extractors
+5. `src/auth.ts` — login + 2FA logic
