@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "spike": "tsx src/spike.ts",
+    "chat": "tsx src/chat.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
+    "@anthropic-ai/sdk": "^0.88.0",
     "@browserbasehq/sdk": "^2.3.0",
     "@browserbasehq/stagehand": "^2.3.0",
     "dotenv": "^16.4.7",

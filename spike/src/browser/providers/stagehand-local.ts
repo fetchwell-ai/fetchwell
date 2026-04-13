@@ -55,15 +55,15 @@ export class StagehandLocalProvider implements BrowserProvider {
   }
 
   async act(instruction: string): Promise<void> {
-    await this.stagehand.page.act(instruction);
+    await this.stagehand.page.act({ action: instruction, iframes: true });
   }
 
   async extract<T>(schema: ZodSchema<T>, instruction: string): Promise<T> {
-    return this.stagehand.page.extract({ instruction, schema: schema as any });
+    return this.stagehand.page.extract({ instruction, schema: schema as any, iframes: true });
   }
 
   async observe(instruction: string): Promise<ObserveResult[]> {
-    return this.stagehand.page.observe(instruction);
+    return this.stagehand.page.observe({ instruction, iframes: true });
   }
 
   async screenshot(): Promise<string> {
@@ -108,6 +108,28 @@ export class StagehandLocalProvider implements BrowserProvider {
     const el = await this.stagehand.page.$(selector);
     if (!el) return null;
     return { textContent: () => el.textContent() };
+  }
+
+  async pageText(): Promise<string> {
+    return this.stagehand.page.evaluate(() => {
+      const el =
+        document.querySelector("main") ??
+        document.querySelector("[role='main']") ??
+        document.querySelector("#mainContent") ??
+        document.body;
+      return (el as HTMLElement).innerText ?? "";
+    });
+  }
+
+  async pageHtml(): Promise<string> {
+    return this.stagehand.page.evaluate(() => {
+      const el =
+        document.querySelector("main") ??
+        document.querySelector("[role='main']") ??
+        document.querySelector("#mainContent") ??
+        document.body;
+      return (el as HTMLElement).innerHTML ?? "";
+    });
   }
 
   async saveSession(): Promise<SerializedSession> {

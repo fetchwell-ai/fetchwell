@@ -91,6 +91,28 @@ export class PlaywrightLocalProvider implements BrowserProvider {
     return { textContent: () => el.textContent() };
   }
 
+  async pageText(): Promise<string> {
+    return this.page.evaluate(() => {
+      const el =
+        document.querySelector("main") ??
+        document.querySelector("[role='main']") ??
+        document.querySelector("#mainContent") ??
+        document.body;
+      return (el as HTMLElement).innerText ?? "";
+    });
+  }
+
+  async pageHtml(): Promise<string> {
+    return this.page.evaluate(() => {
+      const el =
+        document.querySelector("main") ??
+        document.querySelector("[role='main']") ??
+        document.querySelector("#mainContent") ??
+        document.body;
+      return (el as HTMLElement).innerHTML ?? "";
+    });
+  }
+
   async close(): Promise<void> {
     await this.browser.close();
   }

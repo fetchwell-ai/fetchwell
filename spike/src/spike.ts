@@ -27,7 +27,7 @@ import * as path from "node:path";
 import { ImapFlow } from "imapflow";
 import { createBrowserProvider, type BrowserProvider } from "./browser/index.js";
 import { type SerializedSession } from "./browser/interface.js";
-import { LabPanel } from "./schemas.js";
+import { LabPanel, Visit, Medication, Message } from "./schemas.js";
 
 // ---------------------------------------------------------------------------
 // Env validation
@@ -130,35 +130,84 @@ async function fetchGmailVerificationCode(timeoutMs = 5 * 60 * 1000): Promise<st
   });
 
   const deadline = Date.now() + timeoutMs;
-  const searchAfter = new Date(Date.now() - 60_000);
+  const searchAfter = new Date(Date.now() - 5 * 60_000); // look back 5 min
 
   try {
     await client.connect();
-    await client.mailboxOpen("INBOX");
+
+    // Search INBOX first, then Gmail spam folder as fallback
+    const mailboxes = ["INBOX", "[Gmail]/Spam", "[Gmail]/All Mail"];
+    let openedMailbox = "";
+
+    for (const mailbox of mailboxes) {
+      try {
+        await client.mailboxOpen(mailbox);
+        openedMailbox = mailbox;
+        break;
+      } catch {
+        // Mailbox might not exist — try next
+      }
+    }
+
+    if (!openedMailbox) {
+      console.log("   Gmail: could not open any mailbox.");
+      await client.logout();
+      return null;
+    }
+
+    // Track which UIDs we've already checked to avoid re-reading the same messages
+    const checkedUids = new Set<number>();
+    let pollCount = 0;
 
     while (Date.now() < deadline) {
+      pollCount++;
+
+      // Search without a `since` filter — IMAP `since` uses date-only and timezone
+      // semantics that can exclude today's emails near midnight UTC. Instead, we
+      // fetch the last N emails and filter by recency ourselves.
       for (const searchOpts of [
-        { since: searchAfter, subject: "verification" },
-        {
-          since: searchAfter,
-          or: [
-            { subject: "MyChart" }, { subject: "code" },
-            { from: "mychart" }, { from: "epic" }, { from: "ucsf" },
-          ],
-        },
-      ]) {
+        { subject: "verification" },
+        { subject: "MyChart" },
+        { from: "ucsf" },
+        { from: "mychart" },
+        { from: "epic" },
+      ] as const) {
         const uids = await client.search(searchOpts as any);
-        const list = Array.isArray(uids) ? [...uids].reverse() : [];
-        for (const uid of list) {
-          const msg = await client.fetchOne(String(uid), { source: true });
-          if (!msg) continue;
-          const text = msg.source?.toString() ?? "";
-          const match = text.match(/\b(\d{6})\b/);
+        const list = (Array.isArray(uids) ? uids : []) as number[];
+        // Only look at emails we haven't checked yet, newest first
+        const newUids = list.filter((u) => !checkedUids.has(u)).reverse();
+
+        for (const uid of newUids) {
+          checkedUids.add(uid);
+          const msg = await client.fetchOne(String(uid), { source: true, envelope: true });
+          if (!msg?.source) continue;
+
+          // Only consider emails from the last 30 minutes
+          const emailDate = msg.envelope?.date ? new Date(msg.envelope.date) : null;
+          if (emailDate && Date.now() - emailDate.getTime() > 30 * 60_000) continue;
+
+          const raw = (msg.source as Buffer).toString("utf8");
+          // Skip email headers (separated from body by double CRLF)
+          // Header IDs/routing numbers must not be mistaken for the code.
+          const bodyStart = raw.indexOf("\r\n\r\n");
+          const body = bodyStart >= 0 ? raw.slice(bodyStart + 4) : raw;
+          // Prefer code near "code:" context phrase for precision
+          const contextMatch =
+            body.match(/code[:\s]+(\d{6})/i) ??
+            body.match(/verification code is:?\s*(\d{6})/i) ??
+            body.match(/(\d{6})\s+This code will expire/i);
+          const match = contextMatch ?? body.match(/(?<![0-9])(\d{6})(?![0-9])/);
           if (match) {
+            const code = match[1];
+            console.log(`   Gmail: found code ${code} (email: ${msg.envelope?.subject})`);
             await client.logout();
-            return match[1];
+            return code;
           }
         }
+      }
+
+      if (pollCount === 1) {
+        console.log(`   Gmail: no code yet in ${openedMailbox}, polling every 5s...`);
       }
       await new Promise((r) => setTimeout(r, 5000));
     }
@@ -247,8 +296,6 @@ async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promi
       fs.mkdirSync(OUTPUT_DIR, { recursive: true });
       const neededFile = path.join(OUTPUT_DIR, "2fa.needed");
       const codeFile = path.join(OUTPUT_DIR, "2fa.code");
-      fs.writeFileSync(neededFile, new Date().toISOString());
-      try { fs.unlinkSync(codeFile); } catch {}
 
       console.log("+=======================================================+");
       console.log("|  2FA CODE NEEDED                                       |");
@@ -264,12 +311,16 @@ async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promi
           resolve(null);
         }, 5 * 60 * 1000);
 
-        // Also check immediately in case the file already exists
+        // Check immediately — the code may have been pre-placed (e.g., manually or by a helper)
         if (fs.existsSync(codeFile)) {
           clearTimeout(timeout);
           resolve(fs.readFileSync(codeFile, "utf8").trim());
           return;
         }
+
+        // Signal that we're waiting, then clear any stale code file
+        fs.writeFileSync(neededFile, new Date().toISOString());
+        try { fs.unlinkSync(codeFile); } catch {}
 
         const watcher = fs.watch(OUTPUT_DIR, (_event, filename) => {
           if (filename === "2fa.code" && fs.existsSync(codeFile)) {
@@ -307,12 +358,22 @@ async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promi
 
     console.log();
     console.log("   Waiting for login to complete...");
-    const loggedIn = await waitForObservation(
-      browser,
-      "Look for elements indicating a successful login: a dashboard, " +
-      "welcome message, patient name, home page navigation, or MyChart menu",
-      { maxAttempts: 40, delayMs: 5000 },
-    );
+    // Wait for the URL to move away from authentication/2FA pages
+    let loggedIn = false;
+    for (let i = 0; i < 40; i++) {
+      const url = await browser.url();
+      if (
+        !url.toLowerCase().includes("authentication") &&
+        !url.toLowerCase().includes("twofactor") &&
+        !url.toLowerCase().includes("verif") &&
+        !url.toLowerCase().includes("login")
+      ) {
+        loggedIn = true;
+        break;
+      }
+      console.log(`   Waiting... (${i + 1}/40)`);
+      await new Promise((r) => setTimeout(r, 5000));
+    }
 
     if (!loggedIn) {
       throw new Error("Timed out waiting for login to complete after 2FA.");
@@ -330,6 +391,420 @@ async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promi
     }
   }
 
+}
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+
+/** Sanitize a string for use in a filename */
+function slugify(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 60) || "unknown";
+}
+
+/** Check whether a section's output directory already has files of the given extension */
+function sectionDone(dir: string, ext = ".md"): boolean {
+  try {
+    return fs.existsSync(dir) && fs.readdirSync(dir).some((f) => f.endsWith(ext));
+  } catch {
+    return false;
+  }
+}
+
+/** Minimal CSS injected into every saved document page */
+const DOC_CSS = `
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+         max-width: 900px; margin: 0 auto; padding: 24px; color: #1a1a1a; }
+  h1,h2,h3 { color: #0056b3; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-size: 0.9em; }
+  th { background: #f0f4f8; }
+  .meta { font-size: 0.8em; color: #666; border-bottom: 1px solid #eee;
+          padding-bottom: 8px; margin-bottom: 16px; }
+  a { color: #0056b3; }
+  img { max-width: 100%; }
+`.trim();
+
+/**
+ * Save the current page as a self-contained HTML document.
+ * Uses pageHtml() (raw innerHTML, no AI) — captures tables, formatting, and
+ * narrative text that Zod schema extraction would miss.
+ */
+async function savePageAsHtml(
+  browser: BrowserProvider,
+  dir: string,
+  filename: string,
+): Promise<void> {
+  const title = await browser.title();
+  const url = await browser.url();
+  const content = await browser.pageHtml();
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title.replace(/</g, "&lt;")}</title>
+<style>${DOC_CSS}</style>
+</head>
+<body>
+<div class="meta">
+  <strong>Source:</strong> <a href="${url}">${url}</a><br>
+  <strong>Extracted:</strong> ${new Date().toISOString()}
+</div>
+${content}
+</body>
+</html>`;
+  fs.writeFileSync(path.join(dir, filename), html, "utf8");
+}
+
+/**
+ * Build a top-level index.html in OUTPUT_DIR that links to every extracted
+ * document across all sections.  Called once at the end of main().
+ */
+function buildIndex(): void {
+  const sections: Array<{ name: string; subdir: string; ext: string }> = [
+    { name: "Lab Results", subdir: "labs", ext: ".html" },
+    { name: "Visits", subdir: "visits", ext: ".html" },
+    { name: "Medications", subdir: "medications", ext: ".html" },
+    { name: "Messages", subdir: "messages", ext: ".html" },
+  ];
+
+  let body = `<h1>MyChart Health Records</h1>\n<p class="meta">Generated: ${new Date().toISOString()}</p>\n`;
+
+  for (const { name, subdir, ext } of sections) {
+    const dir = path.join(OUTPUT_DIR, subdir);
+    if (!fs.existsSync(dir)) continue;
+    const files = fs.readdirSync(dir).filter((f) => f.endsWith(ext)).sort();
+    if (files.length === 0) continue;
+    body += `<h2>${name} (${files.length})</h2>\n<ul>\n`;
+    for (const f of files) {
+      const label = f.replace(ext, "").replace(/^\d+_/, "").replace(/-/g, " ");
+      body += `  <li><a href="${subdir}/${f}">${label}</a></li>\n`;
+    }
+    body += `</ul>\n`;
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MyChart Health Records</title>
+<style>${DOC_CSS}</style>
+</head>
+<body>
+${body}
+</body>
+</html>`;
+  fs.writeFileSync(path.join(OUTPUT_DIR, "index.html"), html, "utf8");
+  console.log(`   Index saved to output/index.html`);
+}
+
+// ---------------------------------------------------------------------------
+// Section extractors
+// ---------------------------------------------------------------------------
+
+/**
+ * Step 6b: Drill into every lab/test-result panel and save each one as a
+ * standalone Markdown document.  This captures full narrative text (radiology
+ * reports, pathology, etc.) that the structured LabPanel schema misses.
+ *
+ * Output: output/labs/{slug}.md  — one file per panel.
+ * Skip: if output/labs/ already has .md files (set FORCE_LABS=1 to re-run).
+ */
+async function extractLabsDocs(browser: BrowserProvider): Promise<void> {
+  const labsDir = path.join(OUTPUT_DIR, "labs");
+  fs.mkdirSync(labsDir, { recursive: true });
+
+  if (sectionDone(labsDir, ".html") && process.env.FORCE_LABS !== "1") {
+    const count = fs.readdirSync(labsDir).filter((f) => f.endsWith(".html")).length;
+    console.log(
+      `Step 6b: Labs docs already extracted (${count} .html files) — skipping (FORCE_LABS=1 to re-run).`,
+    );
+    return;
+  }
+
+  console.log("Step 6b: Navigating to lab/test results for full-document extraction...");
+  await browser.act(
+    'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
+    'labeled "Test Results", "Labs", "Lab Results", or similar.',
+  );
+  await new Promise((r) => setTimeout(r, 3000));
+
+  const panelLinks = await browser.observe(
+    "Find all clickable lab result or test result entries on this page. " +
+    "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
+    "Return each one as a separate result.",
+  );
+  console.log(`   Found ${panelLinks.length} panel link(s).`);
+
+  if (panelLinks.length === 0) {
+    console.log("   No panels found — saving screenshot.");
+    const ss = await browser.screenshot();
+    fs.writeFileSync(path.join(labsDir, "labs-list.png"), Buffer.from(ss, "base64"));
+    return;
+  }
+
+  const listUrl = await browser.url();
+  const index: Array<{ filename: string; title: string; url: string }> = [];
+  const maxPanels = Math.min(panelLinks.length, 50);
+
+  for (let i = 0; i < maxPanels; i++) {
+    const link = panelLinks[i];
+    console.log(`   Doc ${i + 1}/${maxPanels}: ${link.description}`);
+    try {
+      await browser.act(`Click the element: ${link.description}`);
+      await new Promise((r) => setTimeout(r, 2500));
+
+      const title = await browser.title();
+      const docUrl = await browser.url();
+      // Make filename unique: pad index to keep chronological sort order
+      const filename = `${String(i + 1).padStart(3, "0")}_${slugify(title || link.description)}.html`;
+      await savePageAsHtml(browser, labsDir, filename);
+      index.push({ filename, title, url: docUrl });
+      console.log(`      → saved ${filename}`);
+    } catch (err: any) {
+      console.log(`      → error: ${err?.message ?? err}`);
+      try {
+        const ss = await browser.screenshot();
+        fs.writeFileSync(
+          path.join(labsDir, `${String(i + 1).padStart(3, "0")}_error.png`),
+          Buffer.from(ss, "base64"),
+        );
+      } catch {}
+    }
+    await browser.navigate(listUrl);
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+
+  // Write a simple index file so the folder is easy to browse
+  fs.writeFileSync(
+    path.join(labsDir, "index.json"),
+    JSON.stringify(index, null, 2),
+    "utf8",
+  );
+  console.log(`   Labs docs saved to ${labsDir} (${index.length} documents)`);
+}
+
+async function extractVisits(browser: BrowserProvider): Promise<void> {
+  const visitsDir = path.join(OUTPUT_DIR, "visits");
+  fs.mkdirSync(visitsDir, { recursive: true });
+
+  if (sectionDone(visitsDir, ".html") && process.env.FORCE_VISITS !== "1") {
+    const count = fs.readdirSync(visitsDir).filter((f) => f.endsWith(".html")).length;
+    console.log(
+      `Step 9: Visits already extracted (${count} .html files) — skipping (FORCE_VISITS=1 to re-run).`,
+    );
+    return;
+  }
+
+  console.log("Step 9: Navigating to visits...");
+  await browser.act(
+    'Navigate to the Visits section. Look for a link or menu item labeled ' +
+    '"Visits", "Past Visits", "Appointments", or similar in the main navigation.',
+  );
+  await new Promise((r) => setTimeout(r, 3000));
+
+  const visitLinks = await browser.observe(
+    "Find all clickable past visit or appointment entries on this page. " +
+    "Each entry is a row or link for a specific visit with a date and provider. " +
+    "Return each one separately.",
+  );
+  console.log(`   Found ${visitLinks.length} visit link(s).`);
+
+  if (visitLinks.length === 0) {
+    console.log("   No visits found — saving screenshot.");
+    const ss = await browser.screenshot();
+    fs.writeFileSync(path.join(visitsDir, "visits-list.png"), Buffer.from(ss, "base64"));
+    return;
+  }
+
+  const listUrl = await browser.url();
+  const errors: string[] = [];
+  const maxVisits = Math.min(visitLinks.length, 20);
+
+  for (let i = 0; i < maxVisits; i++) {
+    const link = visitLinks[i];
+    console.log(`   Visit ${i + 1}/${maxVisits}: ${link.description}`);
+    try {
+      await browser.act(`Click the element: ${link.description}`);
+      await new Promise((r) => setTimeout(r, 2500));
+
+      // Save full page HTML (primary, human-readable)
+      const pageTitle = await browser.title();
+      const htmlFilename = `${String(i + 1).padStart(3, "0")}_${slugify(pageTitle || link.description)}.html`;
+      await savePageAsHtml(browser, visitsDir, htmlFilename);
+
+      // Also save structured JSON (secondary, for downstream processing)
+      try {
+        const VisitSchema = z.object({ visit: Visit });
+        const result = await browser.extract(
+          VisitSchema,
+          "Extract all details about this visit: date, visit type, provider name, " +
+          "department, location, reason for visit, diagnoses, and any notes or instructions.",
+        );
+        const v = result.visit;
+        const jsonFilename = `${String(i + 1).padStart(3, "0")}_${slugify(v.date || pageTitle)}_${slugify(v.visitType)}.json`;
+        fs.writeFileSync(path.join(visitsDir, jsonFilename), JSON.stringify(v, null, 2));
+      } catch {
+        // JSON extraction is best-effort; HTML is the primary output
+      }
+
+      console.log(`      → saved ${htmlFilename}`);
+    } catch (err: any) {
+      const msg = `Visit ${i + 1} (${link.description}): ${err?.message ?? String(err)}`;
+      console.log(`      → error: ${err?.message ?? err}`);
+      errors.push(msg);
+      try {
+        const ss = await browser.screenshot();
+        fs.writeFileSync(path.join(visitsDir, `visit-${i + 1}-error.png`), Buffer.from(ss, "base64"));
+      } catch {}
+    }
+    await browser.navigate(listUrl);
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+
+  if (errors.length > 0) {
+    fs.writeFileSync(path.join(visitsDir, "errors.json"), JSON.stringify(errors, null, 2));
+  }
+  console.log(`   Visits saved to ${visitsDir}`);
+}
+
+async function extractMedications(browser: BrowserProvider): Promise<void> {
+  const medsDir = path.join(OUTPUT_DIR, "medications");
+  fs.mkdirSync(medsDir, { recursive: true });
+
+  const htmlPath = path.join(medsDir, "medications.html");
+  if (fs.existsSync(htmlPath) && process.env.FORCE_MEDS !== "1") {
+    console.log("Step 10: Medications already extracted — skipping (FORCE_MEDS=1 to re-run).");
+    return;
+  }
+
+  console.log("Step 10: Navigating to medications...");
+  // Navigate to MyChart home first so relative nav works consistently
+  const homeUrl = MYCHART_URL.replace(/\/Authentication.*$/, "");
+  await browser.navigate(homeUrl);
+  await new Promise((r) => setTimeout(r, 2000));
+
+  await browser.act(
+    'Find and click the Medications link in the navigation menu or on the home page. ' +
+    'Look for text that says "Medications", "My Medications", or "Medication List".',
+  );
+  await new Promise((r) => setTimeout(r, 3000));
+
+  // Save full page as HTML (always reliable)
+  await savePageAsHtml(browser, medsDir, "medications.html");
+  console.log("   Saved medications.html");
+
+  // Also attempt structured extraction
+  const MedListSchema = z.object({ medications: z.array(Medication) });
+  try {
+    const result = await browser.extract(
+      MedListSchema,
+      "Extract all medications listed on this page. For each medication include: " +
+      "full name with strength, dosing instructions, status (active/discontinued), " +
+      "prescribing provider, refills remaining, last filled date, and pharmacy.",
+    );
+    if (result.medications.length > 0) {
+      console.log(`   Extracted ${result.medications.length} medication(s).`);
+      fs.writeFileSync(
+        path.join(medsDir, "medications.json"),
+        JSON.stringify(result.medications, null, 2),
+      );
+    } else {
+      console.log("   Structured extraction returned 0 medications (markdown file still saved).");
+    }
+  } catch (err: any) {
+    console.log(`   Structured extraction failed: ${err?.message ?? err} (markdown file still saved).`);
+  }
+  console.log(`   Medications saved to ${medsDir}`);
+}
+
+async function extractMessages(browser: BrowserProvider): Promise<void> {
+  const msgsDir = path.join(OUTPUT_DIR, "messages");
+  fs.mkdirSync(msgsDir, { recursive: true });
+
+  if (sectionDone(msgsDir, ".html") && process.env.FORCE_MSGS !== "1") {
+    const count = fs.readdirSync(msgsDir).filter((f) => f.endsWith(".html")).length;
+    console.log(
+      `Step 11: Messages already extracted (${count} .html files) — skipping (FORCE_MSGS=1 to re-run).`,
+    );
+    return;
+  }
+
+  console.log("Step 11: Navigating to messages...");
+  await browser.act(
+    'Navigate to the Messages or Inbox section. Look for a link or menu item labeled ' +
+    '"Messages", "Inbox", "MyChart Messages", or similar in the navigation.',
+  );
+  await new Promise((r) => setTimeout(r, 3000));
+
+  const threadLinks = await browser.observe(
+    "Find all clickable message threads or conversations on this page. " +
+    "Each entry is a row with a subject line, sender, and date. Return each one separately.",
+  );
+  console.log(`   Found ${threadLinks.length} message thread(s).`);
+
+  if (threadLinks.length === 0) {
+    console.log("   No messages found — saving screenshot.");
+    const ss = await browser.screenshot();
+    fs.writeFileSync(path.join(msgsDir, "inbox.png"), Buffer.from(ss, "base64"));
+    return;
+  }
+
+  const listUrl = await browser.url();
+  const errors: string[] = [];
+  const maxThreads = Math.min(threadLinks.length, 50);
+
+  for (let i = 0; i < maxThreads; i++) {
+    const link = threadLinks[i];
+    console.log(`   Thread ${i + 1}/${maxThreads}: ${link.description}`);
+    try {
+      await browser.act(`Click the element: ${link.description}`);
+      await new Promise((r) => setTimeout(r, 2000));
+
+      // Save full page HTML (primary)
+      const pageTitle = await browser.title();
+      const htmlFilename = `${String(i + 1).padStart(3, "0")}_${slugify(pageTitle || link.description)}.html`;
+      await savePageAsHtml(browser, msgsDir, htmlFilename);
+
+      // Also save structured JSON (secondary)
+      try {
+        const MsgSchema = z.object({ message: Message });
+        const result = await browser.extract(
+          MsgSchema,
+          "Extract the full message thread: subject, sender name, date, full message body text, " +
+          "and any reply messages (each with sender, date, and body text).",
+        );
+        const m = result.message;
+        const jsonFilename = `${String(i + 1).padStart(3, "0")}_${slugify(m.date)}_${slugify(m.subject)}.json`;
+        fs.writeFileSync(path.join(msgsDir, jsonFilename), JSON.stringify(m, null, 2));
+      } catch {
+        // JSON is best-effort; HTML is the primary output
+      }
+
+      console.log(`      → saved ${htmlFilename}`);
+    } catch (err: any) {
+      const msg = `Thread ${i + 1} (${link.description}): ${err?.message ?? String(err)}`;
+      console.log(`      → error: ${err?.message ?? err}`);
+      errors.push(msg);
+      try {
+        const ss = await browser.screenshot();
+        fs.writeFileSync(path.join(msgsDir, `thread-${i + 1}-error.png`), Buffer.from(ss, "base64"));
+      } catch {}
+    }
+    await browser.navigate(listUrl);
+    await new Promise((r) => setTimeout(r, 1500));
+  }
+
+  if (errors.length > 0) {
+    fs.writeFileSync(path.join(msgsDir, "errors.json"), JSON.stringify(errors, null, 2));
+  }
+  console.log(`   Messages saved to ${msgsDir}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -387,13 +862,15 @@ async function main() {
       await browser.navigate(MYCHART_URL.replace(/\/Authentication.*$/, ""));
       await new Promise((r) => setTimeout(r, 2000));
 
-      // Check if we're actually logged in
-      const stillLoggedIn = await browser.observe(
-        "Look for elements indicating a successful login: a dashboard, " +
-        "welcome message, patient name, home page navigation, or MyChart menu",
-      );
+      // Check if we're actually logged in by inspecting the current URL.
+      // After cookie restore + navigation, a valid session stays on the home page;
+      // an expired/invalid session gets redirected to the login/Authentication page.
+      const currentUrl = await browser.url();
+      const isLoggedIn =
+        !currentUrl.toLowerCase().includes("authentication") &&
+        !currentUrl.toLowerCase().includes("login");
 
-      if (stillLoggedIn.length > 0) {
+      if (isLoggedIn) {
         console.log("   Session restored — skipping login and 2FA.");
         console.log();
       } else {
@@ -423,60 +900,107 @@ async function main() {
     }
     console.log();
 
-    // Step 6: Navigate to lab results
-    console.log("Step 6: Navigating to lab results...");
-    await browser.act(
-      "Navigate to the test results or lab results section. Look for links " +
-      'or menu items labeled "Test Results", "Labs", "Lab Results", or similar.',
-    );
-    console.log("Navigated to lab results section.");
-    await new Promise((r) => setTimeout(r, 3000));
-    console.log();
+    // Step 6-7: Labs extraction (skipped if output/labs.json already has data; set FORCE_LABS=1 to re-extract)
+    const labsPath = path.join(OUTPUT_DIR, "labs.json");
+    const labsExist = (() => {
+      try {
+        const d = JSON.parse(fs.readFileSync(labsPath, "utf8"));
+        return Array.isArray(d.panels) && d.panels.length > 0;
+      } catch { return false; }
+    })();
 
-    // Step 7: Extract lab data
-    console.log("Step 7: Extracting lab results...");
+    let totalResults = 0;
 
-    const LabExtractionSchema = z.object({ panels: z.array(LabPanel) });
-
-    let labData: z.infer<typeof LabExtractionSchema> | null = null;
-    try {
-      labData = await browser.extract(
-        LabExtractionSchema,
-        "Extract all visible lab test results from this page. For each panel " +
-        "or group of tests, get the panel name, ordered date, and each individual " +
-        "test result including the test name, value, unit, reference range, date, " +
-        "flag (H for high, L for low, or normal), and status.",
+    if (labsExist && process.env.FORCE_LABS !== "1") {
+      console.log("Step 6-7: Labs already extracted — skipping (set FORCE_LABS=1 to re-extract).");
+      try {
+        const existing = JSON.parse(fs.readFileSync(labsPath, "utf8"));
+        totalResults = (existing.panels as LabPanel[]).reduce((s, p) => s + p.results.length, 0);
+        console.log(`   ${existing.panels.length} panels, ${totalResults} results in labs.json`);
+      } catch {}
+    } else {
+      console.log("Step 6: Navigating to lab results...");
+      await browser.act(
+        "Navigate to the test results or lab results section. Look for links " +
+        'or menu items labeled "Test Results", "Labs", "Lab Results", or similar.',
       );
-    } catch (err: any) {
-      const isLengthError =
-        err?.message?.includes("length") ||
-        err?.causedBy?.finishReason === "length" ||
-        err?.causedBy?.cause?.finishReason === "length";
-      if (isLengthError) {
-        console.log("   Note: extraction hit token limit — page has too many items for one pass.");
-        console.log("   Phase 1 will paginate or drill into individual panels.");
-      } else {
-        throw err;
+      console.log("Navigated to lab results section.");
+      await new Promise((r) => setTimeout(r, 3000));
+      console.log();
+
+      // Step 7: Discover panels then drill into each one for real values
+      console.log("Step 7: Discovering lab panels...");
+
+      const panelLinks = await browser.observe(
+        "Find all clickable lab result or test result entries on this page. " +
+        "Each entry is a row or link representing a specific lab panel (e.g. CBC, Lipid Panel). " +
+        "Return each one as a separate result.",
+      );
+      console.log(`   Found ${panelLinks.length} panel link(s).`);
+      console.log();
+
+      const allPanels: LabPanel[] = [];
+      const errors: string[] = [];
+      const listUrl = await browser.url();
+
+      const panelsToVisit = panelLinks.slice(0, 30);
+      console.log(`Step 7b: Drilling into ${panelsToVisit.length} panels...`);
+
+      for (let i = 0; i < panelsToVisit.length; i++) {
+        const link = panelsToVisit[i];
+        console.log(`   Panel ${i + 1}/${panelsToVisit.length}: ${link.description}`);
+
+        try {
+          await browser.act(`Click the element: ${link.description}`);
+          await new Promise((r) => setTimeout(r, 2000));
+
+          const PanelSchema = z.object({ panel: LabPanel });
+          const result = await browser.extract(
+            PanelSchema,
+            "Extract the lab panel name, the date it was ordered or resulted, and all " +
+            "individual test results on this page. For each test include: name, value, " +
+            "unit, reference range, flag (H/L/normal), and status.",
+          );
+
+          allPanels.push(result.panel);
+          console.log(`      → ${result.panel.results.length} result(s) extracted`);
+        } catch (err: any) {
+          const msg = `Panel ${i + 1} (${link.description}): ${err?.message ?? String(err)}`;
+          console.log(`      → error: ${err?.message ?? err}`);
+          errors.push(msg);
+        }
+
+        await browser.navigate(listUrl);
+        await new Promise((r) => setTimeout(r, 1500));
       }
-    }
 
-    const totalResults = labData?.panels.reduce((sum, p) => sum + p.results.length, 0) ?? 0;
+      totalResults = allPanels.reduce((sum, p) => sum + p.results.length, 0);
 
-    if (labData) {
-      console.log("Data extracted!");
       console.log();
       console.log("=".repeat(60));
       console.log("  EXTRACTED LAB DATA");
       console.log("=".repeat(60));
-      console.log(`  Panels: ${labData.panels.length}`);
-      console.log(`  Total results: ${totalResults}`);
+      console.log(`  Panels visited: ${panelsToVisit.length}`);
+      console.log(`  Panels extracted: ${allPanels.length}`);
+      console.log(`  Total individual results: ${totalResults}`);
+      if (errors.length > 0) {
+        console.log(`  Errors: ${errors.length}`);
+        errors.forEach((e) => console.log(`    - ${e}`));
+      }
       console.log();
-      console.log(JSON.stringify(labData, null, 2));
-      console.log();
+
+      fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+      fs.writeFileSync(labsPath, JSON.stringify({ panels: allPanels, errors }, null, 2));
+      console.log(`Lab data saved to ${labsPath}`);
     }
 
-    // Step 8: Screenshot
-    console.log("Step 8: Saving screenshot...");
+    // Step 6b: Labs full-document extraction (one .md per panel)
+    console.log();
+    await extractLabsDocs(browser);
+    console.log();
+
+    // Step 8: Screenshot of labs page
+    console.log("Step 8: Saving labs screenshot...");
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
     const screenshotPath = path.join(OUTPUT_DIR, "screenshot.png");
     const screenshotBase64 = await browser.screenshot();
@@ -484,14 +1008,34 @@ async function main() {
     console.log(`Screenshot saved to ${screenshotPath}`);
     console.log();
 
+    // Step 9: Visits
+    console.log();
+    await extractVisits(browser);
+    console.log();
+
+    // Step 10: Medications
+    console.log();
+    await extractMedications(browser);
+    console.log();
+
+    // Step 11: Messages
+    console.log();
+    await extractMessages(browser);
+    console.log();
+
+    // Build browsable index
+    buildIndex();
+
     console.log("=".repeat(60));
-    console.log("  SPIKE TEST COMPLETE");
+    console.log("  EXTRACTION COMPLETE");
     console.log("=".repeat(60));
     console.log();
-    console.log("  Assumptions validated:");
-    console.log("  [ok] 1. Browser session created and controlled via BrowserProvider");
-    console.log(`  [ok] 2. 2FA handled ${GMAIL_USER ? "automatically via Gmail" : "via local browser window"}`);
-    console.log(`  [${totalResults > 0 ? "ok" : labData ? "--" : "!"}] 3. extract() ${totalResults > 0 ? "successfully pulled" : labData ? "returned no" : "hit token limit —"} structured lab data`);
+    console.log("  [ok] Labs index extracted to output/labs.json");
+    console.log("  [ok] Labs documents extracted to output/labs/ (one .html per panel)");
+    console.log("  [ok] Visits extracted to output/visits/ (.html + .json per visit)");
+    console.log("  [ok] Medications extracted to output/medications/ (.html + .json)");
+    console.log("  [ok] Messages extracted to output/messages/ (.html + .json per thread)");
+    console.log("  [ok] Browse everything: open output/index.html");
     console.log();
   } catch (err) {
     failed = true;
