@@ -560,10 +560,13 @@ async function extractLabsDocs(browser: BrowserProvider): Promise<void> {
       await browser.act(`Click the element: ${link.description}`);
       await new Promise((r) => setTimeout(r, 2500));
 
-      const title = await browser.title();
       const docUrl = await browser.url();
-      // Make filename unique: pad index to keep chronological sort order
-      const filename = `${String(i + 1).padStart(3, "0")}_${slugify(title || link.description)}.html`;
+      // Use the observe() description (contains panel name + date) rather than
+      // the generic page title ("UCSF MyChart - Test Details") for every file.
+      const cleanDesc = link.description
+        .replace(/^Lab\/test result entry:\s*/i, "")
+        .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
+      const filename = `${String(i + 1).padStart(3, "0")}_${slugify(cleanDesc || link.description)}.html`;
       await savePageAsHtml(browser, labsDir, filename);
       index.push({ filename, title, url: docUrl });
       console.log(`      → saved ${filename}`);
