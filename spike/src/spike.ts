@@ -55,8 +55,10 @@ if (providerType === "browserbase") {
 }
 
 const MYCHART_URL = process.env.MYCHART_URL!;
-const GMAIL_USER = process.env.GMAIL_USER;
-const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD;
+// Only use Gmail if credentials look real (not the example placeholder)
+const GMAIL_USER = process.env.GMAIL_USER?.includes("@") && process.env.GMAIL_USER !== "you@gmail.com"
+  ? process.env.GMAIL_USER : undefined;
+const GMAIL_APP_PASSWORD = GMAIL_USER ? process.env.GMAIL_APP_PASSWORD : undefined;
 
 const OUTPUT_DIR = path.join(import.meta.dirname, "..", "output");
 const SESSION_FILE = path.join(OUTPUT_DIR, "session.json");
@@ -173,7 +175,7 @@ async function fetchGmailVerificationCode(timeoutMs = 5 * 60 * 1000): Promise<st
 // ---------------------------------------------------------------------------
 // Login + 2FA
 // ---------------------------------------------------------------------------
-async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promise<boolean> {
+async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promise<void> {
   const username = process.env.MYCHART_USERNAME ?? await prompt("   Enter MyChart username: ");
   const password = process.env.MYCHART_PASSWORD ?? await prompt("   Enter MyChart password: ");
   console.log();
@@ -235,20 +237,71 @@ async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promi
         console.log("   Submitted.");
         enteredCode = true;
       } else {
-        console.log("   Could not find code in Gmail. Falling back to manual entry...");
+        console.log("   Could not find code in Gmail. Falling back to file-based entry...");
       }
     }
 
     if (!enteredCode) {
-      if (debugUrl) {
-        console.log("+---------------------------------------------------------+");
-        console.log("|  Open the DEBUG URL above and complete 2FA there.        |");
-        console.log("+---------------------------------------------------------+");
+      // File-based 2FA: write output/2fa.needed, watch output/2fa.code for the code.
+      // To provide the code: echo "123456" > output/2fa.code
+      fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+      const neededFile = path.join(OUTPUT_DIR, "2fa.needed");
+      const codeFile = path.join(OUTPUT_DIR, "2fa.code");
+      fs.writeFileSync(neededFile, new Date().toISOString());
+      try { fs.unlinkSync(codeFile); } catch {}
+
+      console.log("+=======================================================+");
+      console.log("|  2FA CODE NEEDED                                       |");
+      console.log("|  Provide the code by running:                          |");
+      console.log(`|    echo "XXXXXX" > output/2fa.code                     |`);
+      console.log(`|  Watching: ${codeFile}`);
+      console.log("+=======================================================+");
+
+      // Use fs.watch (event-driven) + a 5-minute timeout
+      const code = await new Promise<string | null>((resolve) => {
+        const timeout = setTimeout(() => {
+          watcher.close();
+          resolve(null);
+        }, 5 * 60 * 1000);
+
+        // Also check immediately in case the file already exists
+        if (fs.existsSync(codeFile)) {
+          clearTimeout(timeout);
+          resolve(fs.readFileSync(codeFile, "utf8").trim());
+          return;
+        }
+
+        const watcher = fs.watch(OUTPUT_DIR, (_event, filename) => {
+          if (filename === "2fa.code" && fs.existsSync(codeFile)) {
+            clearTimeout(timeout);
+            watcher.close();
+            resolve(fs.readFileSync(codeFile, "utf8").trim());
+          }
+        });
+
+        // Also poll every 10s as a fallback (fs.watch can be unreliable on some systems)
+        const poll = setInterval(() => {
+          if (fs.existsSync(codeFile)) {
+            clearTimeout(timeout);
+            clearInterval(poll);
+            watcher.close();
+            resolve(fs.readFileSync(codeFile, "utf8").trim());
+          }
+        }, 10_000);
+      });
+
+      try { fs.unlinkSync(codeFile); } catch {}
+      try { fs.unlinkSync(neededFile); } catch {}
+
+      if (code) {
+        console.log(`   Got code: ${code}`);
+        await browser.act(`Type "${code}" into the verification code or security code input field`);
+        console.log("   Code entered.");
+        await browser.act("Click the Submit, Verify, or Continue button to submit the verification code");
+        console.log("   Submitted.");
+        enteredCode = true;
       } else {
-        console.log("+---------------------------------------------------------+");
-        console.log("|  A browser window is open on your screen.                |");
-        console.log("|  Enter the 2FA/verification code there directly.         |");
-        console.log("+---------------------------------------------------------+");
+        console.log("   No code received. Continuing to poll for browser-based entry...");
       }
     }
 
@@ -262,8 +315,7 @@ async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promi
     );
 
     if (!loggedIn) {
-      console.error("Timed out waiting for login to complete after 2FA.");
-      return false;
+      throw new Error("Timed out waiting for login to complete after 2FA.");
     }
     console.log("2FA completed — logged in!");
   } else {
@@ -278,7 +330,6 @@ async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promi
     }
   }
 
-  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -353,8 +404,7 @@ async function main() {
         console.log();
         console.log("Step 3: Login");
         console.log("   Your credentials are entered locally and sent directly to MyChart.");
-        const ok = await doLogin(browser, debugUrl);
-        if (!ok) return;
+        await doLogin(browser, debugUrl);
         if (browser.saveSession) {
           saveSession(await browser.saveSession());
           console.log("   Session saved to output/session.json.");
@@ -365,8 +415,7 @@ async function main() {
       console.log("   Your credentials are entered locally and sent directly to MyChart.");
       console.log("   They are NOT stored or logged anywhere.");
       console.log();
-      const ok = await doLogin(browser, debugUrl);
-      if (!ok) return;
+      await doLogin(browser, debugUrl);
       if (browser.saveSession) {
         saveSession(await browser.saveSession());
         console.log("   Session saved to output/session.json (login + 2FA skipped next run).");
