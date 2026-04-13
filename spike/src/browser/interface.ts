@@ -35,8 +35,28 @@ export interface BrowserProvider {
   /** Query a CSS selector, return element handle or null */
   querySelector(selector: string): Promise<ElementHandle | null>;
 
+  /** Save browser cookies/storage to a serializable object for session persistence */
+  saveSession?(): Promise<SerializedSession>;
+
+  /** Restore a previously saved session */
+  loadSession?(session: SerializedSession): Promise<void>;
+
   /** Destroy the browser session and clean up resources */
   close(): Promise<void>;
+}
+
+export interface SerializedSession {
+  cookies: Array<{
+    name: string;
+    value: string;
+    domain: string;
+    path: string;
+    expires: number;
+    httpOnly: boolean;
+    secure: boolean;
+    sameSite?: string;
+  }>;
+  savedAt: string;
 }
 
 export interface ObserveResult {
