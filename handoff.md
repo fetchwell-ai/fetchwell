@@ -24,9 +24,36 @@ Phase 0 is complete and validated end-to-end against UCSF MyChart:
 
 ## What to do next (Phase 1 priority order)
 
-### 1. Code review with /simplify
+### 1. Run a full validated extraction — BEFORE any refactor or code review
 
-Run `/simplify` on `spike/src/` to get a code quality review. Apply reasonable suggestions. The codebase is a ~900-line monolith (`spike.ts`) that grew organically — some cleanup and decomposition is warranted before the refactor.
+**Do this first, before touching any code.** The messages fix (`navigateWithRetry` + per-thread resume) was committed but never validated end-to-end. Until a clean full run completes, we don't know if the fix holds.
+
+**What a passing run looks like:**
+- Labs: 36 HTML files in `output/labs/` (already saved — will skip)
+- Visits: 12 HTML files in `output/visits/` (already saved — will skip)
+- Medications: `output/medications/medications.html` (already saved — will skip)
+- Messages: **28 HTML files** in `output/messages/` — this is the one to watch. Currently only 13 exist. The run should resume from thread 14 and complete all 28 without crashing.
+- `output/index.html` — rebuilt at the end
+
+**How to run:**
+```bash
+cd spike
+pnpm spike
+```
+The existing session may be expired (12h TTL). If it is, the agent will re-authenticate automatically via Gmail. If Gmail 2FA fails or times out, drop the code manually:
+```bash
+echo "XXXXXX" > output/2fa.code
+```
+
+**Success criteria:** All 28 message HTML files exist in `output/messages/` and `output/index.html` was rebuilt. No crash. If any section fails, diagnose and fix before moving on.
+
+**If messages still fail at thread 13-14:** The network timeout issue may be transient (UCSF server throttling) or the retry logic may need tuning. Check the error, increase the retry delay in `navigateWithRetry`, or add a second retry.
+
+---
+
+### 2. Code review with /simplify
+
+Once the full run passes, run `/simplify` on `spike/src/` to get a code quality review. Apply reasonable suggestions. The codebase is a ~900-line monolith (`spike.ts`) that grew organically — some cleanup is warranted before the refactor.
 
 Key areas to look at:
 - `spike.ts` is too long — should be split into extraction modules
@@ -34,7 +61,7 @@ Key areas to look at:
 - The `navigateWithRetry` and `itemAlreadySaved` helpers (just added) are good patterns to keep
 - `chat.ts` is relatively clean (~150 lines)
 
-### 2. Refactor project structure (spike/ → root)
+### 3. Refactor project structure (spike/ → root)
 
 The "spike" has become the real product. Remove the spike/ indirection:
 
@@ -68,10 +95,6 @@ browser-agent-team/
 4. Update `pnpm spike` → `pnpm extract` in package.json scripts
 5. Verify `pnpm extract` and `pnpm chat` still work
 6. Delete `spike/` directory
-
-### 3. Validate messages fix
-
-The messages network-timeout fix (`navigateWithRetry` + per-thread resume) was committed but never validated end-to-end. After the refactor, run a full `pnpm extract` with an existing session to verify all 28 message threads are saved.
 
 ### 4. Zip packaging (P1.3)
 
