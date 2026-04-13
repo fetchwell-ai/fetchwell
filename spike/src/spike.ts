@@ -28,6 +28,7 @@ import { ImapFlow } from "imapflow";
 import { createBrowserProvider, type BrowserProvider } from "./browser/index.js";
 import { type SerializedSession } from "./browser/interface.js";
 import { LabPanel, Visit, Medication, Message } from "./schemas.js";
+import { extractVerificationCode } from "./imap.js";
 
 // ---------------------------------------------------------------------------
 // Env validation
@@ -68,11 +69,9 @@ const SESSION_FILE = path.join(OUTPUT_DIR, "session.json");
 // ---------------------------------------------------------------------------
 function loadSavedSession(): SerializedSession | null {
   try {
-    if (!fs.existsSync(SESSION_FILE)) return null;
     const data = JSON.parse(fs.readFileSync(SESSION_FILE, "utf8")) as SerializedSession;
     const ageMs = Date.now() - new Date(data.savedAt).getTime();
-    const maxAgeMs = 12 * 60 * 60 * 1000; // 12 hours
-    if (ageMs > maxAgeMs) {
+    if (ageMs > 12 * 60 * 60 * 1000) {
       console.log("   Saved session expired (>12h). Will log in fresh.");
       fs.unlinkSync(SESSION_FILE);
       return null;
@@ -90,6 +89,16 @@ function saveSession(session: SerializedSession) {
 
 function clearSession() {
   try { fs.unlinkSync(SESSION_FILE); } catch {}
+}
+
+function isAuthPage(url: string): boolean {
+  const u = url.toLowerCase();
+  return (
+    u.includes("authentication") ||
+    u.includes("twofactor") ||
+    u.includes("verif") ||
+    u.includes("login")
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -186,19 +195,8 @@ async function fetchGmailVerificationCode(timeoutMs = 5 * 60 * 1000): Promise<st
           const emailDate = msg.envelope?.date ? new Date(msg.envelope.date) : null;
           if (emailDate && Date.now() - emailDate.getTime() > 30 * 60_000) continue;
 
-          const raw = (msg.source as Buffer).toString("utf8");
-          // Skip email headers (separated from body by double CRLF)
-          // Header IDs/routing numbers must not be mistaken for the code.
-          const bodyStart = raw.indexOf("\r\n\r\n");
-          const body = bodyStart >= 0 ? raw.slice(bodyStart + 4) : raw;
-          // Prefer code near "code:" context phrase for precision
-          const contextMatch =
-            body.match(/code[:\s]+(\d{6})/i) ??
-            body.match(/verification code is:?\s*(\d{6})/i) ??
-            body.match(/(\d{6})\s+This code will expire/i);
-          const match = contextMatch ?? body.match(/(?<![0-9])(\d{6})(?![0-9])/);
-          if (match) {
-            const code = match[1];
+          const code = extractVerificationCode((msg.source as Buffer).toString("utf8"));
+          if (code) {
             console.log(`   Gmail: found code ${code} (email: ${msg.envelope?.subject})`);
             await client.logout();
             return code;
@@ -362,12 +360,7 @@ async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promi
     let loggedIn = false;
     for (let i = 0; i < 40; i++) {
       const url = await browser.url();
-      if (
-        !url.toLowerCase().includes("authentication") &&
-        !url.toLowerCase().includes("twofactor") &&
-        !url.toLowerCase().includes("verif") &&
-        !url.toLowerCase().includes("login")
-      ) {
+      if (!isAuthPage(url)) {
         loggedIn = true;
         break;
       }
@@ -416,11 +409,7 @@ async function ensureLoggedIn(browser: BrowserProvider): Promise<void> {
   const homeUrl = MYCHART_URL.replace(/\/Authentication.*$/, "");
   await browser.navigate(homeUrl);
   await new Promise((r) => setTimeout(r, 2000));
-  const url = await browser.url();
-  const expired =
-    url.toLowerCase().includes("authentication") ||
-    url.toLowerCase().includes("login");
-  if (!expired) return;
+  if (!isAuthPage(await browser.url())) return;
 
   console.log("   Session expired — re-authenticating...");
   clearSession();
@@ -430,15 +419,6 @@ async function ensureLoggedIn(browser: BrowserProvider): Promise<void> {
   if (browser.saveSession) {
     saveSession(await browser.saveSession());
     console.log("   Session re-saved.");
-  }
-}
-
-/** Check whether a section's output directory already has files of the given extension */
-function sectionDone(dir: string, ext = ".md"): boolean {
-  try {
-    return fs.existsSync(dir) && fs.readdirSync(dir).some((f) => f.endsWith(ext));
-  } catch {
-    return false;
   }
 }
 
@@ -458,16 +438,6 @@ async function navigateWithRetry(browser: BrowserProvider, url: string): Promise
   }
 }
 
-/** Check if the item at index i already has an HTML file saved in dir */
-function itemAlreadySaved(dir: string, index: number): boolean {
-  const prefix = String(index + 1).padStart(3, "0") + "_";
-  try {
-    return fs.existsSync(dir) && fs.readdirSync(dir).some((f) => f.startsWith(prefix) && f.endsWith(".html"));
-  } catch {
-    return false;
-  }
-}
-
 /** Minimal CSS injected into every saved document page */
 const DOC_CSS = `
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -482,6 +452,11 @@ const DOC_CSS = `
   img { max-width: 100%; }
 `.trim();
 
+/** Build a zero-padded, slug-based filename: "001_some-title.html" */
+function makeItemFilename(index: number, label: string, ext = ".html"): string {
+  return `${String(index + 1).padStart(3, "0")}_${slugify(label)}${ext}`;
+}
+
 /**
  * Save the current page as a self-contained HTML document.
  * Uses pageHtml() (raw innerHTML, no AI) — captures tables, formatting, and
@@ -492,9 +467,11 @@ async function savePageAsHtml(
   dir: string,
   filename: string,
 ): Promise<void> {
-  const title = await browser.title();
-  const url = await browser.url();
-  const content = await browser.pageHtml();
+  const [title, url, content] = await Promise.all([
+    browser.title(),
+    browser.url(),
+    browser.pageHtml(),
+  ]);
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -530,8 +507,12 @@ function buildIndex(): void {
 
   for (const { name, subdir, ext } of sections) {
     const dir = path.join(OUTPUT_DIR, subdir);
-    if (!fs.existsSync(dir)) continue;
-    const files = fs.readdirSync(dir).filter((f) => f.endsWith(ext)).sort();
+    let files: string[];
+    try {
+      files = fs.readdirSync(dir).filter((f) => f.endsWith(ext)).sort();
+    } catch {
+      continue;
+    }
     if (files.length === 0) continue;
     body += `<h2>${name} (${files.length})</h2>\n<ul>\n`;
     for (const f of files) {
@@ -573,10 +554,12 @@ async function extractLabsDocs(browser: BrowserProvider): Promise<void> {
   const labsDir = path.join(OUTPUT_DIR, "labs");
   fs.mkdirSync(labsDir, { recursive: true });
 
-  if (sectionDone(labsDir, ".html") && process.env.FORCE_LABS !== "1") {
-    const count = fs.readdirSync(labsDir).filter((f) => f.endsWith(".html")).length;
+  let existingLabsFiles: string[] = [];
+  try { existingLabsFiles = fs.readdirSync(labsDir); } catch {}
+  const existingLabsHtml = existingLabsFiles.filter((f) => f.endsWith(".html"));
+  if (existingLabsHtml.length > 0 && process.env.FORCE_LABS !== "1") {
     console.log(
-      `Step 6b: Labs docs already extracted (${count} .html files) — skipping (FORCE_LABS=1 to re-run).`,
+      `Step 6b: Labs docs already extracted (${existingLabsHtml.length} .html files) — skipping (FORCE_LABS=1 to re-run).`,
     );
     return;
   }
@@ -606,11 +589,13 @@ async function extractLabsDocs(browser: BrowserProvider): Promise<void> {
   const listUrl = await browser.url();
   const index: Array<{ filename: string; title: string; url: string }> = [];
   const maxPanels = Math.min(panelLinks.length, 50);
+  let savedLabsFiles: string[] = [];
+  try { savedLabsFiles = fs.readdirSync(labsDir); } catch {}
 
   for (let i = 0; i < maxPanels; i++) {
     const link = panelLinks[i];
-
-    if (itemAlreadySaved(labsDir, i)) {
+    const prefix = String(i + 1).padStart(3, "0") + "_";
+    if (savedLabsFiles.some((f) => f.startsWith(prefix) && f.endsWith(".html"))) {
       console.log(`   Doc ${i + 1}/${maxPanels}: already saved — skipping`);
       continue;
     }
@@ -626,7 +611,7 @@ async function extractLabsDocs(browser: BrowserProvider): Promise<void> {
       const cleanDesc = link.description
         .replace(/^Lab\/test result entry:\s*/i, "")
         .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
-      const filename = `${String(i + 1).padStart(3, "0")}_${slugify(cleanDesc || link.description)}.html`;
+      const filename = makeItemFilename(i, cleanDesc || link.description);
       await savePageAsHtml(browser, labsDir, filename);
       index.push({ filename, title: cleanDesc || link.description, url: docUrl });
       console.log(`      → saved ${filename}`);
@@ -657,10 +642,12 @@ async function extractVisits(browser: BrowserProvider): Promise<void> {
   const visitsDir = path.join(OUTPUT_DIR, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
 
-  if (sectionDone(visitsDir, ".html") && process.env.FORCE_VISITS !== "1") {
-    const count = fs.readdirSync(visitsDir).filter((f) => f.endsWith(".html")).length;
+  let existingVisitFiles: string[] = [];
+  try { existingVisitFiles = fs.readdirSync(visitsDir); } catch {}
+  const existingVisitHtml = existingVisitFiles.filter((f) => f.endsWith(".html"));
+  if (existingVisitHtml.length > 0 && process.env.FORCE_VISITS !== "1") {
     console.log(
-      `Step 9: Visits already extracted (${count} .html files) — skipping (FORCE_VISITS=1 to re-run).`,
+      `Step 9: Visits already extracted (${existingVisitHtml.length} .html files) — skipping (FORCE_VISITS=1 to re-run).`,
     );
     return;
   }
@@ -690,11 +677,13 @@ async function extractVisits(browser: BrowserProvider): Promise<void> {
   const listUrl = await browser.url();
   const errors: string[] = [];
   const maxVisits = Math.min(visitLinks.length, 20);
+  let savedVisitFiles: string[] = [];
+  try { savedVisitFiles = fs.readdirSync(visitsDir); } catch {}
 
   for (let i = 0; i < maxVisits; i++) {
     const link = visitLinks[i];
-
-    if (itemAlreadySaved(visitsDir, i)) {
+    const prefix = String(i + 1).padStart(3, "0") + "_";
+    if (savedVisitFiles.some((f) => f.startsWith(prefix) && f.endsWith(".html"))) {
       console.log(`   Visit ${i + 1}/${maxVisits}: already saved — skipping`);
       continue;
     }
@@ -706,7 +695,7 @@ async function extractVisits(browser: BrowserProvider): Promise<void> {
 
       // Save full page HTML (primary, human-readable)
       const pageTitle = await browser.title();
-      const htmlFilename = `${String(i + 1).padStart(3, "0")}_${slugify(pageTitle || link.description)}.html`;
+      const htmlFilename = makeItemFilename(i, pageTitle || link.description);
       await savePageAsHtml(browser, visitsDir, htmlFilename);
 
       // Also save structured JSON (secondary, for downstream processing)
@@ -824,12 +813,13 @@ async function extractMessages(browser: BrowserProvider): Promise<void> {
   const listUrl = await browser.url();
   const errors: string[] = [];
   const maxThreads = Math.min(threadLinks.length, 50);
+  let savedMsgFiles: string[] = [];
+  try { savedMsgFiles = fs.readdirSync(msgsDir); } catch {}
 
   for (let i = 0; i < maxThreads; i++) {
     const link = threadLinks[i];
-
-    // Resume support: skip threads already saved from a prior partial run
-    if (itemAlreadySaved(msgsDir, i)) {
+    const prefix = String(i + 1).padStart(3, "0") + "_";
+    if (savedMsgFiles.some((f) => f.startsWith(prefix) && f.endsWith(".html"))) {
       console.log(`   Thread ${i + 1}/${maxThreads}: already saved — skipping`);
       continue;
     }
@@ -841,7 +831,7 @@ async function extractMessages(browser: BrowserProvider): Promise<void> {
 
       // Save full page HTML (primary)
       const pageTitle = await browser.title();
-      const htmlFilename = `${String(i + 1).padStart(3, "0")}_${slugify(pageTitle || link.description)}.html`;
+      const htmlFilename = makeItemFilename(i, pageTitle || link.description);
       await savePageAsHtml(browser, msgsDir, htmlFilename);
 
       // Also save structured JSON (secondary)
@@ -934,15 +924,7 @@ async function main() {
       await browser.navigate(MYCHART_URL.replace(/\/Authentication.*$/, ""));
       await new Promise((r) => setTimeout(r, 2000));
 
-      // Check if we're actually logged in by inspecting the current URL.
-      // After cookie restore + navigation, a valid session stays on the home page;
-      // an expired/invalid session gets redirected to the login/Authentication page.
-      const currentUrl = await browser.url();
-      const isLoggedIn =
-        !currentUrl.toLowerCase().includes("authentication") &&
-        !currentUrl.toLowerCase().includes("login");
-
-      if (isLoggedIn) {
+      if (!isAuthPage(await browser.url())) {
         console.log("   Session restored — skipping login and 2FA.");
         console.log();
       } else {

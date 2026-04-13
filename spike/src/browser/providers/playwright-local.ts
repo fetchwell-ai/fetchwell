@@ -6,6 +6,7 @@ import {
   ObserveResult,
   ElementHandle,
 } from "../interface.js";
+import { getPageText, getPageHtml } from "../page-eval.js";
 
 export class PlaywrightLocalProvider implements BrowserProvider {
   private browser!: Browser;
@@ -92,25 +93,11 @@ export class PlaywrightLocalProvider implements BrowserProvider {
   }
 
   async pageText(): Promise<string> {
-    return this.page.evaluate(() => {
-      const el =
-        document.querySelector("main") ??
-        document.querySelector("[role='main']") ??
-        document.querySelector("#mainContent") ??
-        document.body;
-      return (el as HTMLElement).innerText ?? "";
-    });
+    return this.page.evaluate(getPageText);
   }
 
   async pageHtml(): Promise<string> {
-    return this.page.evaluate(() => {
-      const el =
-        document.querySelector("main") ??
-        document.querySelector("[role='main']") ??
-        document.querySelector("#mainContent") ??
-        document.body;
-      return (el as HTMLElement).innerHTML ?? "";
-    });
+    return this.page.evaluate(getPageHtml);
   }
 
   async close(): Promise<void> {
