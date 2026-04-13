@@ -4,22 +4,24 @@
 
 AI agent that logs into Epic MyChart via browser automation, extracts health records, and delivers a zip file. No APIs or FHIR — browser only.
 
-- **PRD:** `PRD.md`
-- **Architecture:** `ARCHITECTURE.md`
-- **Browser stack research:** `BROWSER_RESEARCH.md`
-- **Project plan / roadmap:** `PLAN.md`
+- **PRD:** `PRD.md` — product requirements, engineering plan, phase roadmap (read this first)
+- **Architecture:** `ARCHITECTURE.md` — technical architecture detail
+- **Browser stack research:** `BROWSER_RESEARCH.md` — why Stagehand + AISdkClient
+- **Handoff:** `handoff.md` — what to do in the current/next session
 
 ## Repository layout
 
 ```
 browser-agent-team/
-├── PLAN.md              # Roadmap and current status — read this first
-├── PRD.md               # Product requirements
+├── PRD.md               # Product + engineering doc — read first
 ├── ARCHITECTURE.md      # Technical architecture
 ├── BROWSER_RESEARCH.md  # Browser stack rationale
-└── spike/               # Phase 0 spike (complete)
+├── handoff.md           # Current session handoff notes
+└── spike/               # Phase 0 spike — to be refactored in Phase 1
     ├── src/
-    │   ├── spike.ts           # Main spike script
+    │   ├── spike.ts           # Main extraction pipeline
+    │   ├── chat.ts            # Interactive Claude chat
+    │   ├── 2fa-relay.ts       # Standalone Gmail IMAP 2FA helper
     │   ├── schemas.ts         # Zod schemas for lab data
     │   └── browser/
     │       ├── interface.ts   # BrowserProvider abstraction
@@ -30,19 +32,20 @@ browser-agent-team/
     │           └── playwright-local.ts   # Plain Playwright, no AI
     ├── output/            # Runtime output — gitignored
     │   ├── session.json   # Saved browser session (12h TTL, skip login on reuse)
-    │   ├── 2fa.code       # Drop a 6-digit code here to relay 2FA automatically
-    │   └── screenshot.png # Last run screenshot
+    │   ├── 2fa.code       # Drop a 6-digit code here to relay 2FA manually
+    │   └── index.html     # Browsable index of all extracted records
     └── .env               # Credentials — gitignored, see .env.example
 ```
 
-## Running the spike
+## Running (current — pre-refactor)
 
 ```bash
 cd spike
-pnpm spike
+pnpm spike      # Extract all records → output/
+pnpm chat       # Interactive Claude chat about records
 ```
 
-Provide 2FA code (when needed):
+Provide 2FA code manually (when Gmail auto-fetch fails):
 ```bash
 echo "123456" > output/2fa.code
 ```
@@ -85,9 +88,6 @@ Cookies saved to `output/session.json` after successful login. Auto-restored on 
 ### 2FA relay
 The spike watches `output/2fa.code` via `fs.watch` + 10s poll fallback. When the file appears, it reads the code and types it into the browser via `act()`.
 
-### Extraction gap (known)
-The labs list page shows panel names + dates but not actual values. Values require clicking into each panel. This is the Phase 1 task.
-
 ## Environment variables
 
 See `spike/.env.example`. Key vars:
@@ -96,7 +96,8 @@ See `spike/.env.example`. Key vars:
 - `MYCHART_USERNAME` / `MYCHART_PASSWORD` — optional, skips stdin prompts
 - `GMAIL_USER` / `GMAIL_APP_PASSWORD` — optional, enables auto-2FA via Gmail IMAP
 - `BROWSER_PROVIDER` — `stagehand-local` (default), `browserbase`, or `local`
+- `FORCE_LABS`, `FORCE_VISITS`, `FORCE_MEDS`, `FORCE_MSGS` — set to `1` to re-extract that section
 
 ## Current phase
 
-**Phase 0 (spike) is complete.** See `PLAN.md` for Phase 1 tasks.
+**Phase 0 (spike) is complete.** Phase 1 is refactor + stabilize. See `PRD.md` section 12 and `handoff.md`.
