@@ -102,7 +102,7 @@ Username → click Next → password page → Sign In. Any new MyChart target ma
 Cookies saved to `output/session.json` after successful login. Auto-restored on next run (12h TTL). Skips login + 2FA entirely when valid.
 
 ### 2FA relay
-The spike watches `output/2fa.code` via `fs.watch` + 10s poll fallback. When the file appears, it reads the code and types it into the browser via `act()`.
+The extraction pipeline watches `output/2fa.code` via `fs.watch` + 10s poll fallback. When the file appears, it reads the code and types it into the browser via `act()`. See `src/auth.ts`.
 
 ## Environment variables
 

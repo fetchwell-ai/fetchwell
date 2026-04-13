@@ -1,8 +1,8 @@
 # MyChart Browser Agent — Product & Engineering Document
 
-**Version:** 0.3 (merged from PRD.md + PLAN.md)  
+**Version:** 0.4  
 **Date:** 2026-04-13  
-**Status:** v0 complete; Phase 1 (refactor + stabilize) is next
+**Status:** Phase 1 complete; Phase 2 (cloud deployment) is next
 
 ---
 
@@ -36,14 +36,14 @@ No APIs or FHIR connectors — browser automation only.
 | Extract visit notes | 0 | ✅ Done (HTML + JSON) |
 | Extract imaging reports | 0 | ✅ Done (captured within lab HTML) |
 | Extract medication list | 0 | ✅ Done |
-| Extract messages / inbox | 0 | ✅ Done (28 threads targeted; 13 reliable so far) |
+| Extract messages / inbox | 0 | ✅ Done (28 threads, all complete) |
 | Deliver records as human-readable local files + index | 0 | ✅ Done |
 | AI review: interactive chat about records | 0 | ✅ Done (`pnpm chat`) |
-| Refactor out of spike/ into proper application structure | 1 | ⬜ Next |
-| Fix messages extraction reliability (network timeout on thread 13) | 1 | ⬜ Next |
-| Zip packaging + metadata.json | 1 | ⬜ Not yet built |
-| Proper CLI entry point (`mychart-agent fetch`) | 1 | ⬜ Not yet built |
-| Cloud browser (Browserbase) | 2 | ⬜ Future |
+| Refactor out of spike/ into proper application structure | 1 | ✅ Done (src/ at root) |
+| Fix messages extraction reliability (network timeout) | 1 | ✅ Done (`navigateWithRetry` + per-thread resume) |
+| Zip packaging + metadata.json | 1 | ✅ Done (`pnpm package`) |
+| Proper CLI entry point (`mychart-agent fetch`) | 1 | ⬜ Deferred to P1.4 |
+| Cloud browser (Browserbase) | 2 | ⬜ Next |
 | Multi-user web UI | 3 | ⬜ Future |
 
 ---
@@ -56,7 +56,7 @@ No APIs or FHIR connectors — browser automation only.
 | P0 | Imaging reports (MRI, CT, X-ray, ECG) | ✅ Captured within lab HTML |
 | P1 | Doctor/clinic visit notes | ✅ HTML + JSON |
 | P2 | Medication lists | ✅ HTML |
-| P2 | Messages / inbox threads | ✅ HTML + JSON (28 threads; reliability fix in Phase 1) |
+| P2 | Messages / inbox threads | ✅ HTML + JSON (28 threads complete) |
 
 ---
 
@@ -64,8 +64,7 @@ No APIs or FHIR connectors — browser automation only.
 
 ### 5.1 Extract Records
 ```bash
-cd spike        # (will become root after Phase 1 refactor)
-pnpm spike      # (will become pnpm extract)
+pnpm extract
 ```
 The agent:
 1. Restores saved session if < 12h old (skips login + 2FA)
@@ -97,7 +96,7 @@ pnpm chat
 ### Two-Factor Authentication
 - **Auto-2FA:** Agent fetches verification code from Gmail IMAP using an App Password
 - **Fallback:** File relay — `echo "123456" > output/2fa.code`
-- **Standalone relay:** `pnpm tsx src/2fa-relay.ts` runs alongside the spike as a separate process
+- **Standalone relay:** `pnpm tsx src/2fa-relay.ts` runs alongside the extraction pipeline as a separate process
 
 ### Session Persistence
 - After successful login, cookies saved to `output/session.json` (12h TTL)
@@ -137,10 +136,11 @@ output/
 
 **JSON files:** Structured extraction (best-effort, may be empty for narrative-only documents).
 
-### Planned (Phase 1)
+### Phase 1 (current)
 ```
-mychart-2026-04-13.zip
-├── metadata.json
+mychart-2026-04-13.zip          # created by pnpm package
+├── metadata.json               # timestamp, record counts
+├── index.html                  # browsable index
 ├── labs/
 ├── visits/
 ├── medications/
@@ -216,83 +216,83 @@ const llmClient = new AISdkClient({ model });
 
 ---
 
-## 11. Current Codebase Layout (v0 — pre-refactor)
+## 11. Current Codebase Layout (Phase 1)
 
 ```
 browser-agent-team/
 ├── PRD.md                   # This document
 ├── ARCHITECTURE.md          # Technical architecture detail
 ├── BROWSER_RESEARCH.md      # Browser stack rationale
-└── spike/                   # Phase 0 spike — to be refactored in Phase 1
-    ├── src/
-    │   ├── spike.ts              # Extraction pipeline (~900 lines)
-    │   ├── chat.ts               # Interactive Claude chat
-    │   ├── 2fa-relay.ts          # Standalone Gmail IMAP 2FA helper
-    │   ├── schemas.ts            # Zod schemas (LabPanel, Visit, Medication, Message)
-    │   └── browser/
-    │       ├── interface.ts      # BrowserProvider interface
-    │       ├── index.ts          # Provider factory
-    │       └── providers/
-    │           ├── stagehand-local.ts
-    │           ├── stagehand-browserbase.ts
-    │           └── playwright-local.ts
-    ├── output/                   # Extracted records (gitignored)
-    └── .env                      # Credentials (gitignored)
+├── src/
+│   ├── extract/
+│   │   ├── index.ts         # Main extraction pipeline (entry point)
+│   │   ├── labs.ts          # extractLabsDocs(), extractLabsJson()
+│   │   ├── visits.ts        # extractVisits()
+│   │   ├── medications.ts   # extractMedications()
+│   │   ├── messages.ts      # extractMessages()
+│   │   └── helpers.ts       # slugify, savePageAsHtml, navigateWithRetry, buildIndex
+│   ├── auth.ts              # doLogin, ensureLoggedIn, fetchGmailVerificationCode
+│   ├── session.ts           # loadSavedSession, saveSession, clearSession
+│   ├── chat.ts              # Interactive Claude chat
+│   ├── package.ts           # Zip packager
+│   ├── 2fa-relay.ts         # Standalone Gmail IMAP 2FA helper
+│   ├── schemas.ts           # Zod schemas (LabPanel, Visit, Medication, Message)
+│   ├── imap.ts              # extractVerificationCode()
+│   └── browser/
+│       ├── interface.ts     # BrowserProvider interface
+│       ├── index.ts         # Provider factory
+│       ├── page-eval.ts     # Shared browser-side eval functions
+│       └── providers/
+│           ├── stagehand-local.ts
+│           ├── stagehand-browserbase.ts
+│           └── playwright-local.ts
+├── output/                  # Extracted records (gitignored)
+└── .env                     # Credentials (gitignored)
 ```
 
-### Commands (current)
+### Commands
 ```bash
-cd spike
-pnpm spike          # Extract all records → output/
-pnpm chat           # Interactive Claude chat about records
-FORCE_LABS=1 pnpm spike    # Re-extract labs
-FORCE_VISITS=1 pnpm spike  # Re-extract visits
-FORCE_MEDS=1 pnpm spike    # Re-extract medications
-FORCE_MSGS=1 pnpm spike    # Re-extract messages
+pnpm extract               # Extract all records → output/
+pnpm chat                  # Interactive Claude chat about records
+pnpm package               # Bundle output/ into mychart-YYYY-MM-DD.zip
+FORCE_LABS=1 pnpm extract  # Re-extract labs
+FORCE_VISITS=1 pnpm extract  # Re-extract visits
+FORCE_MEDS=1 pnpm extract    # Re-extract medications
+FORCE_MSGS=1 pnpm extract    # Re-extract messages
 ```
 
 ---
 
-## 12. Phase 1 — Refactor + Stabilize (NEXT)
+## 12. Phase 1 — Refactor + Stabilize ✅ COMPLETE
 
 **Goal:** Turn the spike into a proper application. Fix remaining reliability issues.
 
-### P1.1 — Refactor out of spike/
-The spike has grown into the real product. Rename and reorganize:
-- Move `spike/src/` → `src/`
-- Split `spike.ts` into `src/extract/index.ts`, `src/extract/labs.ts`, `src/extract/visits.ts`, `src/extract/medications.ts`, `src/extract/messages.ts`
-- Move `spike/package.json` → root `package.json`
-- Rename `pnpm spike` → `pnpm extract`
-- Rename `spike.ts` → meaningful module names
-- Apply `/simplify` code review findings
+### P1.1 — Refactor out of spike/ ✅
+- Moved `spike/src/` → `src/` with proper module splits
+- Split monolithic `spike.ts` (~1100 lines) into `src/extract/` modules
+- Root `package.json`, `tsconfig.json`, `.env.example`
+- `pnpm extract` replaces `cd spike && pnpm spike`
 
-### P1.2 — Fix messages extraction reliability
-Messages fail at thread 13-14 due to network timeout on `navigate(listUrl)`. Fixes committed in this session:
+### P1.2 — Fix messages extraction reliability ✅
 - `navigateWithRetry()` — one automatic retry after 5s on network errors
-- Per-thread skip logic — partial runs resume from where they left off (threads 1-N already saved are skipped)
-- These fixes need a full end-to-end validation run
+- Per-thread skip logic — partial runs resume from where they left off
+- Validated: all 28 message threads extracted cleanly
 
-### P1.3 — Zip packaging + metadata
-Build a zip at the end of extraction:
-```
-mychart-2026-04-13/
-├── metadata.json         # Run timestamp, record counts, any errors
-├── labs/
-├── visits/
-├── medications/
-└── messages/
-```
+### P1.3 — Zip packaging + metadata ✅
+- `pnpm package` creates `mychart-YYYY-MM-DD.zip` with `metadata.json` + `index.html`
+- Tested: 77 records packaged to ~0.7 MB
 
-### P1.4 — Proper CLI
+### P1.4 — Proper CLI (deferred)
 ```bash
 mychart-agent fetch      # Extract all records
 mychart-agent chat       # Start chat session
 mychart-agent fetch --section labs  # Re-extract single section
 ```
+Deferred — `pnpm extract` is sufficient for current single-user use.
 
 ---
 
-## 13. Phase 2 — Cloud Deployment
+## 13. Phase 2 — Cloud Deployment (NEXT)
 
 **Goal:** Run the browser in the cloud so extraction doesn't need the user's machine.
 
