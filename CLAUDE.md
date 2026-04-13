@@ -17,32 +17,42 @@ browser-agent-team/
 ├── ARCHITECTURE.md      # Technical architecture
 ├── BROWSER_RESEARCH.md  # Browser stack rationale
 ├── handoff.md           # Current session handoff notes
-└── spike/               # Phase 0 spike — to be refactored in Phase 1
-    ├── src/
-    │   ├── spike.ts           # Main extraction pipeline
-    │   ├── chat.ts            # Interactive Claude chat
-    │   ├── 2fa-relay.ts       # Standalone Gmail IMAP 2FA helper
-    │   ├── schemas.ts         # Zod schemas for lab data
-    │   └── browser/
-    │       ├── interface.ts   # BrowserProvider abstraction
-    │       ├── index.ts       # Provider factory
-    │       └── providers/
-    │           ├── stagehand-local.ts    # Stagehand + local Chromium (default)
-    │           ├── stagehand-browserbase.ts  # Stagehand + Browserbase cloud
-    │           └── playwright-local.ts   # Plain Playwright, no AI
-    ├── output/            # Runtime output — gitignored
-    │   ├── session.json   # Saved browser session (12h TTL, skip login on reuse)
-    │   ├── 2fa.code       # Drop a 6-digit code here to relay 2FA manually
-    │   └── index.html     # Browsable index of all extracted records
-    └── .env               # Credentials — gitignored, see .env.example
+├── src/
+│   ├── extract/
+│   │   ├── index.ts     # Main extraction pipeline (entry point)
+│   │   ├── labs.ts      # extractLabsDocs(), extractLabsJson()
+│   │   ├── visits.ts    # extractVisits()
+│   │   ├── medications.ts  # extractMedications()
+│   │   ├── messages.ts  # extractMessages()
+│   │   └── helpers.ts   # Shared: slugify, savePageAsHtml, navigateWithRetry, buildIndex
+│   ├── auth.ts          # doLogin, ensureLoggedIn, fetchGmailVerificationCode
+│   ├── session.ts       # loadSavedSession, saveSession, clearSession
+│   ├── chat.ts          # Interactive Claude chat
+│   ├── package.ts       # Zip packager (pnpm package)
+│   ├── 2fa-relay.ts     # Standalone Gmail IMAP 2FA helper
+│   ├── schemas.ts       # Zod schemas (LabPanel, Visit, Medication, Message)
+│   ├── imap.ts          # extractVerificationCode()
+│   └── browser/
+│       ├── interface.ts  # BrowserProvider abstraction
+│       ├── index.ts      # Provider factory
+│       ├── page-eval.ts  # Shared browser-side eval functions
+│       └── providers/
+│           ├── stagehand-local.ts    # Stagehand + local Chromium (default)
+│           ├── stagehand-browserbase.ts  # Stagehand + Browserbase cloud
+│           └── playwright-local.ts   # Plain Playwright, no AI
+├── output/              # Runtime output — gitignored
+│   ├── session.json     # Saved browser session (12h TTL, skip login on reuse)
+│   ├── 2fa.code         # Drop a 6-digit code here to relay 2FA manually
+│   └── index.html       # Browsable index of all extracted records
+└── .env                 # Credentials — gitignored, see .env.example
 ```
 
-## Running (current — pre-refactor)
+## Running
 
 ```bash
-cd spike
-pnpm spike      # Extract all records → output/
+pnpm extract    # Extract all records → output/
 pnpm chat       # Interactive Claude chat about records
+pnpm package    # Bundle output/ into mychart-YYYY-MM-DD.zip
 ```
 
 Provide 2FA code manually (when Gmail auto-fetch fails):
@@ -53,6 +63,12 @@ echo "123456" > output/2fa.code
 Delete saved session to force fresh login:
 ```bash
 rm output/session.json
+```
+
+Force re-extraction of a specific section:
+```bash
+FORCE_LABS=1 pnpm extract
+FORCE_MSGS=1 pnpm extract
 ```
 
 ## Key technical decisions
@@ -90,7 +106,7 @@ The spike watches `output/2fa.code` via `fs.watch` + 10s poll fallback. When the
 
 ## Environment variables
 
-See `spike/.env.example`. Key vars:
+See `.env.example`. Key vars:
 - `ANTHROPIC_API_KEY` — required for AI browser actions
 - `MYCHART_URL` — target MyChart login URL
 - `MYCHART_USERNAME` / `MYCHART_PASSWORD` — optional, skips stdin prompts
@@ -100,4 +116,4 @@ See `spike/.env.example`. Key vars:
 
 ## Current phase
 
-**Phase 0 (spike) is complete.** Phase 1 is refactor + stabilize. See `PRD.md` section 12 and `handoff.md`.
+**Phase 1 (refactor + stabilize) is complete.** Phase 2 is cloud deployment (Browserbase). See `PRD.md` and `handoff.md`.
