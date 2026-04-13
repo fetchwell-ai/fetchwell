@@ -1,165 +1,189 @@
 # MyChart Browser Agent — Product Requirements Document
 
-**Version:** 0.1 (MVP)
-**Date:** 2026-04-12
-**Author:** Product Manager Agent
+**Version:** 0.2 (updated to reflect v0 completion)  
+**Date:** 2026-04-13  
+**Status:** v0 complete; Phase 1 (stabilize + package) in progress
 
 ---
 
 ## 1. Overview
 
-A cloud-hosted AI agent that uses browser automation to log into Epic MyChart, navigate the patient portal, extract health records, and deliver them as a downloadable zip file. The agent operates via CLI for the MVP, with architecture that supports a future GUI or more accessible interface.
+An AI agent that uses browser automation to log into Epic MyChart, navigate the patient portal, extract health records as human-readable documents, and deliver them to a local folder. An interactive Claude chat session then lets the user ask questions about their records.
 
 No APIs or FHIR connectors — browser automation only.
 
+---
+
 ## 2. Users
 
-### MVP (v0.1)
-- **Primary user:** A single technical user comfortable with CLI tools, browser automation concepts, and cloud infrastructure.
-- **Interaction model:** CLI invocation with manual credential entry and 2FA code input per session.
+### v0 (current)
+- **Primary user:** A single technical user comfortable with CLI tools.
+- **Interaction model:** `pnpm extract` to pull records, `pnpm chat` to analyze them.
+- **2FA:** Fully automated via Gmail IMAP — no manual intervention required.
 
 ### Future
-- Non-technical users (family members, patients with limited tech skills).
-- Architecture decisions made now must not block a future web UI, mobile companion, or guided wizard experience.
+- Non-technical users via a web UI or guided CLI wizard.
+- Multi-user support with secure per-user credential handling.
+
+---
 
 ## 3. Goals
 
-1. Authenticate into a MyChart account via cloud-hosted browser automation.
-2. Navigate to lab results and extract them.
-3. Package extracted records into a downloadable zip file.
-4. Provide a CLI interface for triggering and interacting with the agent.
+| Goal | Status |
+|---|---|
+| Authenticate into MyChart including 2FA | ✅ Done (Gmail auto-2FA) |
+| Navigate to lab results and extract full content | ✅ Done (36 HTML docs) |
+| Extract visit notes | ✅ Done (HTML + JSON) |
+| Extract imaging reports | ✅ Done (captured within lab HTML) |
+| Extract medication list | ✅ Done (needs nav fix re-run) |
+| Extract messages / inbox | ✅ Done (HTML + JSON) |
+| Deliver records as human-readable local files | ✅ Done (HTML + browsable index) |
+| AI review: interactive chat about records | ✅ Done (`pnpm chat`) |
+| Package records as a zip file | ⬜ Not yet built |
+| Proper CLI entry point (`mychart-agent fetch`) | ⬜ Not yet built |
 
-### Non-Goals (MVP)
-- Persistent credential storage or session management.
-- HIPAA/BAA compliance certification.
-- Multi-account or family account support.
-- Automated 2FA resolution.
-- Real-time streaming of results.
+---
 
-## 4. Record Types — Priority Order
+## 4. Record Types
 
-| Priority | Record Type | Target Release |
-|----------|-------------|----------------|
-| P0 | Lab results (blood work, metabolic panels, etc.) | MVP |
-| P1 | Doctor/clinic visit notes | v0.2 |
-| P2 | Imaging reports (radiology, MRI, etc.) | v0.3 |
-| P3 | Medication lists | v0.3 |
+All priority levels have been implemented:
 
-## 5. User Journey (MVP)
+| Priority | Record Type | Status |
+|---|---|---|
+| P0 | Lab results (blood work, metabolic panels) | ✅ Full HTML + structured JSON |
+| P0 | Imaging reports (MRI, CT, X-ray, ECG) | ✅ Captured within lab HTML |
+| P1 | Doctor/clinic visit notes | ✅ HTML + JSON |
+| P2 | Medication lists | ✅ HTML (nav fix in progress) |
+| P2 | Messages / inbox threads | ✅ HTML + JSON |
 
-### 5.1 Trigger the Agent
-1. User runs a CLI command (e.g., `mychart-agent fetch-labs`).
-2. Agent prompts for MyChart username and password via stdin.
-3. Agent launches a cloud-hosted browser session (e.g., via Browserbase or similar service).
+---
 
-### 5.2 Login & Authentication
-1. Agent navigates to the user's MyChart login page.
-2. Agent enters the provided credentials.
-3. If 2FA is triggered, the agent detects the challenge and surfaces a Browserbase session debug URL in the CLI.
-4. User opens the debug URL in their own browser and enters the 2FA code directly into the live cloud browser session.
-5. Agent detects that 2FA is complete and proceeds with the authenticated session.
-6. On login failure, the agent reports the error clearly and exits.
+## 5. User Journey (v0)
 
-### 5.3 Record Extraction
-1. Agent navigates to the lab results section of MyChart.
-2. Agent identifies and extracts available lab results — structured data where possible, fallback to screenshot/PDF capture.
-3. Agent stores extracted records in a temporary cloud location.
+### 5.1 Extract Records
+```bash
+cd spike
+pnpm spike
+```
+The agent:
+1. Restores saved session if < 12h old (skips login + 2FA)
+2. If no session: logs in using credentials from `.env`, auto-fetches 2FA code from Gmail
+3. Navigates to each section and extracts full page content as HTML documents
+4. Builds `output/index.html` — a browsable local index of all records
+5. Saves all records to `output/` (gitignored)
 
-### 5.4 Delivery
-1. Agent packages all extracted records into a zip file.
-2. Agent provides a download URL (pre-signed, time-limited) or streams the zip to the CLI.
-3. Temporary cloud storage is cleaned up after download or after a short TTL.
+### 5.2 Browse Records
+Open `output/index.html` in a browser. Click any document to view it with formatting.
 
-### 5.5 Optional: AI Review (Future)
-- Downloaded records can be passed to a Claude agent for interpretation, trend analysis, or plain-language summaries.
-- Out of scope for MVP but the output format should be structured enough to support this.
+### 5.3 Chat with Claude about Records
+```bash
+pnpm chat
+```
+1. Loads all extracted HTML/JSON into Claude Sonnet context
+2. Generates an opening summary (lab values, visit highlights, medication list, message themes)
+3. Interactive Q&A — ask anything about your records
+
+---
 
 ## 6. Authentication & Security
 
-### 6.1 Credentials (MVP)
-- **No persistent credential storage.** User provides username and password each run.
-- The browser provider is selected via configuration — no custom credential storage code is required for MVP.
-- Credentials are held in memory only for the duration of the session and never written to disk or logs.
+### Credentials
+- Provided via `.env` file (`MYCHART_USERNAME`, `MYCHART_PASSWORD`)
+- Never committed to git, never logged
+- Held in memory only for the duration of the session
 
-### 6.2 Two-Factor Authentication (MVP)
-- **Debug URL handoff.** When MyChart presents a 2FA challenge, the agent detects it and surfaces a Browserbase session debug URL. The user opens this URL in their own browser and completes the 2FA challenge directly in the live cloud browser session.
-- The agent must detect when 2FA is complete and resume automation.
-- Supports any 2FA method MyChart uses (SMS, email, authenticator) since the user interacts with the real browser.
-- **Future:** Automated 2FA via Gmail integration — agent reads the verification code from the user's email automatically.
+### Two-Factor Authentication
+- **Auto-2FA:** Agent fetches verification code from Gmail IMAP using an App Password
+- **Fallback:** File relay — `echo "123456" > output/2fa.code`
+- **Standalone relay:** `pnpm tsx src/2fa-relay.ts` runs alongside the spike as a separate process
 
-### 6.3 Session Persistence
-- **No session persistence for MVP.** Each run is a fresh login.
-- Future versions may explore cookie/session reuse to reduce 2FA friction.
+### Session Persistence
+- After successful login, cookies saved to `output/session.json` (12h TTL)
+- Next run restores session — login and 2FA skipped entirely
+- Delete `output/session.json` to force a fresh login
 
-## 7. Infrastructure & Hosting
+### Health Data Privacy
+- All extracted records stay in `output/` — gitignored, never leave the local machine
+- No health data written to logs or transmitted to third parties (beyond Anthropic API for chat)
+- `output/session.json` contains only browser cookies, not health records
 
-### 7.1 Cloud-Hosted Browser
-- **MVP architecture:** The orchestration layer (Node.js process) runs locally on the developer's machine. Only the browser itself runs remotely in Browserbase's cloud. The local process controls the cloud browser via Browserbase's SDK/API.
-- The local CLI communicates with the cloud browser to drive automation and receive extracted data.
-- For 2FA, the agent surfaces a Browserbase debug URL so the user can interact with the live cloud browser directly.
+---
 
-### 7.2 File Storage & Delivery
-- Extracted records are temporarily stored in cloud storage (e.g., S3, R2, or the browser service's built-in storage).
-- Delivered as a downloadable zip file via pre-signed URL or direct CLI download.
-- Temporary storage is cleaned up after download or after a configurable TTL (default: 1 hour).
+## 7. Output Format
 
-### 7.3 Health Data Privacy
-- **MVP stance:** Accept risk. This is a personal tool for a single technical user.
-- **Architectural guardrails for future compliance:**
-  - No health data written to persistent logs.
-  - Temporary storage only — no long-lived data at rest in the cloud.
-  - Clear data flow documentation so a future HIPAA/BAA audit path is feasible.
-  - Encryption in transit (TLS) for all communications.
-  - Cloud provider selection should favor services that offer BAA options (e.g., AWS, GCP) even if not activated for MVP.
-
-## 8. Output Format
-
-### Zip File Contents
+### Current (v0)
 ```
-mychart-labs-2026-04-12/
-├── metadata.json          # Run metadata: timestamp, account, records found
+output/
+├── index.html              # Browsable index (open in browser)
+├── labs.json               # Structured lab index (panel names, dates, values)
 ├── labs/
-│   ├── 2026-03-15_cbc.json       # Structured lab data (when extractable)
-│   ├── 2026-03-15_cbc.pdf        # PDF/screenshot fallback
-│   ├── 2026-01-20_metabolic.json
-│   └── 2026-01-20_metabolic.pdf
-└── raw/                   # Raw page captures for debugging
+│   ├── 001_lipid-panel-apr-21-2025.html
+│   ├── 002_mr-shoulder-without-contrast-dec-04-2025.html
+│   └── ...                 # One .html per lab/imaging result
+├── visits/
+│   ├── 001_visit-title.html
+│   ├── 001_visit-date_visit-type.json
+│   └── ...
+├── medications/
+│   ├── medications.html
+│   └── medications.json
+└── messages/
+    ├── 001_thread-title.html
+    ├── 001_date_subject.json
     └── ...
 ```
 
-- **Structured data (JSON):** Preferred. Lab name, date, values, reference ranges, units.
-- **PDF/screenshot fallback:** For records that resist structured extraction.
-- **Metadata file:** Captures run context for traceability.
+**HTML files:** Full page content captured from MyChart, wrapped in a simple readable shell. Tables render correctly. Narrative text (radiology reports, clinical notes) is preserved in full.
 
-> **Note:** The directory structure above reflects the MVP (labs only). Future versions will add sibling directories for additional record types (e.g., `visits/`, `imaging/`, `medications/`).
+**JSON files:** Structured extraction (best-effort, may be empty for narrative-only documents). Useful for downstream processing.
 
-## 9. Error Handling & Edge Cases
+**index.html:** Links to every document, organized by section.
 
-| Scenario | MVP Behavior |
-|----------|-------------|
-| Invalid credentials | Clear error message, exit |
-| 2FA timeout (user too slow) | Retry prompt up to 2 times, then exit with instructions |
-| MyChart page structure changed | Graceful failure with error details; save screenshot for debugging |
-| No lab results found | Report "no results found," exit cleanly |
-| Network/browser session failure | Retry once, then exit with error |
-| Multiple MyChart instances (different health systems) | Out of scope — user specifies target MyChart URL at invocation |
+### Planned (Phase 1)
+Add zip packaging:
+```
+mychart-2026-04-13.zip
+├── metadata.json
+├── labs/
+├── visits/
+├── medications/
+└── messages/
+```
+
+---
+
+## 8. Error Handling
+
+| Scenario | Current Behavior |
+|---|---|
+| Invalid credentials | Clear error message, exits |
+| Session expired mid-run | `ensureLoggedIn()` detects and re-authenticates before each section |
+| 2FA code not found in Gmail | Falls back to file-based relay (`output/2fa.code`) |
+| Page structure changed | `observe()` returns 0 results, saves screenshot, continues to next section |
+| Extraction schema failure | Saves HTML (never fails) + logs JSON extraction error |
+| Network/browser failure | Error logged, browser kept open for inspection |
+
+---
+
+## 9. Success Criteria (v0)
+
+All met:
+
+1. ✅ User can run `pnpm spike` and authenticate without touching 2FA manually
+2. ✅ Agent extracts labs (including imaging reports) as full readable documents
+3. ✅ Agent extracts visits, medications, messages
+4. ✅ User can open `output/index.html` and browse all records
+5. ✅ User can run `pnpm chat` and have a Claude conversation about their records
+6. ✅ No credentials or health data committed to git
+
+---
 
 ## 10. Future Considerations
 
-These are explicitly out of MVP scope but should not be blocked by architectural decisions:
-
-- **Multi-account support:** Fetch from multiple MyChart instances in one run.
-- **Family/proxy accounts:** Handle linked family member accounts.
-- **Scheduled runs:** Cron-style automated fetching with notification on new results.
-- **Web UI:** Browser-based dashboard for triggering fetches and viewing results.
-- **AI review pipeline:** Pass structured output directly to Claude for analysis.
-- **Automated 2FA via Gmail:** Agent reads verification codes from email automatically.
-- **HIPAA compliance:** BAA with cloud providers, audit logging, encryption at rest.
-
-## 11. Success Criteria (MVP)
-
-1. User can invoke the agent from CLI and authenticate into their MyChart account (including 2FA).
-2. Agent successfully navigates to lab results and extracts at least the most recent set.
-3. Agent delivers a zip file containing structured lab data and/or PDF captures.
-4. The entire flow completes in under 3 minutes for a typical account.
-5. Failures produce clear, actionable error messages.
+- **Zip delivery** — bundle output/ into a dated zip (Phase 1)
+- **Proper CLI** — `mychart-agent fetch` / `mychart-agent chat` (Phase 1)
+- **Cloud browser** — switch to Browserbase so extraction doesn't require local machine (Phase 2)
+- **Multi-user** — web UI, secure per-user credentials (Phase 3)
+- **HIPAA compliance** — BAA with cloud providers, audit logging (Phase 3+)
+- **Scheduled runs** — cron-style fetch with notifications on new results
+- **PDF download** — for records that have a "Download PDF" button in MyChart

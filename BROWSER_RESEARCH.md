@@ -2,7 +2,10 @@
 
 **Use Case:** AI agent that navigates Epic MyChart to retrieve health records — including login, 2FA handling, navigation, and file download.
 
-**Date:** 2026-04-12
+**Date:** 2026-04-12  
+**Updated:** 2026-04-13
+
+> **What we actually shipped (v0):** Stagehand-local (local Chromium + Stagehand + Claude Sonnet 4.6). The analysis below recommended Browserbase as MVP, but we ran local-first to move faster and avoid cloud browser costs during development. The `StagehandBrowserbaseProvider` is already implemented — switching is one env var change. Gmail IMAP auto-2FA shipped instead of the planned Browserbase debug URL handoff. See ARCHITECTURE.md for current technical details.
 
 ---
 

@@ -1,15 +1,15 @@
 # MyChart Agent — Project Plan
 
-**Last updated:** 2026-04-12  
+**Last updated:** 2026-04-13  
 **Repo:** github.com/chadallen/mychart-agent
 
 ---
 
 ## What this is
 
-An AI agent that logs into Epic MyChart via browser automation (no APIs/FHIR), extracts health records, and delivers them as a zip file. Built for a single technical user (Chad) as an MVP, with architecture that can grow into a multi-user product.
+An AI agent that logs into Epic MyChart via browser automation (no APIs/FHIR), extracts health records as HTML documents, and provides an interactive Claude chat session for analysis. Built for a single technical user as a v0, with architecture that can grow into a multi-user product.
 
-See [PRD.md](PRD.md) for full product requirements, [ARCHITECTURE.md](ARCHITECTURE.md) for technical design, [BROWSER_RESEARCH.md](BROWSER_RESEARCH.md) for browser stack rationale.
+See [PRD.md](PRD.md) for product requirements, [ARCHITECTURE.md](ARCHITECTURE.md) for technical design, [BROWSER_RESEARCH.md](BROWSER_RESEARCH.md) for browser stack rationale.
 
 ---
 
@@ -17,134 +17,143 @@ See [PRD.md](PRD.md) for full product requirements, [ARCHITECTURE.md](ARCHITECTU
 
 **Goal:** Validate the three core technical assumptions before building anything real.
 
-### Assumptions to validate
-1. Can we create a browser session and drive it programmatically via a `BrowserProvider` abstraction?
-2. Can we handle 2FA without the user being at the browser?
-3. Can Stagehand's `extract()` pull structured lab data from a MyChart page?
-
-### Results
-All three validated on 2026-04-12 against UCSF MyChart.
-
 | Assumption | Result | Notes |
 |---|---|---|
-| Browser session + BrowserProvider | ✓ | Stagehand local + Playwright works |
-| 2FA without browser access | ✓ | File-based code relay (`output/2fa.code`) works |
-| `extract()` structured lab data | ✓ (partial) | 21 panels extracted; values `<UNKNOWN>` because list page doesn't show them |
-
-### Key technical findings
-
-**Stack:**
-- Stagehand v2.5.8 + `AISdkClient` + `@ai-sdk/anthropic@1.x` + `claude-sonnet-4-6`
-- Stagehand's built-in model whitelist only has retired Claude 3.7 models. Workaround: pass a custom `AISdkClient` with the Anthropic AI SDK directly — bypasses the whitelist entirely.
-- Stagehand's `AISdkClient` doesn't pass `maxTokens` to `generateObject`, causing 4096-token truncation. Workaround: Proxy wrapper that injects `maxTokens: 16384`.
-
-**UCSF MyChart login is two-step:** username submit → Next → password page → Sign In.
-
-**Session persistence:** Cookies saved to `output/session.json` after successful login (12h TTL). Next run restores session and skips login + 2FA entirely.
-
-**File-based 2FA relay:**
-- Spike writes `output/2fa.needed` when waiting for code
-- Relay: `echo "123456" > output/2fa.code`
-- Uses `fs.watch` (event-driven) + 10s poll fallback for reliability
-- Spike types the code into the browser via `act()` and submits automatically
-
-**Extraction gap:** The labs list page shows panel names + dates but not actual values. Values, units, and reference ranges are one level deeper (click into each panel). This is the main Phase 1 task.
-
-**Token limit:** Even with 16384 output tokens, the full labs list extraction sometimes fails. Phase 1 needs pagination.
-
-### Spike artifacts
-- `/spike/src/spike.ts` — main test script
-- `/spike/src/browser/` — `BrowserProvider` interface + three provider implementations
-- `/spike/src/schemas.ts` — Zod schemas for lab data
-- `/spike/output/session.json` — saved session (gitignored)
-- `/spike/.env` — credentials (gitignored), see `.env.example`
+| Browser session + BrowserProvider abstraction | ✓ | Stagehand local + Playwright works |
+| 2FA without browser access | ✓ | Gmail IMAP auto-fetch (exceeded original file-relay goal) |
+| `extract()` structured lab data | ✓ | Full HTML capture more reliable than schema-based extraction |
 
 ---
 
-## Phase 1 — MVP (NEXT)
+## Current State — v0 (COMPLETE ✓)
 
-**Goal:** Working end-to-end flow that extracts real lab values and delivers a zip file.
+Everything below was built within the spike and works end-to-end against UCSF MyChart.
 
-### P1.1 — Drill into lab panels for actual values
-The labs list page shows panel names and dates. Click into each panel to get:
-- Individual test results (e.g., WBC, RBC, hemoglobin within a CBC)
-- Actual values and units
-- Reference ranges
-- Abnormal flags (H/L)
+### What works
 
-Strategy: After navigating to the labs list, iterate over each panel, click in, extract structured data, click back.
+**Extraction (`pnpm spike`):**
+- Login with Gmail auto-2FA — no manual intervention required
+- Session persistence — 12h TTL session.json, skips login + 2FA on reuse
+- Labs: 36 HTML documents (full page capture including imaging reports, MRI/CT/ECG narrative text)
+- Visits: HTML + JSON per visit (nav bug under active fix; JSON fallback works)
+- Medications: HTML page capture (nav fix in progress)
+- Messages: HTML + JSON per thread (nav bug under active fix; JSON fallback works)
+- Browsable `output/index.html` — click to open any document locally
 
-### P1.2 — Handle extraction pagination
-The labs list has many panels. Extract in batches (e.g., 5 at a time) or filter to most recent N results to avoid token limit errors.
+**Chat (`pnpm chat`):**
+- Loads all extracted HTML/JSON into Claude Sonnet context (~29K tokens for current record set)
+- Auto-generates clinical summary on launch
+- Interactive streaming Q&A — goes back and forth with Claude about your records
+- `/summary`, `/clear`, `/exit` commands
 
-### P1.3 — Package output as zip
-- Structured JSON per panel: `labs/2026-03-15_lipid-panel.json`
-- Screenshot fallback for panels that resist extraction
-- `metadata.json` with run timestamp, account, total results
-- Zip all of the above: `mychart-labs-2026-04-12.zip`
+### Known issues / in-progress fixes
+- Session expires mid-run during long labs crawl (fix committed: `ensureLoggedIn()` before each section)
+- Visits and Messages HTML extraction gets 0 `observe()` results after labs crawl (same fix)
+- Medications HTML occasionally captures login page instead of meds list (same fix)
+- Lab HTML filenames are generic (`ucsf-mychart-test-details`) for run5; fixed in code for run6+
+
+### File layout
+```
+spike/
+├── src/
+│   ├── spike.ts          # Extraction pipeline (~850 lines)
+│   ├── chat.ts           # Interactive Claude chat
+│   ├── 2fa-relay.ts      # Standalone Gmail IMAP 2FA helper
+│   ├── schemas.ts        # Zod schemas (LabPanel, Visit, Medication, Message)
+│   └── browser/
+│       ├── interface.ts  # BrowserProvider interface
+│       ├── index.ts      # Provider factory
+│       └── providers/
+│           ├── stagehand-local.ts      # Default (local Chromium + Stagehand)
+│           ├── stagehand-browserbase.ts  # Cloud browser option
+│           └── playwright-local.ts    # Plain Playwright fallback
+├── output/               # Extracted records (gitignored — health data)
+│   ├── index.html        # Browsable index of all documents
+│   ├── labs/             # One .html per lab/imaging result
+│   ├── visits/           # One .html + .json per visit
+│   ├── medications/      # medications.html + medications.json
+│   ├── messages/         # One .html + .json per message thread
+│   └── labs.json         # Structured index (panel names, dates, values)
+└── .env                  # Credentials (gitignored)
+```
+
+### Commands
+```bash
+pnpm spike          # Extract all records → output/
+pnpm chat           # Interactive Claude chat about your records
+FORCE_LABS=1 pnpm spike    # Re-extract labs even if output/labs/ exists
+FORCE_VISITS=1 pnpm spike  # Re-extract visits
+FORCE_MEDS=1 pnpm spike    # Re-extract medications
+FORCE_MSGS=1 pnpm spike    # Re-extract messages
+```
+
+---
+
+## Phase 1 — Stabilize and Package (NEXT)
+
+**Goal:** Fix remaining bugs, add zip delivery, clean up the codebase.
+
+### P1.1 — Fix extraction nav bugs ← IN PROGRESS
+- `ensureLoggedIn()` now called before each section (committed, not yet run-tested)
+- Run spike-run6 to verify visits, medications, messages all extract correctly
+
+### P1.2 — Zip packaging + metadata
+Build a zip at the end of extraction:
+```
+mychart-2026-04-13/
+├── metadata.json         # Run timestamp, record counts, any errors
+├── labs/                 # All lab HTML + index JSON
+├── visits/               # All visit HTML + JSON
+├── medications/
+└── messages/
+```
+Add `pnpm package` or make zip the final step of `pnpm spike`.
+
+### P1.3 — Refactor out of spike/
+The "spike" has grown into the real product. Rename and reorganize:
+- Move `spike/src/` → `src/`
+- Split `spike.ts` into `src/extract/index.ts`, `src/extract/labs.ts`, `src/extract/visits.ts`, etc.
+- Rename `pnpm spike` → `pnpm extract`
+- Move `spike/package.json` → root `package.json`
+- Add proper README
 
 ### P1.4 — CLI entry point
-Replace the spike script with a proper CLI:
+Proper CLI command instead of `pnpm extract`:
+```bash
+mychart-agent fetch      # Extract all records
+mychart-agent chat       # Start chat session
+mychart-agent fetch --section labs  # Re-extract single section
 ```
-mychart-agent fetch-labs
-```
-Options: `--url`, `--username`, `--output-dir`
-
-### P1.5 — Session management UX
-- Current: session auto-restored if `output/session.json` < 12h old
-- Improve: `--fresh` flag to force new login; clearer messaging when session restores vs. expires
-
-### P1.6 — Error handling
-Per the PRD error table: invalid credentials, 2FA timeout, page structure changes, no results found.
 
 ---
 
 ## Phase 2 — Cloud deployment
 
-**Goal:** Run the agent in the cloud (not locally).
+**Goal:** Run the browser in the cloud (not locally) so extraction doesn't need the user's machine.
 
-- Switch `BROWSER_PROVIDER=browserbase` — orchestrator still runs locally, browser runs in Browserbase cloud
-- Add Railway deployment for the orchestrator process (see ARCHITECTURE.md)
-- 2FA via Browserbase debug URL (user opens URL in their browser)
+- Switch `BROWSER_PROVIDER=browserbase` — orchestrator still runs locally, browser in Browserbase cloud
+- 2FA via Browserbase debug URL (or keep Gmail auto-2FA — it's already working)
+- Add Railway deployment for the orchestrator process
 - Pre-signed S3/R2 URL for zip delivery
-- HIPAA groundwork: no health data in logs, TTL on cloud storage
 
 ---
 
-## Phase 3 — Additional record types
+## Phase 3 — Multi-user
 
-After labs are solid:
-- **Visit notes** (P1 per PRD)
-- **Imaging reports** (P2)
-- **Medication lists** (P2)
-
----
-
-## Phase 4 — AI review pipeline
-
-Pass extracted structured data to Claude for:
-- Plain-language summaries
-- Trend analysis across visits
-- Flagging abnormal results
+- Web UI for triggering and managing extractions
+- Secure credential handling (never stored server-side)
+- HIPAA groundwork: no health data in logs, TTL on cloud storage, BAA path
 
 ---
 
-## Active decisions / open questions
+## Active technical decisions
 
-| Question | Decision | Date |
+| Decision | Choice | Date |
 |---|---|---|
-| Browser stack | Stagehand + local Chromium for dev; Browserbase for prod | 2026-04-12 |
-| Model for browser AI | `claude-sonnet-4-6` via `AISdkClient` (bypasses Stagehand whitelist) | 2026-04-12 |
-| 2FA automation | File-based relay for now; Gmail IMAP (App Password) when ready | 2026-04-12 |
-| Hosting | Railway for fast-follow after local validation; AWS for HIPAA path | 2026-04-12 |
-| Record priority | Labs only for MVP | 2026-04-12 |
-
----
-
-## Immediate next steps
-
-1. [ ] Build panel drill-down — click into each lab panel, extract actual values
-2. [ ] Add pagination/batching for large lab lists
-3. [ ] Package extracted data as zip with metadata.json
-4. [ ] Wire up a real CLI entry point (`mychart-agent fetch-labs`)
-5. [ ] Test against a second MyChart instance to check portability
+| Browser stack | Stagehand v2.5.8 + local Chromium (dev); Browserbase (prod path) | 2026-04-12 |
+| Claude model for browser AI | `claude-sonnet-4-6` via `AISdkClient` (bypasses Stagehand whitelist) | 2026-04-12 |
+| 2FA | Gmail IMAP auto-fetch (App Password); file-based relay fallback | 2026-04-13 |
+| Record output format | Full-page HTML (primary) + structured JSON (secondary) | 2026-04-13 |
+| Chat | Direct Anthropic SDK streaming, all records in system context | 2026-04-13 |
+| Session persistence | Cookie save/restore (session.json), 12h TTL | 2026-04-13 |
+| Health data | Gitignored, local-only, never committed or logged | 2026-04-13 |
