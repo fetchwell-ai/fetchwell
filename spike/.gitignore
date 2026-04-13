@@ -1,4 +1,10 @@
 .env
 node_modules/
 dist/
-output/*.png
+.DS_Store
+
+# Extracted health records — sensitive personal data, never commit
+output/
+
+# Keep the output directory tracked so it exists on checkout
+!output/.gitkeep

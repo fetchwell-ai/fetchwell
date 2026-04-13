@@ -94,6 +94,28 @@ export class StagehandBrowserbaseProvider implements BrowserProvider {
     return { textContent: () => el.textContent() };
   }
 
+  async pageText(): Promise<string> {
+    return this.stagehand.page.evaluate(() => {
+      const el =
+        document.querySelector("main") ??
+        document.querySelector("[role='main']") ??
+        document.querySelector("#mainContent") ??
+        document.body;
+      return (el as HTMLElement).innerText ?? "";
+    });
+  }
+
+  async pageHtml(): Promise<string> {
+    return this.stagehand.page.evaluate(() => {
+      const el =
+        document.querySelector("main") ??
+        document.querySelector("[role='main']") ??
+        document.querySelector("#mainContent") ??
+        document.body;
+      return (el as HTMLElement).innerHTML ?? "";
+    });
+  }
+
   async close(): Promise<void> {
     await this.stagehand.close();
   }

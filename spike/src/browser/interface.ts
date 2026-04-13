@@ -41,6 +41,16 @@ export interface BrowserProvider {
   /** Restore a previously saved session */
   loadSession?(session: SerializedSession): Promise<void>;
 
+  /** Get the plain-text content of the current page's main content area.
+   *  Tries main/[role="main"] first, falls back to body.
+   *  Never uses AI — direct JS evaluation. */
+  pageText(): Promise<string>;
+
+  /** Get the inner HTML of the current page's main content area.
+   *  Tries main/[role="main"] first, falls back to body.
+   *  Never uses AI — direct JS evaluation. */
+  pageHtml(): Promise<string>;
+
   /** Destroy the browser session and clean up resources */
   close(): Promise<void>;
 }
