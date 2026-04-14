@@ -9,26 +9,24 @@ import {
   OUTPUT_DIR,
   readDirSafe,
   makeItemFilename,
-  savePageAsHtml,
   navigateWithRetry,
 } from "./helpers.js";
 
 /**
- * Drill into every lab/test-result panel and save each one as a standalone
- * HTML document. Captures full narrative text (radiology reports, pathology,
- * etc.) that the structured LabPanel schema misses.
+ * Drill into every lab/test-result panel and save each one as a PDF.
+ * Also merges all PDFs into output/labs.pdf for Claude.ai upload.
  *
- * Output: output/labs/{slug}.html — one file per panel.
- * Skip: if output/labs/ already has .html files (set FORCE_LABS=1 to re-run).
+ * Output: output/labs/{slug}.pdf — one file per panel, output/labs.pdf — merged.
+ * Skip: if output/labs/ already has .pdf files (set FORCE_LABS=1 to re-run).
  */
 export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string): Promise<void> {
   const labsDir = path.join(OUTPUT_DIR, "labs");
   fs.mkdirSync(labsDir, { recursive: true });
 
-  const existingHtml = readDirSafe(labsDir).filter((f) => f.endsWith(".html"));
-  if (existingHtml.length > 0 && process.env.FORCE_LABS !== "1") {
+  const existingPdfs = readDirSafe(labsDir).filter((f) => f.endsWith(".pdf"));
+  if (existingPdfs.length > 0 && process.env.FORCE_LABS !== "1") {
     console.log(
-      `Step 6b: Labs docs already extracted (${existingHtml.length} .html files) — skipping (FORCE_LABS=1 to re-run).`,
+      `Step 6b: Labs docs already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_LABS=1 to re-run).`,
     );
     return;
   }
@@ -63,7 +61,7 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
   for (let i = 0; i < maxPanels; i++) {
     const link = panelLinks[i];
     const prefix = String(i + 1).padStart(3, "0") + "_";
-    if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".html"))) {
+    if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
       console.log(`   Doc ${i + 1}/${maxPanels}: already saved — skipping`);
       continue;
     }
@@ -79,13 +77,10 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
       const cleanDesc = link.description
         .replace(/^Lab\/test result entry:\s*/i, "")
         .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
-      const filename = makeItemFilename(i, cleanDesc || link.description);
-      await savePageAsHtml(browser, labsDir, filename);
-
-      // Also capture as PDF for Claude.ai upload
+      const filename = makeItemFilename(i, cleanDesc || link.description, ".pdf");
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
-        fs.writeFileSync(path.join(labsDir, filename.replace(".html", ".pdf")), pdfBuf);
+        fs.writeFileSync(path.join(labsDir, filename), pdfBuf);
       }
 
       index.push({ filename, title: cleanDesc || link.description, url: docUrl });
