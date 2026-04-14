@@ -1,15 +1,12 @@
-import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { type BrowserProvider } from "../browser/interface.js";
-import { Visit } from "../schemas.js";
 import { ensureLoggedIn } from "../auth.js";
 import {
   OUTPUT_DIR,
   readDirSafe,
-  slugify,
   makeItemFilename,
-  savePageAsHtml,
+  mergePdfs,
   navigateWithRetry,
 } from "./helpers.js";
 
@@ -17,15 +14,15 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   const visitsDir = path.join(OUTPUT_DIR, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
 
-  const existingHtml = readDirSafe(visitsDir).filter((f) => f.endsWith(".html"));
-  if (existingHtml.length > 0 && process.env.FORCE_VISITS !== "1") {
+  const existingPdfs = readDirSafe(visitsDir).filter((f) => f.endsWith(".pdf"));
+  if (existingPdfs.length > 0 && process.env.FORCE_VISITS !== "1") {
     console.log(
-      `Step 9: Visits already extracted (${existingHtml.length} .html files) — skipping (FORCE_VISITS=1 to re-run).`,
+      `Step 7: Visits already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_VISITS=1 to re-run).`,
     );
     return;
   }
 
-  console.log("Step 9: Navigating to visits...");
+  console.log("Step 7: Navigating to visits...");
   await ensureLoggedIn(browser, mychartUrl);
   await browser.act(
     'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
@@ -48,14 +45,13 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   }
 
   const listUrl = await browser.url();
-  const errors: string[] = [];
   const maxVisits = Math.min(visitLinks.length, 20);
   const savedFiles = readDirSafe(visitsDir);
 
   for (let i = 0; i < maxVisits; i++) {
     const link = visitLinks[i];
     const prefix = String(i + 1).padStart(3, "0") + "_";
-    if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".html"))) {
+    if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
       console.log(`   Visit ${i + 1}/${maxVisits}: already saved — skipping`);
       continue;
     }
@@ -63,32 +59,18 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
     console.log(`   Visit ${i + 1}/${maxVisits}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
-      await new Promise((r) => setTimeout(r, 2500));
+      await new Promise((r) => setTimeout(r, 1000));
+      try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
       const pageTitle = await browser.title();
-      const htmlFilename = makeItemFilename(i, pageTitle || link.description);
-      await savePageAsHtml(browser, visitsDir, htmlFilename);
-
-      // Also save structured JSON (secondary, for downstream processing)
-      try {
-        const VisitSchema = z.object({ visit: Visit });
-        const result = await browser.extract(
-          VisitSchema,
-          "Extract all details about this visit: date, visit type, provider name, " +
-          "department, location, reason for visit, diagnoses, and any notes or instructions.",
-        );
-        const v = result.visit;
-        const jsonFilename = `${String(i + 1).padStart(3, "0")}_${slugify(v.date || pageTitle)}_${slugify(v.visitType)}.json`;
-        fs.writeFileSync(path.join(visitsDir, jsonFilename), JSON.stringify(v, null, 2));
-      } catch {
-        // JSON extraction is best-effort; HTML is the primary output
+      const filename = makeItemFilename(i, pageTitle || link.description);
+      if (browser.pdf) {
+        const pdfBuf = await browser.pdf();
+        fs.writeFileSync(path.join(visitsDir, filename), pdfBuf);
       }
-
-      console.log(`      → saved ${htmlFilename}`);
+      console.log(`      → saved ${filename}`);
     } catch (err: any) {
-      const msg = `Visit ${i + 1} (${link.description}): ${err?.message ?? String(err)}`;
       console.log(`      → error: ${err?.message ?? err}`);
-      errors.push(msg);
       try {
         const ss = await browser.screenshot();
         fs.writeFileSync(path.join(visitsDir, `visit-${i + 1}-error.png`), Buffer.from(ss, "base64"));
@@ -98,8 +80,6 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
     await new Promise((r) => setTimeout(r, 1500));
   }
 
-  if (errors.length > 0) {
-    fs.writeFileSync(path.join(visitsDir, "errors.json"), JSON.stringify(errors, null, 2));
-  }
   console.log(`   Visits saved to ${visitsDir}`);
+  await mergePdfs(visitsDir, path.join(OUTPUT_DIR, "visits.pdf"), "visits");
 }

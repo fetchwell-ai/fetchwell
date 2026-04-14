@@ -1,15 +1,12 @@
-import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { type BrowserProvider } from "../browser/interface.js";
-import { Message } from "../schemas.js";
 import { ensureLoggedIn } from "../auth.js";
 import {
   OUTPUT_DIR,
   readDirSafe,
-  slugify,
   makeItemFilename,
-  savePageAsHtml,
+  mergePdfs,
   navigateWithRetry,
 } from "./helpers.js";
 
@@ -22,7 +19,7 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
     readDirSafe(msgsDir).forEach((f) => fs.unlinkSync(path.join(msgsDir, f)));
   }
 
-  console.log("Step 11: Navigating to messages...");
+  console.log("Step 9: Navigating to messages...");
   await ensureLoggedIn(browser, mychartUrl);
   await browser.act(
     'Click the Messages or Inbox link in the navigation menu. ' +
@@ -44,14 +41,13 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
   }
 
   const listUrl = await browser.url();
-  const errors: string[] = [];
   const maxThreads = Math.min(threadLinks.length, 50);
   const savedFiles = readDirSafe(msgsDir);
 
   for (let i = 0; i < maxThreads; i++) {
     const link = threadLinks[i];
     const prefix = String(i + 1).padStart(3, "0") + "_";
-    if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".html"))) {
+    if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
       console.log(`   Thread ${i + 1}/${maxThreads}: already saved — skipping`);
       continue;
     }
@@ -59,32 +55,18 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
     console.log(`   Thread ${i + 1}/${maxThreads}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
-      await new Promise((r) => setTimeout(r, 2000));
+      await new Promise((r) => setTimeout(r, 1000));
+      try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
       const pageTitle = await browser.title();
-      const htmlFilename = makeItemFilename(i, pageTitle || link.description);
-      await savePageAsHtml(browser, msgsDir, htmlFilename);
-
-      // Also save structured JSON (secondary)
-      try {
-        const MsgSchema = z.object({ message: Message });
-        const result = await browser.extract(
-          MsgSchema,
-          "Extract the full message thread: subject, sender name, date, full message body text, " +
-          "and any reply messages (each with sender, date, and body text).",
-        );
-        const m = result.message;
-        const jsonFilename = `${String(i + 1).padStart(3, "0")}_${slugify(m.date)}_${slugify(m.subject)}.json`;
-        fs.writeFileSync(path.join(msgsDir, jsonFilename), JSON.stringify(m, null, 2));
-      } catch {
-        // JSON is best-effort; HTML is the primary output
+      const filename = makeItemFilename(i, pageTitle || link.description);
+      if (browser.pdf) {
+        const pdfBuf = await browser.pdf();
+        fs.writeFileSync(path.join(msgsDir, filename), pdfBuf);
       }
-
-      console.log(`      → saved ${htmlFilename}`);
+      console.log(`      → saved ${filename}`);
     } catch (err: any) {
-      const msg = `Thread ${i + 1} (${link.description}): ${err?.message ?? String(err)}`;
       console.log(`      → error: ${err?.message ?? err}`);
-      errors.push(msg);
       try {
         const ss = await browser.screenshot();
         fs.writeFileSync(path.join(msgsDir, `thread-${i + 1}-error.png`), Buffer.from(ss, "base64"));
@@ -94,8 +76,6 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
     await new Promise((r) => setTimeout(r, 1500));
   }
 
-  if (errors.length > 0) {
-    fs.writeFileSync(path.join(msgsDir, "errors.json"), JSON.stringify(errors, null, 2));
-  }
   console.log(`   Messages saved to ${msgsDir}`);
+  await mergePdfs(msgsDir, path.join(OUTPUT_DIR, "messages.pdf"), "threads");
 }
