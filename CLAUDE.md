@@ -2,7 +2,7 @@
 
 ## Project overview
 
-AI agent that logs into Epic MyChart via browser automation, extracts health records, and delivers a zip file. No APIs or FHIR — browser only.
+AI agent that logs into Epic MyChart via browser automation, extracts health records as PDFs, and delivers merged PDF files ready to upload to Claude.ai. No APIs or FHIR — browser only.
 
 - **PRD:** `PRD.md` — product requirements, engineering plan, phase roadmap (read this first)
 - **Architecture:** `ARCHITECTURE.md` — technical architecture detail
@@ -19,18 +19,15 @@ browser-agent-team/
 ├── handoff.md           # Current session handoff notes
 ├── src/
 │   ├── extract/
-│   │   ├── index.ts     # Main extraction pipeline (entry point)
-│   │   ├── labs.ts      # extractLabsDocs(), extractLabsJson()
-│   │   ├── visits.ts    # extractVisits()
-│   │   ├── medications.ts  # extractMedications()
-│   │   ├── messages.ts  # extractMessages()
-│   │   └── helpers.ts   # Shared: slugify, savePageAsHtml, navigateWithRetry, buildIndex
+│   │   ├── index.ts        # Main extraction pipeline (entry point)
+│   │   ├── labs.ts         # extractLabsDocs() → output/labs/*.pdf + output/labs.pdf
+│   │   ├── visits.ts       # extractVisits() → output/visits/*.pdf + output/visits.pdf
+│   │   ├── medications.ts  # extractMedications() → output/medications.pdf
+│   │   ├── messages.ts     # extractMessages() → output/messages/*.pdf + output/messages.pdf
+│   │   └── helpers.ts      # Shared: slugify, makeItemFilename, mergePdfs, navigateWithRetry, buildIndex
 │   ├── auth.ts          # doLogin, ensureLoggedIn, fetchGmailVerificationCode
 │   ├── session.ts       # loadSavedSession, saveSession, clearSession
-│   ├── chat.ts          # Interactive Claude chat
-│   ├── package.ts       # Zip packager (pnpm package)
 │   ├── 2fa-relay.ts     # Standalone Gmail IMAP 2FA helper
-│   ├── schemas.ts       # Zod schemas (LabPanel, Visit, Medication, Message)
 │   ├── imap.ts          # extractVerificationCode()
 │   └── browser/
 │       ├── interface.ts  # BrowserProvider abstraction
@@ -43,16 +40,22 @@ browser-agent-team/
 ├── output/              # Runtime output — gitignored
 │   ├── session.json     # Saved browser session (12h TTL, skip login on reuse)
 │   ├── 2fa.code         # Drop a 6-digit code here to relay 2FA manually
-│   └── index.html       # Browsable index of all extracted records
+│   ├── labs.pdf         # All lab results merged — upload to Claude.ai
+│   ├── visits.pdf       # All visits merged — upload to Claude.ai
+│   ├── medications.pdf  # Medication list — upload to Claude.ai
+│   ├── messages.pdf     # All messages merged — upload to Claude.ai
+│   ├── index.html       # Overview listing the 4 merged PDFs
+│   ├── labs/            # Individual lab PDFs (one per panel)
+│   ├── visits/          # Individual visit PDFs
+│   ├── medications/     # (empty — single file goes to output/medications.pdf)
+│   └── messages/        # Individual message thread PDFs
 └── .env                 # Credentials — gitignored, see .env.example
 ```
 
 ## Running
 
 ```bash
-pnpm extract    # Extract all records → output/
-pnpm chat       # Interactive Claude chat about records
-pnpm package    # Bundle output/ into mychart-YYYY-MM-DD.zip
+pnpm extract    # Extract all records → output/*.pdf
 ```
 
 Provide 2FA code manually (when Gmail auto-fetch fails):
@@ -68,10 +71,27 @@ rm output/session.json
 Force re-extraction of a specific section:
 ```bash
 FORCE_LABS=1 pnpm extract
+FORCE_VISITS=1 pnpm extract
+FORCE_MEDS=1 pnpm extract
 FORCE_MSGS=1 pnpm extract
 ```
 
+## Output format
+
+Each `pnpm extract` run produces 4 merged PDFs in `output/`:
+- `labs.pdf` — all lab results and imaging reports (one PDF per panel, merged)
+- `visits.pdf` — all visit notes (one PDF per visit, merged)
+- `medications.pdf` — current medication list (single page)
+- `messages.pdf` — all message threads (one PDF per thread, merged)
+
+Upload all 4 to Claude.ai to analyze your records. Each is typically 1–10 MB.
+
 ## Key technical decisions
+
+### Output format: PDF-only
+All records are captured as PDFs using Playwright's `page.pdf()`. This solves two problems:
+1. **Scroll**: `page.pdf()` captures full page height regardless of scroll position
+2. **Async content**: `waitForLoadState("networkidle")` is called before capture so AJAX-loaded content (imaging reports, etc.) is present
 
 ### Stagehand model setup
 Stagehand v2.5.8's built-in model whitelist only contains retired Claude 3.7 models. We bypass it using `AISdkClient` from Stagehand + `@ai-sdk/anthropic@1.x`:
@@ -104,6 +124,9 @@ Cookies saved to `output/session.json` after successful login. Auto-restored on 
 ### 2FA relay
 The extraction pipeline watches `output/2fa.code` via `fs.watch` + 10s poll fallback. When the file appears, it reads the code and types it into the browser via `act()`. See `src/auth.ts`.
 
+### Deprecated: pnpm chat
+The built-in Claude chat feature has been removed. Upload the PDF output directly to Claude.ai instead — it reads PDFs natively and can analyze all records in a single session.
+
 ## Environment variables
 
 See `.env.example`. Key vars:
@@ -116,4 +139,5 @@ See `.env.example`. Key vars:
 
 ## Current phase
 
-**Phase 1 (refactor + stabilize) is complete.** Phase 2 is cloud deployment (Browserbase). See `PRD.md` and `handoff.md`.
+**Phase 1 (refactor + stabilize) is complete. PDF output migration is complete.**
+Next: validate visits/messages/medications PDF output, then Phase 2 (Browserbase cloud deployment). See `PRD.md` and `handoff.md`.
