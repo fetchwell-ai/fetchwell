@@ -38,7 +38,7 @@ No APIs or FHIR connectors — browser automation only.
 | Extract medication list | 0 | ✅ Done |
 | Extract messages / inbox | 0 | ✅ Done (28 threads, all complete) |
 | Deliver records as human-readable local files + index | 0 | ✅ Done |
-| AI review: interactive chat about records | 0 | ✅ Done (`pnpm chat`) |
+| AI review: interactive chat about records | 0 | ⏸ Deprecated — use Claude.ai with exported PDFs instead |
 | Refactor out of spike/ into proper application structure | 1 | ✅ Done (src/ at root) |
 | Fix messages extraction reliability (network timeout) | 1 | ✅ Done (`navigateWithRetry` + per-thread resume) |
 | Zip packaging + metadata.json | 1 | ✅ Done (`pnpm package`) |
@@ -76,13 +76,12 @@ The agent:
 ### 5.2 Browse Records
 Open `output/index.html` in a browser. Click any document to view it with formatting.
 
-### 5.3 Chat with Claude
-```bash
-pnpm chat
-```
-1. Loads all extracted HTML/JSON into Claude Sonnet context
-2. Generates an opening summary (lab values, visit highlights, medication list, message themes)
-3. Interactive Q&A — ask anything about your records
+### 5.3 Chat with Claude (deprecated)
+
+> **Superseded:** Upload the exported PDF zip to Claude.ai instead.
+> The `pnpm chat` command still works but is no longer actively developed.
+
+~~`pnpm chat`~~ — use Claude.ai with the exported PDFs from `pnpm package`.
 
 ---
 
@@ -173,7 +172,7 @@ mychart-2026-04-13.zip          # created by pnpm package
 | AI browser layer | Stagehand v2.5.8 + `AISdkClient` | Bypasses Stagehand's model whitelist |
 | Claude model | `claude-sonnet-4-6` | Via `@ai-sdk/anthropic` (v1.x) |
 | Gmail 2FA | imapflow | IMAP App Password auth |
-| Chat | `@anthropic-ai/sdk` | Streaming, direct API |
+| Chat | `@anthropic-ai/sdk` | Streaming, direct API — **deprecated, use Claude.ai with PDF export** |
 | Cloud browser (future) | Browserbase | Switch via `BROWSER_PROVIDER=browserbase` |
 
 ### Critical: Stagehand model setup
