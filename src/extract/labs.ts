@@ -1,6 +1,7 @@
 import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { PDFDocument } from "pdf-lib";
 import { type BrowserProvider } from "../browser/interface.js";
 import { LabPanel } from "../schemas.js";
 import { ensureLoggedIn } from "../auth.js";
@@ -70,7 +71,9 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
     console.log(`   Doc ${i + 1}/${maxPanels}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
-      await new Promise((r) => setTimeout(r, 2500));
+      await new Promise((r) => setTimeout(r, 1000));
+      // Wait for async content (imaging reports load via AJAX after page ready)
+      try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
       const docUrl = await browser.url();
       const cleanDesc = link.description
@@ -78,6 +81,13 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
         .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
       const filename = makeItemFilename(i, cleanDesc || link.description);
       await savePageAsHtml(browser, labsDir, filename);
+
+      // Also capture as PDF for Claude.ai upload
+      if (browser.pdf) {
+        const pdfBuf = await browser.pdf();
+        fs.writeFileSync(path.join(labsDir, filename.replace(".html", ".pdf")), pdfBuf);
+      }
+
       index.push({ filename, title: cleanDesc || link.description, url: docUrl });
       console.log(`      → saved ${filename}`);
     } catch (err: any) {
@@ -96,6 +106,26 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
 
   fs.writeFileSync(path.join(labsDir, "index.json"), JSON.stringify(index, null, 2), "utf8");
   console.log(`   Labs docs saved to ${labsDir} (${index.length} documents)`);
+
+  // Merge all individual PDFs into a single output/labs.pdf for Claude.ai upload
+  const pdfFiles = readDirSafe(labsDir).filter((f) => f.endsWith(".pdf")).sort();
+  if (pdfFiles.length > 0) {
+    console.log(`   Merging ${pdfFiles.length} PDFs → output/labs.pdf...`);
+    const merged = await PDFDocument.create();
+    for (const pdfFile of pdfFiles) {
+      try {
+        const bytes = fs.readFileSync(path.join(labsDir, pdfFile));
+        const doc = await PDFDocument.load(bytes);
+        const pages = await merged.copyPages(doc, doc.getPageIndices());
+        pages.forEach((page) => merged.addPage(page));
+      } catch (err: any) {
+        console.log(`      → skipping ${pdfFile}: ${err?.message}`);
+      }
+    }
+    const mergedBytes = await merged.save();
+    fs.writeFileSync(path.join(OUTPUT_DIR, "labs.pdf"), mergedBytes);
+    console.log(`   ✓ output/labs.pdf (${pdfFiles.length} labs, ${(mergedBytes.length / 1024).toFixed(0)} KB)`);
+  }
 }
 
 /**

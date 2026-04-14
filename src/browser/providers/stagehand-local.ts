@@ -128,6 +128,10 @@ export class StagehandLocalProvider implements BrowserProvider {
     await this.stagehand.page.context().addCookies(session.cookies as any);
   }
 
+  async pdf(): Promise<Buffer> {
+    return this.stagehand.page.pdf({ format: "A4", printBackground: true });
+  }
+
   async close(): Promise<void> {
     await this.stagehand.close();
   }

@@ -51,6 +51,9 @@ export interface BrowserProvider {
    *  Never uses AI — direct JS evaluation. */
   pageHtml(): Promise<string>;
 
+  /** Capture the current page as a PDF buffer (full page height, not viewport-limited) */
+  pdf?(): Promise<Buffer>;
+
   /** Destroy the browser session and clean up resources */
   close(): Promise<void>;
 }
