@@ -1,96 +1,99 @@
-# Handoff — Phase 1 Complete / Phase 2 Prep
+# Handoff — PDF Migration Complete / Phase 2 Prep
 
-**Date:** 2026-04-13  
+**Date:** 2026-04-13
 **For:** Next Claude Code session
 
 ---
 
 ## What was accomplished in this session
 
-Phase 1 (Refactor + Stabilize) is complete:
+### Cleanup
+- ✅ Deleted `spike/` directory (validated clean extraction run first)
+- ✅ `pnpm chat` deprecated and `src/chat.ts` deleted — superseded by Claude.ai + PDF upload
 
-- ✅ Validation run confirmed: 36 labs, 12 visits, 1 medications, **28 messages** (full extraction clean)
-- ✅ Simplify pass already done last session (commit: "Simplify: extract shared helpers, remove N+1 dir reads, parallelize async calls")
-- ✅ Refactored `spike/` → root `src/` with proper module splits:
-  - `src/extract/{index,labs,visits,medications,messages,helpers}.ts`
-  - `src/{auth,session,chat,imap,schemas,package}.ts`
-  - `src/browser/` (unchanged from spike)
-- ✅ `pnpm extract` replaces `cd spike && pnpm spike`
-- ✅ `pnpm package` creates `mychart-YYYY-MM-DD.zip` with metadata.json (tested: 77 records, 0.7 MB)
-- ✅ Existing extracted records moved from `spike/output/` → `output/`
-- ✅ Zero TypeScript errors, committed
+### PDF output migration (major refactor)
+- ✅ Added `pdf()` to `BrowserProvider` interface + implemented in `StagehandLocalProvider` via `page.pdf()`
+- ✅ Added `waitForLoadState("networkidle")` before capture in all extractors — fixes imaging reports that previously rendered blank (`InternalReportViewerWrapper` AJAX content now loads before capture)
+- ✅ `labs`: PDF-only extraction, 36 PDFs merged into `output/labs.pdf` (4.5 MB — **validated and confirmed working**)
+- ✅ `visits`, `messages`: refactored to PDF, per-item PDFs + merged section PDF
+- ✅ `medications`: single-page PDF saved directly to `output/medications.pdf`
+- ✅ Removed all HTML capture (`savePageAsHtml`, `DOC_CSS` gone from helpers)
+- ✅ Removed all JSON structured extraction from visits, messages, medications
+- ✅ Deleted `src/schemas.ts` (LabPanel, Visit, Medication, Message — nothing uses them)
+- ✅ Deleted `src/package.ts` + removed `archiver` dependency + `pnpm package` script — zip replaced by merged PDFs
+- ✅ Removed legacy `extractLabsJson` (30-panel JSON drill-down step)
+- ✅ `buildIndex()` updated to list the 4 merged PDFs instead of HTML files
+- ✅ Cleaned up `output/` — deleted all old HTML, JSON, zip files
+- ✅ Added shared `mergePdfs()` helper in `helpers.ts`
+
+### Commits pushed this session
+All commits pushed to `origin/main`. Run `git log --oneline` to see the full list.
 
 ---
 
-## What to do next (Phase 2 priority order)
+## What to do next (in order)
 
-### 1. Delete spike/ (cleanup)
+### 1. Validate visits, messages, medications PDF extraction
 
-The `spike/` directory is still present as a safety backup. Once you've verified `pnpm extract` completes a clean run from the new location, delete it:
-
-```bash
-rm -rf spike/
-git add -A
-git commit -m "Remove spike/ — refactored into root src/"
-```
-
-**Note:** The new `pnpm extract` will write to `output/` at the root (not `spike/output/`). The session file is now at `output/session.json`. A fresh login will be needed on the first run since the spike session was already expired.
-
-### 2. Full validation run from new location
-
-Run `pnpm extract` from the root (not from inside spike/):
+Labs PDF was validated this session. The other three sections still have their OLD files deleted and need to be re-extracted as PDFs:
 
 ```bash
-pnpm extract
+FORCE_VISITS=1 FORCE_MEDS=1 FORCE_MSGS=1 pnpm extract
 ```
 
 **Passing criteria:**
-- All sections skip (already saved in output/)  
-- `output/index.html` is rebuilt
-- No crash
+- `output/visits.pdf` created, opens cleanly, visit notes readable
+- `output/medications.pdf` created, medication list visible
+- `output/messages.pdf` created, message threads readable
+- No crashes
 
-If the session has expired, the agent will re-authenticate automatically.
+**Before running:** prompt the user — they may want to watch the output.
 
-### 3. Phase 2 — Cloud Deployment (Browserbase)
+### 2. Review PDF quality
 
-The groundwork is already done:
-- `StagehandBrowserbaseProvider` is implemented in `src/browser/providers/stagehand-browserbase.ts`
-- Set `BROWSER_PROVIDER=browserbase` in `.env`
-- Add `BROWSERBASE_API_KEY` and `BROWSERBASE_PROJECT_ID` to `.env`
-- No other code changes needed
+Have the user check the PDFs:
+- Do imaging reports now have content (previously blank with async loading)?
+- Are blood work panels readable?
+- Is there any MyChart UI chrome that should be trimmed (print CSS)?
+- Are all pages legible when uploaded to Claude.ai?
 
-Next steps for Phase 2:
-- Deploy orchestrator to Railway (runs locally → runs in cloud)
-- Store session cookies in Browserbase Contexts for persistence
-- Pre-signed S3/R2 URL for zip delivery
+### 3. Phase 2 — Browserbase cloud browser (NEXT MAJOR WORK)
 
-### 4. Phase 1.4 — Proper CLI (optional)
+The groundwork is done — `StagehandBrowserbaseProvider` is implemented in `src/browser/providers/stagehand-browserbase.ts`. Two known issues to fix before it will work:
 
-```bash
-mychart-agent fetch       # pnpm extract
-mychart-agent chat        # pnpm chat
-mychart-agent package     # pnpm package
-mychart-agent fetch --section labs  # FORCE_LABS=1 pnpm extract
-```
+**Bug 1 — Model whitelist (unknown if issue in BROWSERBASE mode):**
+The Browserbase provider uses `modelName: "claude-sonnet-4-6"` + `modelClientOptions`. In LOCAL mode this would fail (Stagehand's whitelist blocks it), but BROWSERBASE mode routes the LLM through Browserbase's infra. May work as-is — test first before changing.
+
+**Bug 2 — Missing `saveSession()`/`loadSession()`:**
+Browserbase provider doesn't implement these. For Phase 2 step 1 (cloud browser, local orchestrator), add cookie-based session persistence using the same pattern as the local provider. Longer term: use Browserbase Contexts.
+
+**Bug 3 — Missing `pdf()` method:**
+The Browserbase provider doesn't implement `pdf()`. Add it: `return this.stagehand.page.pdf({ format: "A4", printBackground: true })`.
+
+**Bug 4 — Missing `iframes: true`:**
+Local provider passes `{ iframes: true }` to `act()`/`extract()`/`observe()`. Browserbase provider doesn't. May be needed for MyChart.
+
+**To activate Browserbase:**
+1. Set `BROWSER_PROVIDER=browserbase` in `.env`
+2. Add `BROWSERBASE_API_KEY` and `BROWSERBASE_PROJECT_ID` to `.env`
+3. Fix the bugs above
+4. Run `pnpm extract` and watch for errors
 
 ---
 
 ## Known issues / gotchas
 
-**spike/ still present:**
-- It's safe to delete after a successful `pnpm extract` run from the root
-- Don't need to migrate anything — records are already in `output/`
+**`pdf()` not implemented in Browserbase provider:**
+`StagehandBrowserbaseProvider` doesn't have `pdf()` yet. Will silently skip PDF capture if used. Add before Phase 2 testing.
 
 **Stagehand model whitelist:**
-- Do NOT update `@browserbasehq/stagehand` without checking if the new version has better model support
-- The `AISdkClient` + proxy pattern in `src/browser/providers/stagehand-local.ts` must be preserved until Stagehand natively supports `claude-sonnet-4-6`
+Do NOT update `@browserbasehq/stagehand` without checking if new version has better model support. The AISdkClient + Proxy pattern in `src/browser/providers/stagehand-local.ts` must be preserved until Stagehand natively supports `claude-sonnet-4-6`.
 
 **`@ai-sdk/anthropic` version:**
-- Must stay at `@1.x`. The `@3.x` package (AI SDK spec v2) is incompatible with Stagehand's internal `ai@4.x`
+Must stay at `@1.x`. The `@3.x` package (AI SDK spec v2) is incompatible with Stagehand's internal `ai@4.x`.
 
 **Gmail 2FA polling is slow on first poll:**
-- First IMAP search fetches all matching UIDs — can take 2-3 minutes if there are many old emails
-- `checkedUids` tracking prevents re-fetching on subsequent polls
+First IMAP search can take 2-3 minutes if there are many old emails. `checkedUids` tracking prevents re-fetching on subsequent polls.
 
 ---
 
@@ -98,6 +101,6 @@ mychart-agent fetch --section labs  # FORCE_LABS=1 pnpm extract
 
 1. `PRD.md` — merged product + engineering doc
 2. `ARCHITECTURE.md` — system architecture
-3. `src/extract/index.ts` — main orchestrator (was spike.ts)
-4. `src/extract/labs.ts` / `visits.ts` / `messages.ts` — section extractors
-5. `src/auth.ts` — login + 2FA logic
+3. `handoff.md` — this file
+4. `src/extract/labs.ts` — reference implementation for PDF capture pattern
+5. `src/browser/providers/stagehand-browserbase.ts` — what needs fixing for Phase 2

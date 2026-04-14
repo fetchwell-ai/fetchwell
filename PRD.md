@@ -1,14 +1,14 @@
 # MyChart Browser Agent — Product & Engineering Document
 
-**Version:** 0.4  
+**Version:** 0.5  
 **Date:** 2026-04-13  
-**Status:** Phase 1 complete; Phase 2 (cloud deployment) is next
+**Status:** PDF migration complete; visits/meds/messages PDF validation next, then Phase 2 (cloud deployment)
 
 ---
 
 ## 1. Overview
 
-An AI agent that uses browser automation to log into Epic MyChart, navigate the patient portal, extract health records as human-readable HTML documents, and deliver them to a local folder. An interactive Claude chat session lets the user ask questions about their records.
+An AI agent that uses browser automation to log into Epic MyChart, navigate the patient portal, extract health records as PDF documents, and deliver merged PDFs ready for upload to Claude.ai.
 
 No APIs or FHIR connectors — browser automation only.
 
@@ -18,7 +18,7 @@ No APIs or FHIR connectors — browser automation only.
 
 ### v0 / Phase 1 (current)
 - **Primary user:** A single technical user comfortable with CLI tools.
-- **Interaction model:** `pnpm extract` to pull records, `pnpm chat` to analyze them.
+- **Interaction model:** `pnpm extract` to pull records → upload PDFs to Claude.ai to analyze.
 - **2FA:** Fully automated via Gmail IMAP — no manual intervention required.
 
 ### Future (Phase 3+)
@@ -32,18 +32,19 @@ No APIs or FHIR connectors — browser automation only.
 | Goal | Phase | Status |
 |---|---|---|
 | Authenticate into MyChart including 2FA | 0 | ✅ Done (Gmail auto-2FA) |
-| Extract lab results as full HTML documents | 0 | ✅ Done (36 HTML docs) |
-| Extract visit notes | 0 | ✅ Done (HTML + JSON) |
-| Extract imaging reports | 0 | ✅ Done (captured within lab HTML) |
-| Extract medication list | 0 | ✅ Done |
-| Extract messages / inbox | 0 | ✅ Done (28 threads, all complete) |
-| Deliver records as human-readable local files + index | 0 | ✅ Done |
+| Extract lab results as PDFs | 0 | ✅ Done (36 PDFs → labs.pdf, validated) |
+| Extract visit notes | 0 | ✅ Done (PDF) |
+| Extract imaging reports | 0 | ✅ Done (PDF, async content fixed) |
+| Extract medication list | 0 | ✅ Done (PDF) |
+| Extract messages / inbox | 0 | ✅ Done (28 threads, PDF) |
+| Deliver records as merged PDFs for Claude.ai upload | 0 | ✅ Done |
 | AI review: interactive chat about records | 0 | ⏸ Deprecated — use Claude.ai with exported PDFs instead |
 | Refactor out of spike/ into proper application structure | 1 | ✅ Done (src/ at root) |
 | Fix messages extraction reliability (network timeout) | 1 | ✅ Done (`navigateWithRetry` + per-thread resume) |
-| Zip packaging + metadata.json | 1 | ✅ Done (`pnpm package`) |
-| Proper CLI entry point (`mychart-agent fetch`) | 1 | ⬜ Deferred to P1.4 |
-| Cloud browser (Browserbase) | 2 | ⬜ Next |
+| PDF output migration (replace HTML/JSON/zip) | 1 | ✅ Done (labs validated; visits/meds/msgs need re-extraction) |
+| Validate visits/meds/messages PDF output | 1 | ⬜ Next — run FORCE_VISITS=1 FORCE_MEDS=1 FORCE_MSGS=1 |
+| Proper CLI entry point (`mychart-agent fetch`) | 1 | ⬜ Deferred |
+| Cloud browser (Browserbase) | 2 | ⬜ Next after PDF validation |
 | Multi-user web UI | 3 | ⬜ Future |
 
 ---
@@ -69,7 +70,7 @@ pnpm extract
 The agent:
 1. Restores saved session if < 12h old (skips login + 2FA)
 2. If no session: logs in using credentials from `.env`, auto-fetches 2FA code from Gmail
-3. Navigates to each section and extracts full page content as HTML documents
+3. Navigates to each section and extracts full page content as PDF documents
 4. Builds `output/index.html` — a browsable local index of all records
 5. Saves all records to `output/` (gitignored)
 
@@ -78,10 +79,7 @@ Open `output/index.html` in a browser. Click any document to view it with format
 
 ### 5.3 Chat with Claude (deprecated)
 
-> **Superseded:** Upload the exported PDF zip to Claude.ai instead.
-> The `pnpm chat` command still works but is no longer actively developed.
-
-~~`pnpm chat`~~ — use Claude.ai with the exported PDFs from `pnpm package`.
+> **Removed:** `src/chat.ts` deleted. Upload the 4 merged PDFs from `output/` to Claude.ai instead — it reads PDFs natively.
 
 ---
 
@@ -111,40 +109,20 @@ Open `output/index.html` in a browser. Click any document to view it with format
 
 ## 7. Output Format
 
-### Current (v0)
+### Current (PDF output)
 ```
 output/
-├── index.html              # Browsable index (open in browser)
-├── labs.json               # Structured lab index
-├── labs/
-│   ├── 001_lipid-panel-apr-21-2025.html
-│   └── ...                 # One .html per lab/imaging result (36 total)
-├── visits/
-│   ├── 001_visit-title.html
-│   ├── 001_visit-date_visit-type.json
-│   └── ...                 # One .html + .json per visit (12 total)
-├── medications/
-│   └── medications.html
-└── messages/
-    ├── 001_ucsf-mychart-conversation.html
-    ├── 001_date_subject.json
-    └── ...                 # One .html + .json per thread (28 targeted)
+├── index.html              # Lists the 4 merged PDFs with links
+├── labs.pdf                # All lab results + imaging reports merged — upload to Claude.ai
+├── visits.pdf              # All visit notes merged — upload to Claude.ai
+├── medications.pdf         # Medication list — upload to Claude.ai
+├── messages.pdf            # All message threads merged — upload to Claude.ai
+├── labs/                   # Individual lab PDFs (one per panel, used to build labs.pdf)
+├── visits/                 # Individual visit PDFs
+└── messages/               # Individual message thread PDFs
 ```
 
-**HTML files:** Full page content captured from MyChart, wrapped in a simple readable shell. Tables render correctly. Narrative text (radiology reports, clinical notes) is preserved in full.
-
-**JSON files:** Structured extraction (best-effort, may be empty for narrative-only documents).
-
-### Phase 1 (current)
-```
-mychart-2026-04-13.zip          # created by pnpm package
-├── metadata.json               # timestamp, record counts
-├── index.html                  # browsable index
-├── labs/
-├── visits/
-├── medications/
-└── messages/
-```
+**PDF files:** Full page captured via Playwright `page.pdf()` after `waitForLoadState("networkidle")`. Captures full scroll height. Async-loaded content (imaging reports, etc.) is present. Upload directly to Claude.ai for analysis.
 
 ---
 
@@ -172,7 +150,7 @@ mychart-2026-04-13.zip          # created by pnpm package
 | AI browser layer | Stagehand v2.5.8 + `AISdkClient` | Bypasses Stagehand's model whitelist |
 | Claude model | `claude-sonnet-4-6` | Via `@ai-sdk/anthropic` (v1.x) |
 | Gmail 2FA | imapflow | IMAP App Password auth |
-| Chat | `@anthropic-ai/sdk` | Streaming, direct API — **deprecated, use Claude.ai with PDF export** |
+| Chat | ~~`@anthropic-ai/sdk`~~ | **Removed** — upload PDFs to Claude.ai directly |
 | Cloud browser (future) | Browserbase | Switch via `BROWSER_PROVIDER=browserbase` |
 
 ### Critical: Stagehand model setup
@@ -264,29 +242,29 @@ FORCE_MSGS=1 pnpm extract    # Re-extract messages
 
 ## 12. Phase 1 — Refactor + Stabilize ✅ COMPLETE
 
-**Goal:** Turn the spike into a proper application. Fix remaining reliability issues.
+**Goal:** Turn the spike into a proper application. Fix reliability. Migrate to PDF output.
 
 ### P1.1 — Refactor out of spike/ ✅
 - Moved `spike/src/` → `src/` with proper module splits
 - Split monolithic `spike.ts` (~1100 lines) into `src/extract/` modules
 - Root `package.json`, `tsconfig.json`, `.env.example`
 - `pnpm extract` replaces `cd spike && pnpm spike`
+- `spike/` deleted after validation
 
 ### P1.2 — Fix messages extraction reliability ✅
 - `navigateWithRetry()` — one automatic retry after 5s on network errors
 - Per-thread skip logic — partial runs resume from where they left off
 - Validated: all 28 message threads extracted cleanly
 
-### P1.3 — Zip packaging + metadata ✅
-- `pnpm package` creates `mychart-YYYY-MM-DD.zip` with `metadata.json` + `index.html`
-- Tested: 77 records packaged to ~0.7 MB
+### P1.3 — PDF output migration ✅
+- All records captured as PDFs via Playwright `page.pdf()`
+- `waitForLoadState("networkidle")` added before capture — fixes blank imaging reports
+- Per-section merged PDFs: `output/labs.pdf`, `visits.pdf`, `medications.pdf`, `messages.pdf`
+- Shared `mergePdfs()` helper in `helpers.ts`
+- Removed: HTML capture, JSON structured extraction, `schemas.ts`, `package.ts`, `archiver`, zip output, `pnpm chat`
+- `labs.pdf` validated (4.5 MB, 36 records including imaging reports); visits/meds/messages need re-extraction
 
 ### P1.4 — Proper CLI (deferred)
-```bash
-mychart-agent fetch      # Extract all records
-mychart-agent chat       # Start chat session
-mychart-agent fetch --section labs  # Re-extract single section
-```
 Deferred — `pnpm extract` is sufficient for current single-user use.
 
 ---
@@ -298,7 +276,7 @@ Deferred — `pnpm extract` is sufficient for current single-user use.
 - Set `BROWSER_PROVIDER=browserbase` — orchestrator still runs locally, browser in Browserbase cloud
 - `StagehandBrowserbaseProvider` already implemented — no other code changes needed
 - Add Railway deployment for the orchestrator process
-- Pre-signed S3/R2 URL for zip delivery
+- Pre-signed S3/R2 URL for PDF delivery
 - Store session cookies in Browserbase Contexts (persistent across sessions)
 
 ---
