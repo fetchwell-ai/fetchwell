@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { PDFDocument } from "pdf-lib";
 import { type BrowserProvider } from "../browser/interface.js";
 
 export const OUTPUT_DIR = path.resolve(import.meta.dirname, "..", "..", "output");
@@ -16,50 +17,29 @@ export function slugify(s: string): string {
     .slice(0, 60) || "unknown";
 }
 
-export function makeItemFilename(index: number, label: string, ext = ".html"): string {
+export function makeItemFilename(index: number, label: string, ext = ".pdf"): string {
   return `${String(index + 1).padStart(3, "0")}_${slugify(label)}${ext}`;
 }
 
-export const DOC_CSS = `
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-         max-width: 900px; margin: 0 auto; padding: 24px; color: #1a1a1a; }
-  h1,h2,h3 { color: #0056b3; }
-  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
-  th, td { border: 1px solid #ccc; padding: 6px 10px; text-align: left; font-size: 0.9em; }
-  th { background: #f0f4f8; }
-  .meta { font-size: 0.8em; color: #666; border-bottom: 1px solid #eee;
-          padding-bottom: 8px; margin-bottom: 16px; }
-  a { color: #0056b3; }
-  img { max-width: 100%; }
-`.trim();
-
-export async function savePageAsHtml(
-  browser: BrowserProvider,
-  dir: string,
-  filename: string,
-): Promise<void> {
-  const [title, url, content] = await Promise.all([
-    browser.title(),
-    browser.url(),
-    browser.pageHtml(),
-  ]);
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title.replace(/</g, "&lt;")}</title>
-<style>${DOC_CSS}</style>
-</head>
-<body>
-<div class="meta">
-  <strong>Source:</strong> <a href="${url}">${url}</a><br>
-  <strong>Extracted:</strong> ${new Date().toISOString()}
-</div>
-${content}
-</body>
-</html>`;
-  fs.writeFileSync(path.join(dir, filename), html, "utf8");
+/** Merge all .pdf files in pdfDir into a single PDF at outputPath. */
+export async function mergePdfs(pdfDir: string, outputPath: string, label: string): Promise<void> {
+  const pdfFiles = readDirSafe(pdfDir).filter((f) => f.endsWith(".pdf")).sort();
+  if (pdfFiles.length === 0) return;
+  console.log(`   Merging ${pdfFiles.length} PDFs → ${path.basename(outputPath)}...`);
+  const merged = await PDFDocument.create();
+  for (const pdfFile of pdfFiles) {
+    try {
+      const bytes = fs.readFileSync(path.join(pdfDir, pdfFile));
+      const doc = await PDFDocument.load(bytes);
+      const pages = await merged.copyPages(doc, doc.getPageIndices());
+      pages.forEach((page) => merged.addPage(page));
+    } catch (err: any) {
+      console.log(`      → skipping ${pdfFile}: ${err?.message}`);
+    }
+  }
+  const mergedBytes = await merged.save();
+  fs.writeFileSync(outputPath, mergedBytes);
+  console.log(`   ✓ ${path.basename(outputPath)} (${pdfFiles.length} ${label}, ${(mergedBytes.length / 1024).toFixed(0)} KB)`);
 }
 
 export async function navigateWithRetry(browser: BrowserProvider, url: string): Promise<void> {
@@ -75,31 +55,32 @@ export async function navigateWithRetry(browser: BrowserProvider, url: string): 
 }
 
 export function buildIndex(): void {
-  const sections: Array<{ name: string; subdir: string; ext: string }> = [
-    { name: "Lab Results", subdir: "labs", ext: ".html" },
-    { name: "Visits", subdir: "visits", ext: ".html" },
-    { name: "Medications", subdir: "medications", ext: ".html" },
-    { name: "Messages", subdir: "messages", ext: ".html" },
+  const sections: Array<{ name: string; pdf: string }> = [
+    { name: "Lab Results", pdf: "labs.pdf" },
+    { name: "Visits", pdf: "visits.pdf" },
+    { name: "Medications", pdf: "medications.pdf" },
+    { name: "Messages", pdf: "messages.pdf" },
   ];
 
-  let body = `<h1>MyChart Health Records</h1>\n<p class="meta">Generated: ${new Date().toISOString()}</p>\n`;
+  let body = `<h1>MyChart Health Records</h1>\n`;
+  body += `<p class="meta">Generated: ${new Date().toISOString()}</p>\n`;
+  body += `<p>Upload these PDF files to Claude.ai to analyze your records.</p>\n<ul>\n`;
 
-  for (const { name, subdir, ext } of sections) {
-    const dir = path.join(OUTPUT_DIR, subdir);
-    let files: string[];
-    try {
-      files = fs.readdirSync(dir).filter((f) => f.endsWith(ext)).sort();
-    } catch {
-      continue;
+  for (const { name, pdf } of sections) {
+    const pdfPath = path.join(OUTPUT_DIR, pdf);
+    if (fs.existsSync(pdfPath)) {
+      const size = (fs.statSync(pdfPath).size / 1024).toFixed(0);
+      body += `  <li><a href="${pdf}">${name}</a> — ${size} KB</li>\n`;
     }
-    if (files.length === 0) continue;
-    body += `<h2>${name} (${files.length})</h2>\n<ul>\n`;
-    for (const f of files) {
-      const label = f.replace(ext, "").replace(/^\d+_/, "").replace(/-/g, " ");
-      body += `  <li><a href="${subdir}/${f}">${label}</a></li>\n`;
-    }
-    body += `</ul>\n`;
   }
+  body += `</ul>\n`;
+
+  const css = `body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+       max-width: 900px; margin: 0 auto; padding: 24px; color: #1a1a1a; }
+  h1 { color: #0056b3; }
+  .meta { font-size: 0.8em; color: #666; margin-bottom: 16px; }
+  a { color: #0056b3; }
+  li { margin: 10px 0; font-size: 1.1em; }`.trim();
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -107,7 +88,7 @@ export function buildIndex(): void {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>MyChart Health Records</title>
-<style>${DOC_CSS}</style>
+<style>${css}</style>
 </head>
 <body>
 ${body}

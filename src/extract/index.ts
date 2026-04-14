@@ -1,7 +1,7 @@
 /**
  * MyChart Agent — Extraction Pipeline
  *
- * Logs into Epic MyChart, extracts health records as HTML documents, and
+ * Logs into Epic MyChart, extracts health records as PDFs, and
  * builds a browsable local index.
  *
  * Usage:
@@ -143,21 +143,9 @@ async function main() {
     }
     console.log();
 
-    // Step 6: Labs extraction (one .pdf per panel + merged output/labs.pdf)
     await extractLabsDocs(browser, MYCHART_URL);
     console.log();
 
-    // Step 8: Screenshot
-    console.log("Step 8: Saving labs screenshot...");
-    const screenshotBase64 = await browser.screenshot();
-    fs.writeFileSync(
-      path.join(OUTPUT_DIR, "screenshot.png"),
-      Buffer.from(screenshotBase64, "base64"),
-    );
-    console.log(`Screenshot saved to output/screenshot.png`);
-    console.log();
-
-    // Steps 9-11: Visits, Medications, Messages
     await extractVisits(browser, MYCHART_URL);
     console.log();
 
@@ -173,11 +161,11 @@ async function main() {
     console.log("  EXTRACTION COMPLETE");
     console.log("=".repeat(60));
     console.log();
-    console.log("  [ok] Labs extracted to output/labs/ (one .pdf per panel) + output/labs.pdf");
-    console.log("  [ok] Visits extracted to output/visits/ (.html + .json per visit)");
-    console.log("  [ok] Medications extracted to output/medications/ (.html + .json)");
-    console.log("  [ok] Messages extracted to output/messages/ (.html + .json per thread)");
-    console.log("  [ok] Browse everything: open output/index.html");
+    console.log("  [ok] output/labs.pdf");
+    console.log("  [ok] output/visits.pdf");
+    console.log("  [ok] output/medications.pdf");
+    console.log("  [ok] output/messages.pdf");
+    console.log("  [ok] output/index.html  (upload PDFs to Claude.ai)");
     console.log();
   } catch (err) {
     failed = true;
