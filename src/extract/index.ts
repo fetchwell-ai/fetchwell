@@ -28,7 +28,7 @@ import { createBrowserProvider } from "../browser/index.js";
 import { loadSavedSession, saveSession } from "../session.js";
 import { isAuthPage, doLogin, GMAIL_USER, prompt } from "../auth.js";
 import { OUTPUT_DIR, buildIndex } from "./helpers.js";
-import { extractLabsJson, extractLabsDocs } from "./labs.js";
+import { extractLabsDocs } from "./labs.js";
 import { extractVisits } from "./visits.js";
 import { extractMedications } from "./medications.js";
 import { extractMessages } from "./messages.js";
@@ -143,11 +143,7 @@ async function main() {
     }
     console.log();
 
-    // Step 6-7: Labs structured extraction (produces labs.json; skipped if it exists)
-    await extractLabsJson(browser, MYCHART_URL);
-    console.log();
-
-    // Step 6b: Labs full-document extraction (one .html per panel)
+    // Step 6: Labs extraction (one .pdf per panel + merged output/labs.pdf)
     await extractLabsDocs(browser, MYCHART_URL);
     console.log();
 
@@ -177,8 +173,7 @@ async function main() {
     console.log("  EXTRACTION COMPLETE");
     console.log("=".repeat(60));
     console.log();
-    console.log("  [ok] Labs JSON extracted to output/labs.json");
-    console.log("  [ok] Labs documents extracted to output/labs/ (one .html per panel)");
+    console.log("  [ok] Labs extracted to output/labs/ (one .pdf per panel) + output/labs.pdf");
     console.log("  [ok] Visits extracted to output/visits/ (.html + .json per visit)");
     console.log("  [ok] Medications extracted to output/medications/ (.html + .json)");
     console.log("  [ok] Messages extracted to output/messages/ (.html + .json per thread)");

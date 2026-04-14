@@ -1,9 +1,7 @@
-import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { type BrowserProvider } from "../browser/interface.js";
-import { LabPanel } from "../schemas.js";
 import { ensureLoggedIn } from "../auth.js";
 import {
   OUTPUT_DIR,
@@ -123,99 +121,3 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
   }
 }
 
-/**
- * Legacy structured labs extraction — produces output/labs.json with Zod-parsed
- * LabPanel data. Only runs on a fresh install (when labs.json doesn't exist).
- * Set FORCE_LABS=1 to re-run.
- */
-export async function extractLabsJson(browser: BrowserProvider, mychartUrl: string): Promise<number> {
-  const labsPath = path.join(OUTPUT_DIR, "labs.json");
-
-  const labsExist = (() => {
-    try {
-      const d = JSON.parse(fs.readFileSync(labsPath, "utf8"));
-      return Array.isArray(d.panels) && d.panels.length > 0;
-    } catch { return false; }
-  })();
-
-  if (labsExist && process.env.FORCE_LABS !== "1") {
-    console.log("Step 6-7: Labs JSON already extracted — skipping (set FORCE_LABS=1 to re-extract).");
-    try {
-      const existing = JSON.parse(fs.readFileSync(labsPath, "utf8"));
-      const totalResults = (existing.panels as LabPanel[]).reduce((s: number, p: LabPanel) => s + p.results.length, 0);
-      console.log(`   ${existing.panels.length} panels, ${totalResults} results in labs.json`);
-      return totalResults;
-    } catch {}
-    return 0;
-  }
-
-  console.log("Step 6: Navigating to lab results...");
-  await browser.act(
-    "Navigate to the test results or lab results section. Look for links " +
-    'or menu items labeled "Test Results", "Labs", "Lab Results", or similar.',
-  );
-  console.log("Navigated to lab results section.");
-  await new Promise((r) => setTimeout(r, 3000));
-
-  console.log("Step 7: Discovering lab panels...");
-  const panelLinks = await browser.observe(
-    "Find all clickable lab result or test result entries on this page. " +
-    "Each entry is a row or link representing a specific lab panel (e.g. CBC, Lipid Panel). " +
-    "Return each one as a separate result.",
-  );
-  console.log(`   Found ${panelLinks.length} panel link(s).`);
-
-  const allPanels: LabPanel[] = [];
-  const errors: string[] = [];
-  const listUrl = await browser.url();
-  const panelsToVisit = panelLinks.slice(0, 30);
-
-  console.log(`Step 7b: Drilling into ${panelsToVisit.length} panels...`);
-  for (let i = 0; i < panelsToVisit.length; i++) {
-    const link = panelsToVisit[i];
-    console.log(`   Panel ${i + 1}/${panelsToVisit.length}: ${link.description}`);
-
-    try {
-      await browser.act(`Click the element: ${link.description}`);
-      await new Promise((r) => setTimeout(r, 2000));
-
-      const PanelSchema = z.object({ panel: LabPanel });
-      const result = await browser.extract(
-        PanelSchema,
-        "Extract the lab panel name, the date it was ordered or resulted, and all " +
-        "individual test results on this page. For each test include: name, value, " +
-        "unit, reference range, flag (H/L/normal), and status.",
-      );
-
-      allPanels.push(result.panel);
-      console.log(`      → ${result.panel.results.length} result(s) extracted`);
-    } catch (err: any) {
-      const msg = `Panel ${i + 1} (${link.description}): ${err?.message ?? String(err)}`;
-      console.log(`      → error: ${err?.message ?? err}`);
-      errors.push(msg);
-    }
-
-    await navigateWithRetry(browser, listUrl);
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-
-  const totalResults = allPanels.reduce((sum, p) => sum + p.results.length, 0);
-
-  console.log();
-  console.log("=".repeat(60));
-  console.log("  EXTRACTED LAB DATA");
-  console.log("=".repeat(60));
-  console.log(`  Panels visited: ${panelsToVisit.length}`);
-  console.log(`  Panels extracted: ${allPanels.length}`);
-  console.log(`  Total individual results: ${totalResults}`);
-  if (errors.length > 0) {
-    console.log(`  Errors: ${errors.length}`);
-    errors.forEach((e) => console.log(`    - ${e}`));
-  }
-  console.log();
-
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  fs.writeFileSync(labsPath, JSON.stringify({ panels: allPanels, errors }, null, 2));
-  console.log(`Lab data saved to ${labsPath}`);
-  return totalResults;
-}
