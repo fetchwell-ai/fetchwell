@@ -1,4 +1,4 @@
-import { z, ZodSchema } from "zod";
+import { ZodSchema } from "zod";
 
 export interface BrowserProvider {
   /** Navigate to a URL */
@@ -53,6 +53,10 @@ export interface BrowserProvider {
 
   /** Capture the current page as a PDF buffer (full page height, not viewport-limited) */
   pdf?(): Promise<Buffer>;
+
+  /** Click an element by CSS/XPath selector, piercing shadow DOM where needed.
+   *  Fallback for when act() silently fails on shadow DOM elements. */
+  clickSelector?(selector: string): Promise<void>;
 
   /** Destroy the browser session and clean up resources */
   close(): Promise<void>;

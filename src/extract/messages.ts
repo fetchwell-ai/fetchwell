@@ -54,8 +54,15 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
 
     console.log(`   Thread ${i + 1}/${maxThreads}: ${link.description}`);
     try {
+      const urlBefore = await browser.url();
       await browser.act(`Click the element: ${link.description}`);
       await new Promise((r) => setTimeout(r, 1000));
+      // If act() silently failed (shadow DOM element), fall back to direct selector click
+      if ((await browser.url()) === urlBefore && browser.clickSelector && link.selector) {
+        console.log(`      (act() didn't navigate — trying direct selector click)`);
+        await browser.clickSelector(link.selector);
+        await new Promise((r) => setTimeout(r, 1000));
+      }
       try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
       const pageTitle = await browser.title();

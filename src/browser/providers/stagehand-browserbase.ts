@@ -103,6 +103,10 @@ export class StagehandBrowserbaseProvider implements BrowserProvider {
     return this.stagehand.page.evaluate(getPageHtml);
   }
 
+  async clickSelector(selector: string): Promise<void> {
+    await this.stagehand.page.locator(selector).click({ timeout: 5000 });
+  }
+
   async close(): Promise<void> {
     await this.stagehand.close();
   }
