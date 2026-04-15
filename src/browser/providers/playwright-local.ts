@@ -100,6 +100,10 @@ export class PlaywrightLocalProvider implements BrowserProvider {
     return this.page.evaluate(getPageHtml);
   }
 
+  async clickSelector(selector: string): Promise<void> {
+    await this.page.locator(selector).click({ timeout: 5000 });
+  }
+
   async close(): Promise<void> {
     await this.browser.close();
   }

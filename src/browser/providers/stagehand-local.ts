@@ -132,6 +132,10 @@ export class StagehandLocalProvider implements BrowserProvider {
     return this.stagehand.page.pdf({ format: "A4", printBackground: true });
   }
 
+  async clickSelector(selector: string): Promise<void> {
+    await this.stagehand.page.locator(selector).click({ timeout: 5000 });
+  }
+
   async close(): Promise<void> {
     await this.stagehand.close();
   }

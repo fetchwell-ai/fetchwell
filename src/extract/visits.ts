@@ -31,11 +31,12 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   await new Promise((r) => setTimeout(r, 3000));
 
   const visitLinks = await browser.observe(
-    "Find all clickable past visit or appointment entries on this page. " +
-    "Each entry is a row or link for a specific visit with a date and provider. " +
-    "Return each one separately.",
+    "Find all document links within past visit entries on this page. " +
+    "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
+    "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +
+    "Return each link separately.",
   );
-  console.log(`   Found ${visitLinks.length} visit link(s).`);
+  console.log(`   Found ${visitLinks.length} visit document link(s).`);
 
   if (visitLinks.length === 0) {
     console.log("   No visits found — saving screenshot.");
@@ -45,7 +46,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   }
 
   const listUrl = await browser.url();
-  const maxVisits = Math.min(visitLinks.length, 20);
+  const maxVisits = Math.min(visitLinks.length, 50);
   const savedFiles = readDirSafe(visitsDir);
 
   for (let i = 0; i < maxVisits; i++) {
