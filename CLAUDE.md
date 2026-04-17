@@ -53,8 +53,15 @@ browser-agent-team/
 ## Running
 
 ```bash
-pnpm extract    # Extract all records → output/*.pdf
+pnpm extract        # Extract all records → output/*.pdf
+pnpm typecheck      # TypeScript type check (tsc --noEmit)
 ```
+
+## Testing and linting
+
+**No test suite.** Browser provider tests require a live browser session and MyChart credentials — not automatable in CI. Validate provider changes via `pnpm extract` against the live portal.
+
+**No linter.** Only TypeScript type checking is configured (`pnpm typecheck`). Code reviewers should not attempt to run ESLint or similar — it is not installed.
 
 Provide 2FA code manually (when Gmail auto-fetch fails):
 ```bash
