@@ -1,4 +1,5 @@
-import { Stagehand } from "@browserbasehq/stagehand";
+import { Stagehand, AISdkClient } from "@browserbasehq/stagehand";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import Browserbase from "@browserbasehq/sdk";
 import { ZodSchema } from "zod";
 import {
@@ -6,6 +7,7 @@ import {
   WaitCondition,
   ObserveResult,
   ElementHandle,
+  SerializedSession,
 } from "../interface.js";
 import { getPageText, getPageHtml } from "../page-eval.js";
 
@@ -19,14 +21,30 @@ export class StagehandBrowserbaseProvider implements BrowserProvider {
   }
 
   async init(): Promise<void> {
+    // Use AISdkClient with @ai-sdk/anthropic to bypass Stagehand's model whitelist,
+    // allowing us to use current Claude models (claude-sonnet-4-6, etc.)
+    const anthropic = createAnthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY!,
+    });
+    const baseModel = anthropic("claude-sonnet-4-6");
+    const model = new Proxy(baseModel, {
+      get(target, prop) {
+        if (prop === "doGenerate" || prop === "doStream") {
+          return (opts: any) =>
+            (target as any)[prop]({ maxTokens: 16384, ...opts });
+        }
+        const val = (target as any)[prop];
+        return typeof val === "function" ? val.bind(target) : val;
+      },
+    });
+
+    const llmClient = new AISdkClient({ model });
+
     this.stagehand = new Stagehand({
       env: "BROWSERBASE",
       apiKey: process.env.BROWSERBASE_API_KEY!,
       projectId: process.env.BROWSERBASE_PROJECT_ID!,
-      modelName: "claude-sonnet-4-6",
-      modelClientOptions: {
-        apiKey: process.env.ANTHROPIC_API_KEY!,
-      },
+      llmClient,
       verbose: 1,
       disablePino: true,
     });
@@ -105,6 +123,19 @@ export class StagehandBrowserbaseProvider implements BrowserProvider {
 
   async clickSelector(selector: string): Promise<void> {
     await this.stagehand.page.locator(selector).click({ timeout: 5000 });
+  }
+
+  async saveSession(): Promise<SerializedSession> {
+    const cookies = await this.stagehand.page.context().cookies();
+    return { cookies: cookies as SerializedSession["cookies"], savedAt: new Date().toISOString() };
+  }
+
+  async loadSession(session: SerializedSession): Promise<void> {
+    await this.stagehand.page.context().addCookies(session.cookies as any);
+  }
+
+  async pdf(): Promise<Buffer> {
+    return this.stagehand.page.pdf({ format: "A4", printBackground: true });
   }
 
   async close(): Promise<void> {
