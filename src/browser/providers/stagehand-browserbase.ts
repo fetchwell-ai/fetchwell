@@ -1,5 +1,6 @@
-import { Stagehand } from "@browserbasehq/stagehand";
+import { Stagehand, AISdkClient } from "@browserbasehq/stagehand";
 import Browserbase from "@browserbasehq/sdk";
+import { createAnthropic } from "@ai-sdk/anthropic";
 import { ZodSchema } from "zod";
 import {
   BrowserProvider,
@@ -19,14 +20,32 @@ export class StagehandBrowserbaseProvider implements BrowserProvider {
   }
 
   async init(): Promise<void> {
+    // Use AISdkClient + Proxy to bypass Stagehand's stale model whitelist,
+    // allowing current Claude models (claude-sonnet-4-6, etc.)
+    // Wrap the model to inject maxTokens — Stagehand's AISdkClient does not
+    // pass maxTokens to generateObject, causing a 4096-token truncation.
+    const anthropic = createAnthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY!,
+    });
+    const baseModel = anthropic("claude-sonnet-4-6");
+    const model = new Proxy(baseModel, {
+      get(target, prop) {
+        if (prop === "doGenerate" || prop === "doStream") {
+          return (opts: any) =>
+            (target as any)[prop]({ maxTokens: 16384, ...opts });
+        }
+        const val = (target as any)[prop];
+        return typeof val === "function" ? val.bind(target) : val;
+      },
+    });
+
+    const llmClient = new AISdkClient({ model });
+
     this.stagehand = new Stagehand({
       env: "BROWSERBASE",
       apiKey: process.env.BROWSERBASE_API_KEY!,
       projectId: process.env.BROWSERBASE_PROJECT_ID!,
-      modelName: "claude-sonnet-4-6",
-      modelClientOptions: {
-        apiKey: process.env.ANTHROPIC_API_KEY!,
-      },
+      llmClient,
       verbose: 1,
       disablePino: true,
     });
