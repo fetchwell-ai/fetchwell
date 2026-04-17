@@ -137,6 +137,11 @@ See `.env.example`. Key vars:
 - `BROWSER_PROVIDER` — `stagehand-local` (default), `browserbase`, or `local`
 - `FORCE_LABS`, `FORCE_VISITS`, `FORCE_MEDS`, `FORCE_MSGS` — set to `1` to re-extract that section
 
+## Task tracking
+
+This project uses beads. Run `bd ready` for next tasks. Always include task ID in parens in commit messages: `git commit -m "<message> (browser-agent-team-7et.1)"`.
+
+Skills: /start-session, /end-session, /plan-to-epic, /epic-executor, /adr
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
