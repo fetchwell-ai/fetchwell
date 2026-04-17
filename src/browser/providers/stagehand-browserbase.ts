@@ -126,6 +126,10 @@ export class StagehandBrowserbaseProvider implements BrowserProvider {
     await this.stagehand.page.locator(selector).click({ timeout: 5000 });
   }
 
+  async pdf(): Promise<Buffer> {
+    return this.stagehand.page.pdf({ format: "A4", printBackground: true });
+  }
+
   async close(): Promise<void> {
     await this.stagehand.close();
   }
