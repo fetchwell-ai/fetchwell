@@ -7,6 +7,7 @@ import {
   WaitCondition,
   ObserveResult,
   ElementHandle,
+  SerializedSession,
 } from "../interface.js";
 import { getPageText, getPageHtml } from "../page-eval.js";
 
@@ -124,6 +125,15 @@ export class StagehandBrowserbaseProvider implements BrowserProvider {
 
   async clickSelector(selector: string): Promise<void> {
     await this.stagehand.page.locator(selector).click({ timeout: 5000 });
+  }
+
+  async saveSession(): Promise<SerializedSession> {
+    const cookies = await this.stagehand.page.context().cookies();
+    return { cookies: cookies as SerializedSession["cookies"], savedAt: new Date().toISOString() };
+  }
+
+  async loadSession(session: SerializedSession): Promise<void> {
+    await this.stagehand.page.context().addCookies(session.cookies as any);
   }
 
   async pdf(): Promise<Buffer> {
