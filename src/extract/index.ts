@@ -27,7 +27,7 @@ import * as path from "node:path";
 import { createBrowserProvider } from "../browser/index.js";
 import { loadSavedSession, saveSession } from "../session.js";
 import { isAuthPage, doLogin, GMAIL_USER, prompt } from "../auth.js";
-import { OUTPUT_DIR, buildIndex } from "./helpers.js";
+import { OUTPUT_DIR, buildIndex, readNavNotes } from "./helpers.js";
 import { extractLabsDocs } from "./labs.js";
 import { extractVisits } from "./visits.js";
 import { extractMedications } from "./medications.js";
@@ -143,16 +143,18 @@ async function main() {
     }
     console.log();
 
-    await extractLabsDocs(browser, MYCHART_URL);
+    const navNotes = readNavNotes();
+
+    await extractLabsDocs(browser, MYCHART_URL, navNotes);
     console.log();
 
-    await extractVisits(browser, MYCHART_URL);
+    await extractVisits(browser, MYCHART_URL, navNotes);
     console.log();
 
     await extractMedications(browser, MYCHART_URL);
     console.log();
 
-    await extractMessages(browser, MYCHART_URL);
+    await extractMessages(browser, MYCHART_URL, navNotes);
     console.log();
 
     buildIndex();
