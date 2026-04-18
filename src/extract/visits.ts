@@ -8,6 +8,7 @@ import {
   makeItemFilename,
   mergePdfs,
   navigateWithRetry,
+  logDepth,
 } from "./helpers.js";
 
 export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = ""): Promise<void> {
@@ -30,6 +31,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   );
   await new Promise((r) => setTimeout(r, 3000));
 
+  await logDepth(browser, "visits");
   const visitLinks = await browser.observe(
     (navNotes ? navNotes + "\n\n" : "") +
     "Find all document links within past visit entries on this page. " +
