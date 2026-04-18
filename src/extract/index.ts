@@ -28,10 +28,10 @@ import { createBrowserProvider } from "../browser/index.js";
 import { loadSavedSession, saveSession } from "../session.js";
 import { isAuthPage, doLogin, GMAIL_USER, prompt } from "../auth.js";
 import { OUTPUT_DIR, buildIndex, readNavNotes } from "./helpers.js";
-import { extractLabsDocs } from "./labs.js";
-import { extractVisits } from "./visits.js";
-import { extractMedications } from "./medications.js";
-import { extractMessages } from "./messages.js";
+import { extractLabsDocs, probeLabsDocs } from "./labs.js";
+import { extractVisits, probeVisits } from "./visits.js";
+import { extractMedications, probeMedications } from "./medications.js";
+import { extractMessages, probeMessages } from "./messages.js";
 
 // ---------------------------------------------------------------------------
 // Env validation
@@ -59,6 +59,132 @@ if (providerType === "browserbase") {
 }
 
 const MYCHART_URL = process.env.MYCHART_URL!;
+
+// ---------------------------------------------------------------------------
+// Probe mode
+// ---------------------------------------------------------------------------
+/**
+ * Lightweight navigation smoke test. Navigates to each section, calls
+ * observe() to find items, logs count + first 5 titles, saves a screenshot
+ * to output/probe/{section}.png. Does NOT produce any PDF output.
+ *
+ * Activate with: PROBE=1 pnpm extract
+ */
+async function probe() {
+  console.log("=".repeat(60));
+  console.log("  MyChart Agent — Probe Mode");
+  console.log(`  Mode: ${providerType}`);
+  console.log("  (navigation smoke test — no PDFs will be written)");
+  console.log("=".repeat(60));
+  console.log();
+
+  const probeDir = path.join(OUTPUT_DIR, "probe");
+  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  fs.mkdirSync(probeDir, { recursive: true });
+
+  const savedSession = loadSavedSession();
+  if (savedSession) {
+    console.log(`   Found saved session from ${savedSession.savedAt} — will skip login.`);
+    console.log();
+  }
+
+  console.log("Step 1: Creating browser session...");
+  const browser = await createBrowserProvider();
+  console.log("Browser session created!");
+
+  const debugUrl = await browser.getDebugUrl();
+  if (debugUrl) {
+    console.log();
+    console.log("+---------------------------------------------------------+");
+    console.log("|  DEBUG URL — open this in your browser:                  |");
+    console.log(`|  ${debugUrl}`);
+    console.log("+---------------------------------------------------------+");
+  }
+  console.log();
+
+  let failed = false;
+
+  try {
+    console.log(`Step 2: Navigating to ${MYCHART_URL}...`);
+    await browser.navigate(MYCHART_URL);
+    console.log("Page loaded.");
+    console.log();
+
+    // Login or restore session
+    if (savedSession && browser.loadSession) {
+      console.log("Step 3: Restoring saved session...");
+      await browser.loadSession(savedSession);
+      await browser.navigate(MYCHART_URL.replace(/\/Authentication.*$/, ""));
+      await new Promise((r) => setTimeout(r, 2000));
+
+      if (!isAuthPage(await browser.url())) {
+        console.log("   Session restored — skipping login and 2FA.");
+        console.log();
+      } else {
+        console.log("   Session expired or invalid. Logging in fresh...");
+        await browser.navigate(MYCHART_URL);
+        await new Promise((r) => setTimeout(r, 2000));
+        await doLogin(browser, debugUrl);
+        if (browser.saveSession) {
+          saveSession(await browser.saveSession());
+          console.log("   Session saved to output/session.json.");
+        }
+      }
+    } else {
+      console.log("Step 3: Login");
+      await doLogin(browser, debugUrl);
+      if (browser.saveSession) {
+        saveSession(await browser.saveSession());
+        console.log("   Session saved to output/session.json (login + 2FA skipped next run).");
+      }
+    }
+    console.log();
+
+    const navNotes = readNavNotes();
+
+    console.log("Step 4: Probing all sections...");
+    console.log();
+
+    await probeLabsDocs(browser, MYCHART_URL, probeDir, navNotes);
+    console.log();
+
+    await probeVisits(browser, MYCHART_URL, probeDir, navNotes);
+    console.log();
+
+    await probeMedications(browser, MYCHART_URL, probeDir);
+    console.log();
+
+    await probeMessages(browser, MYCHART_URL, probeDir, navNotes);
+    console.log();
+
+    console.log("=".repeat(60));
+    console.log("  PROBE COMPLETE");
+    console.log("=".repeat(60));
+    console.log();
+    console.log("  Screenshots saved to output/probe/");
+    console.log("  [ok] output/probe/labs.png");
+    console.log("  [ok] output/probe/visits.png");
+    console.log("  [ok] output/probe/medications.png");
+    console.log("  [ok] output/probe/messages.png");
+    console.log();
+    console.log("  No PDFs were written. Run pnpm extract for full extraction.");
+    console.log();
+  } catch (err) {
+    failed = true;
+    console.error();
+    console.error("Probe failed with error:");
+    console.error(err);
+    console.error();
+    console.error("Browser is being kept open for inspection.");
+    console.error("Press Enter to close it.");
+    await prompt("");
+  } finally {
+    console.log("Cleaning up session...");
+    await browser.close();
+    console.log("Done.");
+    if (failed) process.exit(1);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Main
@@ -186,7 +312,9 @@ async function main() {
   }
 }
 
-main().catch((err) => {
+const entryPoint = process.env.PROBE === "1" ? probe : main;
+
+entryPoint().catch((err) => {
   console.error();
   console.error("Unexpected error:");
   console.error(err);

@@ -11,6 +11,42 @@ import {
   logDepth,
 } from "./helpers.js";
 
+/**
+ * Probe mode: navigate to visits list, observe items, log count + titles,
+ * take a screenshot. Does NOT extract any PDFs.
+ */
+export async function probeVisits(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = ""): Promise<void> {
+  console.log("[probe] Visits: navigating...");
+  await ensureLoggedIn(browser, mychartUrl);
+  await browser.act(
+    'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
+    '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.',
+  );
+  await new Promise((r) => setTimeout(r, 3000));
+
+  await logDepth(browser, "visits");
+
+  const visitLinks = await browser.observe(
+    (navNotes ? navNotes + "\n\n" : "") +
+    "Find all document links within past visit entries on this page. " +
+    "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
+    "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +
+    "Return each link separately.",
+  );
+
+  console.log(`[probe] Visits: ${visitLinks.length} item(s) found`);
+  visitLinks.slice(0, 5).forEach((link, i) => {
+    console.log(`[probe]   ${i + 1}. ${link.description}`);
+  });
+  if (visitLinks.length > 5) {
+    console.log(`[probe]   ... and ${visitLinks.length - 5} more`);
+  }
+
+  const ss = await browser.screenshot();
+  fs.writeFileSync(path.join(probeDir, "visits.png"), Buffer.from(ss, "base64"));
+  console.log(`[probe] Visits: screenshot saved to output/probe/visits.png`);
+}
+
 export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = ""): Promise<void> {
   const visitsDir = path.join(OUTPUT_DIR, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
