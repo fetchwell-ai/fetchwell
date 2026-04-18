@@ -11,6 +11,40 @@ import {
   logDepth,
 } from "./helpers.js";
 
+/**
+ * Probe mode: navigate to messages inbox, observe threads, log count + titles,
+ * take a screenshot. Does NOT extract any PDFs.
+ */
+export async function probeMessages(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = ""): Promise<void> {
+  console.log("[probe] Messages: navigating...");
+  await ensureLoggedIn(browser, mychartUrl);
+  await browser.act(
+    'Click the Messages or Inbox link in the navigation menu. ' +
+    'It may be labeled "Messages", "Inbox", or "MyChart Messages".',
+  );
+  await new Promise((r) => setTimeout(r, 3000));
+
+  await logDepth(browser, "messages");
+
+  const threadLinks = await browser.observe(
+    (navNotes ? navNotes + "\n\n" : "") +
+    "Find all clickable message threads or conversations on this page. " +
+    "Each entry is a row with a subject line, sender, and date. Return each one separately.",
+  );
+
+  console.log(`[probe] Messages: ${threadLinks.length} thread(s) found`);
+  threadLinks.slice(0, 5).forEach((link, i) => {
+    console.log(`[probe]   ${i + 1}. ${link.description}`);
+  });
+  if (threadLinks.length > 5) {
+    console.log(`[probe]   ... and ${threadLinks.length - 5} more`);
+  }
+
+  const ss = await browser.screenshot();
+  fs.writeFileSync(path.join(probeDir, "messages.png"), Buffer.from(ss, "base64"));
+  console.log(`[probe] Messages: screenshot saved to output/probe/messages.png`);
+}
+
 export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = ""): Promise<void> {
   const msgsDir = path.join(OUTPUT_DIR, "messages");
   fs.mkdirSync(msgsDir, { recursive: true });

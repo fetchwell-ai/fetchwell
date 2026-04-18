@@ -12,6 +12,41 @@ import {
 } from "./helpers.js";
 
 /**
+ * Probe mode: navigate to labs list, observe items, log count + titles,
+ * take a screenshot. Does NOT extract any PDFs.
+ */
+export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = ""): Promise<void> {
+  console.log("[probe] Labs: navigating...");
+  await ensureLoggedIn(browser, mychartUrl);
+  await browser.act(
+    'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
+    'labeled "Test Results", "Labs", "Lab Results", or similar.',
+  );
+  await new Promise((r) => setTimeout(r, 3000));
+
+  await logDepth(browser, "labs");
+
+  const panelLinks = await browser.observe(
+    (navNotes ? navNotes + "\n\n" : "") +
+    "Find all clickable lab result or test result entries on this page. " +
+    "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
+    "Return each one as a separate result.",
+  );
+
+  console.log(`[probe] Labs: ${panelLinks.length} item(s) found`);
+  panelLinks.slice(0, 5).forEach((link, i) => {
+    console.log(`[probe]   ${i + 1}. ${link.description}`);
+  });
+  if (panelLinks.length > 5) {
+    console.log(`[probe]   ... and ${panelLinks.length - 5} more`);
+  }
+
+  const ss = await browser.screenshot();
+  fs.writeFileSync(path.join(probeDir, "labs.png"), Buffer.from(ss, "base64"));
+  console.log(`[probe] Labs: screenshot saved to output/probe/labs.png`);
+}
+
+/**
  * Drill into every lab/test-result panel and save each one as a PDF.
  * Merges all into output/labs.pdf for Claude.ai upload.
  *
