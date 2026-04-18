@@ -10,7 +10,7 @@ import {
   navigateWithRetry,
 } from "./helpers.js";
 
-export async function extractVisits(browser: BrowserProvider, mychartUrl: string): Promise<void> {
+export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = ""): Promise<void> {
   const visitsDir = path.join(OUTPUT_DIR, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
 
@@ -31,6 +31,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   await new Promise((r) => setTimeout(r, 3000));
 
   const visitLinks = await browser.observe(
+    (navNotes ? navNotes + "\n\n" : "") +
     "Find all document links within past visit entries on this page. " +
     "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
     "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +

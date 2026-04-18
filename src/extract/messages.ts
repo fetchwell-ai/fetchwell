@@ -10,7 +10,7 @@ import {
   navigateWithRetry,
 } from "./helpers.js";
 
-export async function extractMessages(browser: BrowserProvider, mychartUrl: string): Promise<void> {
+export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = ""): Promise<void> {
   const msgsDir = path.join(OUTPUT_DIR, "messages");
   fs.mkdirSync(msgsDir, { recursive: true });
 
@@ -28,6 +28,7 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
   await new Promise((r) => setTimeout(r, 3000));
 
   const threadLinks = await browser.observe(
+    (navNotes ? navNotes + "\n\n" : "") +
     "Find all clickable message threads or conversations on this page. " +
     "Each entry is a row with a subject line, sender, and date. Return each one separately.",
   );

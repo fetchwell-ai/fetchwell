@@ -16,7 +16,7 @@ import {
  *
  * Skip: if output/labs/ already has .pdf files (set FORCE_LABS=1 to re-run).
  */
-export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string): Promise<void> {
+export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = ""): Promise<void> {
   const labsDir = path.join(OUTPUT_DIR, "labs");
   fs.mkdirSync(labsDir, { recursive: true });
 
@@ -37,6 +37,7 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
   await new Promise((r) => setTimeout(r, 3000));
 
   const panelLinks = await browser.observe(
+    (navNotes ? navNotes + "\n\n" : "") +
     "Find all clickable lab result or test result entries on this page. " +
     "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
     "Return each one as a separate result.",

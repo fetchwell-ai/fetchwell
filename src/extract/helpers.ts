@@ -5,6 +5,17 @@ import { type BrowserProvider } from "../browser/interface.js";
 
 export const OUTPUT_DIR = path.resolve(import.meta.dirname, "..", "..", "output");
 
+export function readNavNotes(): string {
+  const navNotesPath = path.join(OUTPUT_DIR, "nav-notes.md");
+  try {
+    const contents = fs.readFileSync(navNotesPath, "utf8");
+    console.log(`   Nav notes loaded from ${navNotesPath}`);
+    return contents;
+  } catch {
+    return "";
+  }
+}
+
 export function readDirSafe(dir: string): string[] {
   try { return fs.readdirSync(dir); } catch { return []; }
 }
