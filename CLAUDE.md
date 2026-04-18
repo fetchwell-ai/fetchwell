@@ -22,7 +22,7 @@ browser-agent-team/
 │   │   ├── visits.ts       # extractVisits() → output/visits/*.pdf + output/visits.pdf
 │   │   ├── medications.ts  # extractMedications() → output/medications.pdf
 │   │   ├── messages.ts     # extractMessages() → output/messages/*.pdf + output/messages.pdf
-│   │   └── helpers.ts      # Shared: slugify, makeItemFilename, mergePdfs, navigateWithRetry, buildIndex
+│   │   └── helpers.ts      # Shared: slugify, makeItemFilename, mergePdfs, navigateWithRetry, buildIndex, logDepth, readNavNotes
 │   ├── auth.ts          # doLogin, ensureLoggedIn, fetchGmailVerificationCode
 │   ├── session.ts       # loadSavedSession, saveSession, clearSession
 │   ├── 2fa-relay.ts     # Standalone Gmail IMAP 2FA helper
@@ -38,6 +38,7 @@ browser-agent-team/
 ├── output/              # Runtime output — gitignored
 │   ├── session.json     # Saved browser session (12h TTL, skip login on reuse)
 │   ├── 2fa.code         # Drop a 6-digit code here to relay 2FA manually
+│   ├── nav-notes.md     # Optional: instructions prepended to every observe() call
 │   ├── labs.pdf         # All lab results merged — upload to Claude.ai
 │   ├── visits.pdf       # All visits merged — upload to Claude.ai
 │   ├── medications.pdf  # Medication list — upload to Claude.ai
@@ -46,7 +47,8 @@ browser-agent-team/
 │   ├── labs/            # Individual lab PDFs (one per panel)
 │   ├── visits/          # Individual visit PDFs
 │   ├── medications/     # (empty — single file goes to output/medications.pdf)
-│   └── messages/        # Individual message thread PDFs
+│   ├── messages/        # Individual message thread PDFs
+│   └── probe/           # Screenshots from PROBE=1 runs (labs.png, visits.png, etc.)
 └── .env                 # Credentials — gitignored, see .env.example
 ```
 
@@ -55,6 +57,7 @@ browser-agent-team/
 ```bash
 pnpm extract        # Extract all records → output/*.pdf
 pnpm typecheck      # TypeScript type check (tsc --noEmit)
+PROBE=1 pnpm extract  # Probe mode: navigate + observe + screenshot, no PDFs (fast smoke test)
 ```
 
 ## Testing and linting
@@ -143,6 +146,7 @@ See `.env.example`. Key vars:
 - `GMAIL_USER` / `GMAIL_APP_PASSWORD` — optional, enables auto-2FA via Gmail IMAP
 - `BROWSER_PROVIDER` — `stagehand-local` (default), `browserbase`, or `local`
 - `FORCE_LABS`, `FORCE_VISITS`, `FORCE_MEDS`, `FORCE_MSGS` — set to `1` to re-extract that section
+- `PROBE` — set to `1` to run probe mode (navigate + observe + screenshot, no PDF output)
 
 ## Task tracking
 
