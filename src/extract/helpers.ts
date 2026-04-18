@@ -53,6 +53,12 @@ export async function mergePdfs(pdfDir: string, outputPath: string, label: strin
   console.log(`   ✓ ${path.basename(outputPath)} (${pdfFiles.length} ${label}, ${(mergedBytes.length / 1024).toFixed(0)} KB)`);
 }
 
+export async function logDepth(browser: BrowserProvider, section: string): Promise<void> {
+  const url = await browser.url();
+  const title = await browser.title();
+  console.log(`[probe] ${section} | ${url} | ${title}`);
+}
+
 export async function navigateWithRetry(browser: BrowserProvider, url: string): Promise<void> {
   try {
     await browser.navigate(url);

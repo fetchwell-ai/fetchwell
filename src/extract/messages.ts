@@ -8,6 +8,7 @@ import {
   makeItemFilename,
   mergePdfs,
   navigateWithRetry,
+  logDepth,
 } from "./helpers.js";
 
 export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = ""): Promise<void> {
@@ -27,6 +28,7 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
   );
   await new Promise((r) => setTimeout(r, 3000));
 
+  await logDepth(browser, "messages");
   const threadLinks = await browser.observe(
     (navNotes ? navNotes + "\n\n" : "") +
     "Find all clickable message threads or conversations on this page. " +

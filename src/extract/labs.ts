@@ -8,6 +8,7 @@ import {
   makeItemFilename,
   mergePdfs,
   navigateWithRetry,
+  logDepth,
 } from "./helpers.js";
 
 /**
@@ -36,6 +37,7 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
   );
   await new Promise((r) => setTimeout(r, 3000));
 
+  await logDepth(browser, "labs");
   const panelLinks = await browser.observe(
     (navNotes ? navNotes + "\n\n" : "") +
     "Find all clickable lab result or test result entries on this page. " +
