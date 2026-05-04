@@ -114,7 +114,9 @@ async function probe() {
     if (savedSession && browser.loadSession) {
       console.log("Step 3: Restoring saved session...");
       await browser.loadSession(savedSession);
-      await browser.navigate(MYCHART_URL.replace(/\/Authentication.*$/, ""));
+      // Navigate to the login URL — if cookies are valid, MyChart redirects to home.
+      // Do NOT navigate to the bare home URL: its lowercase path triggers ?action=logout.
+      await browser.navigate(MYCHART_URL);
       await new Promise((r) => setTimeout(r, 2000));
 
       if (!isAuthPage(await browser.url())) {
@@ -122,8 +124,6 @@ async function probe() {
         console.log();
       } else {
         console.log("   Session expired or invalid. Logging in fresh...");
-        await browser.navigate(MYCHART_URL);
-        await new Promise((r) => setTimeout(r, 2000));
         await doLogin(browser, debugUrl);
         if (browser.saveSession) {
           saveSession(await browser.saveSession());
@@ -238,7 +238,9 @@ async function main() {
     if (savedSession && browser.loadSession) {
       console.log("Step 3: Restoring saved session...");
       await browser.loadSession(savedSession);
-      await browser.navigate(MYCHART_URL.replace(/\/Authentication.*$/, ""));
+      // Navigate to the login URL — if cookies are valid, MyChart redirects to home.
+      // Do NOT navigate to the bare home URL: its lowercase path triggers ?action=logout.
+      await browser.navigate(MYCHART_URL);
       await new Promise((r) => setTimeout(r, 2000));
 
       if (!isAuthPage(await browser.url())) {
@@ -246,8 +248,6 @@ async function main() {
         console.log();
       } else {
         console.log("   Session expired or invalid. Logging in fresh...");
-        await browser.navigate(MYCHART_URL);
-        await new Promise((r) => setTimeout(r, 2000));
         console.log();
         console.log("Step 3: Login");
         await doLogin(browser, debugUrl);
