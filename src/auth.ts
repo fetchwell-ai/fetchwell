@@ -290,7 +290,7 @@ export async function doLogin(browser: BrowserProvider, debugUrl: string | null)
     if (!loggedIn) {
       throw new Error("Timed out waiting for login to complete after 2FA.");
     }
-    console.log("2FA completed — logged in!");
+    console.log(`2FA completed — logged in! URL: ${await browser.url()}`);
   } else {
     const dashboardObs = await browser.observe(
       "Look for elements indicating a successful login: a dashboard, " +
@@ -308,12 +308,14 @@ export async function ensureLoggedIn(
   browser: BrowserProvider,
   mychartUrl: string,
 ): Promise<void> {
-  const homeUrl = mychartUrl.replace(/\/Authentication.*$/, "");
-  await browser.navigate(homeUrl);
-  await new Promise((r) => setTimeout(r, 2000));
-  if (!isAuthPage(await browser.url())) return;
+  // Check current URL — if we're not on an auth page, the session is still alive.
+  // Do NOT navigate to the home URL to verify — MyChart's lowercase/mixed-case
+  // path handling redirects that navigation to ?action=logout, killing the session.
+  const currentUrl = await browser.url();
+  if (!isAuthPage(currentUrl)) return;
 
-  console.log("   Session expired — re-authenticating...");
+  console.log(`   Session expired — on auth page: ${currentUrl}`);
+  console.log("   Re-authenticating...");
   clearSession();
   await browser.navigate(mychartUrl);
   await new Promise((r) => setTimeout(r, 2000));
