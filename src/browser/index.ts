@@ -1,9 +1,8 @@
 import { BrowserProvider } from "./interface.js";
-import { StagehandBrowserbaseProvider } from "./providers/stagehand-browserbase.js";
 import { StagehandLocalProvider } from "./providers/stagehand-local.js";
 import { PlaywrightLocalProvider } from "./providers/playwright-local.js";
 
-export type ProviderType = "stagehand-local" | "browserbase" | "local";
+export type ProviderType = "stagehand-local" | "local";
 
 export async function createBrowserProvider(
   type?: ProviderType,
@@ -18,9 +17,6 @@ export async function createBrowserProvider(
       provider = new StagehandLocalProvider({
         headless: process.env.HEADLESS === "true",
       });
-      break;
-    case "browserbase":
-      provider = new StagehandBrowserbaseProvider();
       break;
     case "local":
       provider = new PlaywrightLocalProvider({
