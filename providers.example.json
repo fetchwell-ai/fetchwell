@@ -11,6 +11,12 @@
       "name": "One Medical",
       "type": "onemedical",
       "url": "https://app.onemedical.com/login"
+    },
+    {
+      "id": "stanford",
+      "name": "Stanford MyChart",
+      "type": "mychart",
+      "url": "https://mystanfordchart.stanfordhealthcare.org/MyChart/Authentication/Login"
     }
   ]
 }
