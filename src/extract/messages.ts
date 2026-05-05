@@ -3,7 +3,6 @@ import * as path from "node:path";
 import { type BrowserProvider } from "../browser/interface.js";
 import { ensureLoggedIn } from "../auth.js";
 import {
-  OUTPUT_DIR,
   readDirSafe,
   makeItemFilename,
   mergePdfs,
@@ -15,9 +14,9 @@ import {
  * Probe mode: navigate to messages inbox, observe threads, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeMessages(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
+export async function probeMessages(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
   console.log("[probe] Messages: navigating...");
-  await ensureLoggedIn(browser, mychartUrl, credentials);
+  await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
   await browser.act(
     'Click the Messages or Inbox link in the navigation menu. ' +
     'It may be labeled "Messages", "Inbox", or "MyChart Messages".',
@@ -42,11 +41,12 @@ export async function probeMessages(browser: BrowserProvider, mychartUrl: string
 
   const ss = await browser.screenshot();
   fs.writeFileSync(path.join(probeDir, "messages.png"), Buffer.from(ss, "base64"));
-  console.log(`[probe] Messages: screenshot saved to output/probe/messages.png`);
+  console.log(`[probe] Messages: screenshot saved to ${probeDir}/messages.png`);
 }
 
-export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
-  const msgsDir = path.join(OUTPUT_DIR, "messages");
+export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string): Promise<void> {
+  const baseDir = outputDir ?? process.cwd();
+  const msgsDir = path.join(baseDir, "messages");
   fs.mkdirSync(msgsDir, { recursive: true });
 
   // Clear dir for a forced full re-run; otherwise partial runs resume per-thread
@@ -55,7 +55,7 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
   }
 
   console.log("Step 9: Navigating to messages...");
-  await ensureLoggedIn(browser, mychartUrl, credentials);
+  await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
   await browser.act(
     'Click the Messages or Inbox link in the navigation menu. ' +
     'It may be labeled "Messages", "Inbox", or "MyChart Messages".',
@@ -121,5 +121,5 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
   }
 
   console.log(`   Messages saved to ${msgsDir}`);
-  await mergePdfs(msgsDir, path.join(OUTPUT_DIR, "messages.pdf"), "threads");
+  await mergePdfs(msgsDir, path.join(baseDir, "messages.pdf"), "threads");
 }

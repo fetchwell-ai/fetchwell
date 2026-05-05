@@ -17,7 +17,12 @@ import { extractVerificationCode } from "../imap.js";
 import { clearSession, saveSession, loadSavedSession } from "../session.js";
 import { type AuthModule, type AuthConfig } from "./interface.js";
 
-const OUTPUT_DIR = path.join(import.meta.dirname, "..", "..", "output");
+const OUTPUT_BASE = path.join(import.meta.dirname, "..", "..", "output");
+
+/** Return the output dir for a provider. Falls back to base output dir. */
+function resolveOutputDir(providerId?: string): string {
+  return providerId ? path.join(OUTPUT_BASE, providerId) : OUTPUT_BASE;
+}
 
 // Only use Gmail if credentials look real (not the example placeholder)
 export const GMAIL_USER =
@@ -154,6 +159,7 @@ export async function doLogin(
   browser: BrowserProvider,
   debugUrl: string | null,
   credentials?: { username?: string; password?: string },
+  providerId?: string,
 ): Promise<void> {
   const username = credentials?.username ?? process.env.MYCHART_USERNAME ?? await prompt("   Enter MyChart username: ");
   const password = credentials?.password ?? process.env.MYCHART_PASSWORD ?? await prompt("   Enter MyChart password: ");
@@ -221,16 +227,18 @@ export async function doLogin(
     }
 
     if (!enteredCode) {
-      // File-based 2FA: write output/2fa.needed, watch output/2fa.code for the code.
-      // To provide the code: echo "123456" > output/2fa.code
-      fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-      const neededFile = path.join(OUTPUT_DIR, "2fa.needed");
-      const codeFile = path.join(OUTPUT_DIR, "2fa.code");
+      // File-based 2FA: write output/<provider>/2fa.needed, watch for 2fa.code.
+      // To provide the code: echo "123456" > output/<provider>/2fa.code
+      const outputDir = resolveOutputDir(providerId);
+      fs.mkdirSync(outputDir, { recursive: true });
+      const neededFile = path.join(outputDir, "2fa.needed");
+      const codeFile = path.join(outputDir, "2fa.code");
 
+      const relCodeFile = path.relative(path.join(outputDir, "..", ".."), codeFile);
       console.log("+=======================================================+");
       console.log("|  2FA CODE NEEDED                                       |");
       console.log("|  Provide the code by running:                          |");
-      console.log(`|    echo "XXXXXX" > output/2fa.code                     |`);
+      console.log(`|    echo "XXXXXX" > ${relCodeFile}`);
       console.log(`|  Watching: ${codeFile}`);
       console.log("+=======================================================+");
 
@@ -252,7 +260,7 @@ export async function doLogin(
         fs.writeFileSync(neededFile, new Date().toISOString());
         try { fs.unlinkSync(codeFile); } catch {}
 
-        const watcher = fs.watch(OUTPUT_DIR, (_event, filename) => {
+        const watcher = fs.watch(outputDir, (_event, filename) => {
           if (filename === "2fa.code" && fs.existsSync(codeFile)) {
             clearTimeout(timeout);
             watcher.close();
@@ -321,11 +329,12 @@ export async function ensureLoggedIn(
   browser: BrowserProvider,
   mychartUrl: string,
   credentials?: { username?: string; password?: string },
+  providerId?: string,
 ): Promise<void> {
   // Navigate to the saved home URL (e.g. /UCSFMyChart/Home/) to put us in a
   // known state for act() navigation and to verify the session is alive.
   // Do NOT navigate to the login URL -- that triggers ?action=logout when already authenticated.
-  const savedSession = loadSavedSession();
+  const savedSession = loadSavedSession(providerId);
   const homeUrl = savedSession?.homeUrl;
   if (homeUrl) {
     await browser.navigate(homeUrl);
@@ -336,14 +345,14 @@ export async function ensureLoggedIn(
 
   console.log(`   Session expired — on auth page: ${currentUrl}`);
   console.log("   Re-authenticating...");
-  clearSession();
+  clearSession(providerId);
   await browser.navigate(mychartUrl);
   await new Promise((r) => setTimeout(r, 2000));
-  await doLogin(browser, null, credentials);
+  await doLogin(browser, null, credentials, providerId);
   if (browser.saveSession) {
     const session = await browser.saveSession();
     session.homeUrl = await browser.url();
-    saveSession(session);
+    saveSession(session, providerId);
     console.log("   Session re-saved.");
   }
 }
@@ -360,10 +369,10 @@ export async function ensureLoggedIn(
  */
 export const myChartAuth: AuthModule = {
   async login(browser, config, debugUrl) {
-    await doLogin(browser, debugUrl, config.credentials);
+    await doLogin(browser, debugUrl, config.credentials, config.providerId);
   },
 
   async ensureLoggedIn(browser, config) {
-    await ensureLoggedIn(browser, config.url, config.credentials);
+    await ensureLoggedIn(browser, config.url, config.credentials, config.providerId);
   },
 };

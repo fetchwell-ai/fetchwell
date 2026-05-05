@@ -37,4 +37,6 @@ export interface AuthConfig {
   url: string;
   /** Optional pre-filled credentials. When absent, modules may prompt stdin. */
   credentials?: { username?: string; password?: string };
+  /** Provider ID used for provider-scoped output (session files, 2FA relay, etc.). */
+  providerId?: string;
 }

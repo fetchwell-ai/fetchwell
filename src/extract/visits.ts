@@ -3,7 +3,6 @@ import * as path from "node:path";
 import { type BrowserProvider } from "../browser/interface.js";
 import { ensureLoggedIn } from "../auth.js";
 import {
-  OUTPUT_DIR,
   readDirSafe,
   makeItemFilename,
   mergePdfs,
@@ -15,9 +14,9 @@ import {
  * Probe mode: navigate to visits list, observe items, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeVisits(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
+export async function probeVisits(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
   console.log("[probe] Visits: navigating...");
-  await ensureLoggedIn(browser, mychartUrl, credentials);
+  await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
   await browser.act(
     'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
     '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.',
@@ -44,11 +43,12 @@ export async function probeVisits(browser: BrowserProvider, mychartUrl: string, 
 
   const ss = await browser.screenshot();
   fs.writeFileSync(path.join(probeDir, "visits.png"), Buffer.from(ss, "base64"));
-  console.log(`[probe] Visits: screenshot saved to output/probe/visits.png`);
+  console.log(`[probe] Visits: screenshot saved to ${probeDir}/visits.png`);
 }
 
-export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
-  const visitsDir = path.join(OUTPUT_DIR, "visits");
+export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string): Promise<void> {
+  const baseDir = outputDir ?? process.cwd();
+  const visitsDir = path.join(baseDir, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
 
   const existingPdfs = readDirSafe(visitsDir).filter((f) => f.endsWith(".pdf"));
@@ -60,7 +60,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   }
 
   console.log("Step 7: Navigating to visits...");
-  await ensureLoggedIn(browser, mychartUrl, credentials);
+  await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
   await browser.act(
     'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
     '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.',
@@ -121,5 +121,5 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   }
 
   console.log(`   Visits saved to ${visitsDir}`);
-  await mergePdfs(visitsDir, path.join(OUTPUT_DIR, "visits.pdf"), "visits");
+  await mergePdfs(visitsDir, path.join(baseDir, "visits.pdf"), "visits");
 }
