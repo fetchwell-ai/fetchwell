@@ -10,12 +10,15 @@
 
 export { type AuthModule, type AuthConfig } from "./interface.js";
 export { myChartAuth } from "./mychart.js";
+export { oneMedicalAuth } from "./onemedical.js";
 
 import { type AuthModule } from "./interface.js";
 import { myChartAuth } from "./mychart.js";
+import { oneMedicalAuth } from "./onemedical.js";
 
 const registry: Record<string, AuthModule> = {
   mychart: myChartAuth,
+  onemedical: oneMedicalAuth,
 };
 
 /**
