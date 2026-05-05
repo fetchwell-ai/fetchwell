@@ -18,7 +18,8 @@ Multi-provider support via `providers.json` (see `providers.example.json`). Each
 ## Running
 
 ```bash
-pnpm extract                          # Extract all records → output/*.pdf
+pnpm extract                          # Extract all records → output/<id>/labs-<id>.pdf etc.
+pnpm extract --incremental            # Only fetch items newer than last run
 pnpm typecheck                        # TypeScript type check (tsc --noEmit)
 PROBE=1 pnpm extract                  # Probe mode: screenshot only, no PDFs
 pnpm discover --provider <id>         # Discover portal nav structure → output/<id>/nav-map.json
@@ -36,7 +37,7 @@ FORCE_LABS=1 pnpm extract             # Force re-extract a section (FORCE_VISITS
 - **Two browser providers.** `stagehand-local` (default, AI-powered) and `local` (plain Playwright). Set via `BROWSER_PROVIDER` env var.
 - **Auth is composable.** Two axes: `loginForm` (two-step | single-page) and `twoFactor` (none | email | manual). Configured per provider in `providers.json`.
 - **Nav-map drives navigation.** Discovery engine (`pnpm discover`) builds a nav-map.json. Extraction modules follow it instead of hardcoded act() instructions.
-- **Session persistence.** Cookies in `output/session.json` (12h TTL). Skips login + 2FA when valid.
+- **Session persistence.** Cookies in `output/<provider-id>/session.json` (12h TTL). Skips login + 2FA when valid.
 - **2FA relay.** Watches `output/2fa.code` for manual OTP entry when Gmail auto-fetch fails.
 - **Stagehand model bypass.** v2.5.8 whitelist is stale — use `AISdkClient` + Proxy. `@ai-sdk/anthropic` must be `@1.x`.
 
