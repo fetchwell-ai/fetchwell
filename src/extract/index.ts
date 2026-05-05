@@ -114,9 +114,10 @@ async function probe() {
     if (savedSession && browser.loadSession) {
       console.log("Step 3: Restoring saved session...");
       await browser.loadSession(savedSession);
-      // Navigate to the login URL — if cookies are valid, MyChart redirects to home.
-      // Do NOT navigate to the bare home URL: its lowercase path triggers ?action=logout.
-      await browser.navigate(MYCHART_URL);
+      // Navigate to the saved home URL (e.g. /UCSFMyChart/Home/) — NOT the login URL.
+      // Navigating to the login URL while already authenticated triggers ?action=logout.
+      const verifyUrl = savedSession.homeUrl ?? MYCHART_URL;
+      await browser.navigate(verifyUrl);
       await new Promise((r) => setTimeout(r, 2000));
 
       if (!isAuthPage(await browser.url())) {
@@ -124,9 +125,13 @@ async function probe() {
         console.log();
       } else {
         console.log("   Session expired or invalid. Logging in fresh...");
+        await browser.navigate(MYCHART_URL);
+        await new Promise((r) => setTimeout(r, 2000));
         await doLogin(browser, debugUrl);
         if (browser.saveSession) {
-          saveSession(await browser.saveSession());
+          const session = await browser.saveSession();
+          session.homeUrl = await browser.url();
+          saveSession(session);
           console.log("   Session saved to output/session.json.");
         }
       }
@@ -134,7 +139,9 @@ async function probe() {
       console.log("Step 3: Login");
       await doLogin(browser, debugUrl);
       if (browser.saveSession) {
-        saveSession(await browser.saveSession());
+        const session = await browser.saveSession();
+        session.homeUrl = await browser.url();
+        saveSession(session);
         console.log("   Session saved to output/session.json (login + 2FA skipped next run).");
       }
     }
@@ -238,9 +245,10 @@ async function main() {
     if (savedSession && browser.loadSession) {
       console.log("Step 3: Restoring saved session...");
       await browser.loadSession(savedSession);
-      // Navigate to the login URL — if cookies are valid, MyChart redirects to home.
-      // Do NOT navigate to the bare home URL: its lowercase path triggers ?action=logout.
-      await browser.navigate(MYCHART_URL);
+      // Navigate to the saved home URL (e.g. /UCSFMyChart/Home/) — NOT the login URL.
+      // Navigating to the login URL while already authenticated triggers ?action=logout.
+      const verifyUrl = savedSession.homeUrl ?? MYCHART_URL;
+      await browser.navigate(verifyUrl);
       await new Promise((r) => setTimeout(r, 2000));
 
       if (!isAuthPage(await browser.url())) {
@@ -250,9 +258,13 @@ async function main() {
         console.log("   Session expired or invalid. Logging in fresh...");
         console.log();
         console.log("Step 3: Login");
+        await browser.navigate(MYCHART_URL);
+        await new Promise((r) => setTimeout(r, 2000));
         await doLogin(browser, debugUrl);
         if (browser.saveSession) {
-          saveSession(await browser.saveSession());
+          const session = await browser.saveSession();
+          session.homeUrl = await browser.url();
+          saveSession(session);
           console.log("   Session saved to output/session.json.");
         }
       }
@@ -263,7 +275,9 @@ async function main() {
       console.log();
       await doLogin(browser, debugUrl);
       if (browser.saveSession) {
-        saveSession(await browser.saveSession());
+        const session = await browser.saveSession();
+        session.homeUrl = await browser.url();
+        saveSession(session);
         console.log("   Session saved to output/session.json (login + 2FA skipped next run).");
       }
     }
