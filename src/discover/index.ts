@@ -209,28 +209,11 @@ export async function discoverPortal(
     const screenshotName = navEl.description.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40) + ".png";
     fs.writeFileSync(path.join(discoverDir, screenshotName), Buffer.from(sectionSs, "base64"));
 
-    // Match to an extraction target
-    const matched = matchSection(pageDescription);
-    if (!matched || visited.has(matched)) {
-      if (matched && visited.has(matched)) {
-        console.log(`   Matched "${matched}" but already found — skipping`);
-      } else {
-        console.log(`   No extraction target matched — skipping`);
-      }
-      continue;
-    }
-
-    console.log(`   Matched extraction target: ${matched}`);
-    visited.add(matched);
-
-    // Build the nav steps
-    const steps = [actInstruction];
-
-    // Step 5: For sections with sub-tabs, explore one level deeper
-    // (e.g. visits page might have "Past (AVS/Notes)" sub-tab)
+    // Observe sub-navigation items (sidebar, sub-tabs, etc.)
     const subNavObs = await browser.observe(
-      "List any sub-navigation tabs, sub-tabs, or secondary navigation items on this page " +
-      "that might lead to more specific content (e.g. 'Past Visits', 'AVS/Notes', 'Documents').",
+      "List any sub-navigation tabs, sub-tabs, sidebar links, or secondary navigation items " +
+      "on this page. Include items in left sidebars, sub-menus, or content tabs. " +
+      "For each, return its visible text label.",
     );
 
     if (subNavObs.length > 0) {
@@ -238,8 +221,18 @@ export async function discoverPortal(
       for (const sub of subNavObs) {
         console.log(`      - ${sub.description}`);
       }
+    }
 
-      // Try to find a sub-tab that leads to the content we want
+    // Match the page description to an extraction target
+    const matched = matchSection(pageDescription);
+
+    if (matched && !visited.has(matched)) {
+      console.log(`   Matched extraction target: ${matched}`);
+      visited.add(matched);
+
+      const steps = [actInstruction];
+
+      // For sections with sub-tabs, explore one level deeper
       const relevantSubTab = findRelevantSubTab(subNavObs, matched);
       if (relevantSubTab) {
         console.log(`   Clicking sub-tab: "${relevantSubTab.description}"`);
@@ -249,25 +242,89 @@ export async function discoverPortal(
           await new Promise((r) => setTimeout(r, 2000));
           steps.push(subActInstruction);
 
-          // Take another screenshot after sub-nav click
           const subSs = await browser.screenshot();
-          const subScreenshotName = matched + "-subtab.png";
-          fs.writeFileSync(path.join(discoverDir, subScreenshotName), Buffer.from(subSs, "base64"));
+          fs.writeFileSync(path.join(discoverDir, matched + "-subtab.png"), Buffer.from(subSs, "base64"));
         } catch (err: any) {
           console.log(`   Failed to click sub-tab: ${err?.message?.slice(0, 80)}`);
         }
       }
+
+      sections[matched] = {
+        steps,
+        listInstruction: buildListInstruction(matched),
+        itemInstruction: buildItemInstruction(matched),
+      };
+      console.log(`   Recorded ${matched} section with ${steps.length} step(s)`);
+    } else if (matched && visited.has(matched)) {
+      console.log(`   Matched "${matched}" but already found — skipping`);
+    } else {
+      console.log(`   No extraction target matched from page description`);
     }
 
-    // Record the section
-    const section: NavMapSection = {
-      steps,
-      listInstruction: buildListInstruction(matched),
-      itemInstruction: buildItemInstruction(matched),
-    };
+    // Check sub-nav items for sections we haven't found yet.
+    // A single nav element (like a hamburger menu) may contain sub-items
+    // for multiple sections (e.g. "Test Results", "Medicines", "Messages").
+    for (const subItem of subNavObs) {
+      if (visited.size === 4) break;
 
-    sections[matched] = section;
-    console.log(`   Recorded ${matched} section with ${steps.length} step(s)`);
+      const subMatch = matchSection(subItem.description);
+      if (!subMatch || visited.has(subMatch)) continue;
+
+      console.log(`   Sub-nav item "${subItem.description}" matches unfound section: ${subMatch}`);
+      console.log(`   Exploring sub-nav item...`);
+
+      // Navigate back to home, re-click the parent nav element, then click the sub-item
+      await browser.navigate(homeUrl);
+      await new Promise((r) => setTimeout(r, 2000));
+
+      try {
+        await browser.act(actInstruction);
+        await new Promise((r) => setTimeout(r, 2000));
+      } catch (err: any) {
+        console.log(`   Failed to re-click parent nav: ${err?.message?.slice(0, 80)}`);
+        continue;
+      }
+
+      const subActInstruction = `Click the navigation item or sidebar link labeled "${subItem.description}"`;
+      try {
+        await browser.act(subActInstruction);
+      } catch (err: any) {
+        console.log(`   Failed to click sub-item "${subItem.description}": ${err?.message?.slice(0, 80)}`);
+        continue;
+      }
+      await new Promise((r) => setTimeout(r, 3000));
+
+      visited.add(subMatch);
+      const subSteps = [actInstruction, subActInstruction];
+
+      // Check for relevant sub-tabs within this section too
+      const innerSubNavObs = await browser.observe(
+        "List any sub-navigation tabs or secondary navigation items on this page.",
+      );
+      const innerRelevantSubTab = findRelevantSubTab(innerSubNavObs, subMatch);
+      if (innerRelevantSubTab) {
+        console.log(`   Clicking inner sub-tab: "${innerRelevantSubTab.description}"`);
+        const innerSubAct = `Click the sub-tab or secondary navigation item labeled "${innerRelevantSubTab.description}"`;
+        try {
+          await browser.act(innerSubAct);
+          await new Promise((r) => setTimeout(r, 2000));
+          subSteps.push(innerSubAct);
+        } catch (err: any) {
+          console.log(`   Failed to click inner sub-tab: ${err?.message?.slice(0, 80)}`);
+        }
+      }
+
+      // Take a screenshot
+      const subSs = await browser.screenshot();
+      fs.writeFileSync(path.join(discoverDir, subMatch + ".png"), Buffer.from(subSs, "base64"));
+
+      sections[subMatch] = {
+        steps: subSteps,
+        listInstruction: buildListInstruction(subMatch),
+        itemInstruction: buildItemInstruction(subMatch),
+      };
+      console.log(`   Recorded ${subMatch} section with ${subSteps.length} step(s)`);
+    }
   }
 
   // Build the NavMap
