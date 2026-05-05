@@ -84,7 +84,7 @@ Chat feature removed. Upload the 4 merged PDFs from `output/` to Claude.ai — i
 ## 6. Authentication & Security
 
 ### Credentials
-- Provided via `.env` file (`MYCHART_USERNAME`, `MYCHART_PASSWORD`)
+- Provided via `providers.json` (see `providers.example.json`)
 - Never committed to git, never logged
 - Held in memory only for the duration of the session
 

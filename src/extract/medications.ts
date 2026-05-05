@@ -8,9 +8,9 @@ import { OUTPUT_DIR, logDepth } from "./helpers.js";
  * Probe mode: navigate to medications page, log URL, take a screenshot.
  * Does NOT extract any PDFs.
  */
-export async function probeMedications(browser: BrowserProvider, mychartUrl: string, probeDir: string): Promise<void> {
+export async function probeMedications(browser: BrowserProvider, mychartUrl: string, probeDir: string, credentials?: { username?: string; password?: string }): Promise<void> {
   console.log("[probe] Medications: navigating...");
-  await ensureLoggedIn(browser, mychartUrl);
+  await ensureLoggedIn(browser, mychartUrl, credentials);
   await browser.act(
     'Click the Medications link in the navigation menu or on the home page. ' +
     'Look for text that says "Medications", "My Medications", or "Medication List".',
@@ -25,7 +25,7 @@ export async function probeMedications(browser: BrowserProvider, mychartUrl: str
   console.log(`[probe] Medications: screenshot saved to output/probe/medications.png`);
 }
 
-export async function extractMedications(browser: BrowserProvider, mychartUrl: string): Promise<void> {
+export async function extractMedications(browser: BrowserProvider, mychartUrl: string, credentials?: { username?: string; password?: string }): Promise<void> {
   const medsDir = path.join(OUTPUT_DIR, "medications");
   fs.mkdirSync(medsDir, { recursive: true });
 
@@ -36,7 +36,7 @@ export async function extractMedications(browser: BrowserProvider, mychartUrl: s
   }
 
   console.log("Step 8: Navigating to medications...");
-  await ensureLoggedIn(browser, mychartUrl);
+  await ensureLoggedIn(browser, mychartUrl, credentials);
   await browser.act(
     'Click the Medications link in the navigation menu or on the home page. ' +
     'Look for text that says "Medications", "My Medications", or "Medication List".',

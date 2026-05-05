@@ -15,9 +15,9 @@ import {
  * Probe mode: navigate to visits list, observe items, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeVisits(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = ""): Promise<void> {
+export async function probeVisits(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
   console.log("[probe] Visits: navigating...");
-  await ensureLoggedIn(browser, mychartUrl);
+  await ensureLoggedIn(browser, mychartUrl, credentials);
   await browser.act(
     'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
     '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.',
@@ -47,7 +47,7 @@ export async function probeVisits(browser: BrowserProvider, mychartUrl: string, 
   console.log(`[probe] Visits: screenshot saved to output/probe/visits.png`);
 }
 
-export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = ""): Promise<void> {
+export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
   const visitsDir = path.join(OUTPUT_DIR, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
 
@@ -60,7 +60,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   }
 
   console.log("Step 7: Navigating to visits...");
-  await ensureLoggedIn(browser, mychartUrl);
+  await ensureLoggedIn(browser, mychartUrl, credentials);
   await browser.act(
     'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
     '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.',

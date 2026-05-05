@@ -15,9 +15,9 @@ import {
  * Probe mode: navigate to labs list, observe items, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = ""): Promise<void> {
+export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
   console.log("[probe] Labs: navigating...");
-  await ensureLoggedIn(browser, mychartUrl);
+  await ensureLoggedIn(browser, mychartUrl, credentials);
   await browser.act(
     'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
     'labeled "Test Results", "Labs", "Lab Results", or similar.',
@@ -52,7 +52,7 @@ export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string
  *
  * Skip: if output/labs/ already has .pdf files (set FORCE_LABS=1 to re-run).
  */
-export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = ""): Promise<void> {
+export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
   const labsDir = path.join(OUTPUT_DIR, "labs");
   fs.mkdirSync(labsDir, { recursive: true });
 
@@ -65,7 +65,7 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
   }
 
   console.log("Step 6: Navigating to lab/test results...");
-  await ensureLoggedIn(browser, mychartUrl);
+  await ensureLoggedIn(browser, mychartUrl, credentials);
   await browser.act(
     'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
     'labeled "Test Results", "Labs", "Lab Results", or similar.',

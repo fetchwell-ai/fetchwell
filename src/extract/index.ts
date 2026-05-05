@@ -145,16 +145,16 @@ async function probe() {
     console.log("Step 4: Probing all sections...");
     console.log();
 
-    await probeLabsDocs(browser, MYCHART_URL, probeDir, navNotes);
+    await probeLabsDocs(browser, MYCHART_URL, probeDir, navNotes, providerCredentials);
     console.log();
 
-    await probeVisits(browser, MYCHART_URL, probeDir, navNotes);
+    await probeVisits(browser, MYCHART_URL, probeDir, navNotes, providerCredentials);
     console.log();
 
-    await probeMedications(browser, MYCHART_URL, probeDir);
+    await probeMedications(browser, MYCHART_URL, probeDir, providerCredentials);
     console.log();
 
-    await probeMessages(browser, MYCHART_URL, probeDir, navNotes);
+    await probeMessages(browser, MYCHART_URL, probeDir, navNotes, providerCredentials);
     console.log();
 
     console.log("=".repeat(60));
@@ -278,16 +278,16 @@ async function main() {
 
     const navNotes = readNavNotes();
 
-    await extractLabsDocs(browser, MYCHART_URL, navNotes);
+    await extractLabsDocs(browser, MYCHART_URL, navNotes, providerCredentials);
     console.log();
 
-    await extractVisits(browser, MYCHART_URL, navNotes);
+    await extractVisits(browser, MYCHART_URL, navNotes, providerCredentials);
     console.log();
 
-    await extractMedications(browser, MYCHART_URL);
+    await extractMedications(browser, MYCHART_URL, providerCredentials);
     console.log();
 
-    await extractMessages(browser, MYCHART_URL, navNotes);
+    await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials);
     console.log();
 
     buildIndex();
