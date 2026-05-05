@@ -28,15 +28,34 @@ type SectionKey = "labs" | "visits" | "medications" | "messages";
 /**
  * Match a page description (from observe()) against our known extraction targets.
  * Returns the section key if matched, or null.
+ *
+ * Uses word-boundary matching to avoid false positives like "welcome message"
+ * matching the "messages" section. Also skips dashboard/home pages.
  */
 function matchSection(description: string): SectionKey | null {
   const lower = description.toLowerCase();
-  // Score each section by how many keywords match
+
+  // Dashboard/home pages should never match a section
+  const dashboardIndicators = [
+    "good morning", "good afternoon", "good evening",
+    "welcome back", "welcome,", "dashboard",
+  ];
+  if (dashboardIndicators.some((d) => lower.includes(d))) {
+    return null;
+  }
+
+  // Score each section by how many keywords match (word-boundary aware)
   let bestSection: SectionKey | null = null;
   let bestCount = 0;
 
   for (const [section, keywords] of Object.entries(SECTION_KEYWORDS)) {
-    const count = keywords.filter((kw) => lower.includes(kw)).length;
+    const count = keywords.filter((kw) => {
+      // Use word-boundary regex to avoid partial matches
+      // e.g. "message" in "welcome message" should NOT match "messages"
+      const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\b${escaped}\\b`, "i");
+      return re.test(lower);
+    }).length;
     if (count > bestCount) {
       bestCount = count;
       bestSection = section as SectionKey;
@@ -373,10 +392,10 @@ function findRelevantSubTab(
   section: SectionKey,
 ): ObserveResult | null {
   const relevanceKeywords: Record<SectionKey, string[]> = {
-    labs: ["results", "completed", "past", "all"],
+    labs: ["results", "completed", "past results", "all results", "all test"],
     visits: ["past", "notes", "avs", "documents", "summary", "after visit", "completed"],
     medications: ["current medications", "active prescriptions", "current meds"],
-    messages: ["inbox", "received", "all"],
+    messages: ["inbox", "received", "all messages", "sent"],
   };
 
   const keywords = relevanceKeywords[section];
