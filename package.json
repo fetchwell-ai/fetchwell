@@ -6,7 +6,8 @@
   "scripts": {
     "extract": "tsx src/extract/index.ts",
     "discover": "tsx src/discover/cli.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
@@ -19,9 +20,12 @@
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^22.0.0",
+    "eslint": "^10.3.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.59.2"
   },
   "engines": {
     "node": ">=22"
