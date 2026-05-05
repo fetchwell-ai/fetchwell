@@ -141,9 +141,13 @@ export async function fetchGmailVerificationCode(timeoutMs = 5 * 60 * 1000): Pro
   }
 }
 
-export async function doLogin(browser: BrowserProvider, debugUrl: string | null): Promise<void> {
-  const username = process.env.MYCHART_USERNAME ?? await prompt("   Enter MyChart username: ");
-  const password = process.env.MYCHART_PASSWORD ?? await prompt("   Enter MyChart password: ");
+export async function doLogin(
+  browser: BrowserProvider,
+  debugUrl: string | null,
+  credentials?: { username?: string; password?: string },
+): Promise<void> {
+  const username = credentials?.username ?? process.env.MYCHART_USERNAME ?? await prompt("   Enter MyChart username: ");
+  const password = credentials?.password ?? process.env.MYCHART_PASSWORD ?? await prompt("   Enter MyChart password: ");
   console.log();
 
   console.log("Step 4: Filling in login form...");
@@ -307,6 +311,7 @@ export async function doLogin(browser: BrowserProvider, debugUrl: string | null)
 export async function ensureLoggedIn(
   browser: BrowserProvider,
   mychartUrl: string,
+  credentials?: { username?: string; password?: string },
 ): Promise<void> {
   // Navigate to the saved home URL (e.g. /UCSFMyChart/Home/) to put us in a
   // known state for act() navigation and to verify the session is alive.
@@ -325,7 +330,7 @@ export async function ensureLoggedIn(
   clearSession();
   await browser.navigate(mychartUrl);
   await new Promise((r) => setTimeout(r, 2000));
-  await doLogin(browser, null);
+  await doLogin(browser, null, credentials);
   if (browser.saveSession) {
     const session = await browser.saveSession();
     session.homeUrl = await browser.url();
