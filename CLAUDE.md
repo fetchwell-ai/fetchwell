@@ -139,12 +139,12 @@ The built-in Claude chat feature has been removed. Upload the PDF output directl
 
 See `.env.example`. Key vars:
 - `ANTHROPIC_API_KEY` — required for AI browser actions
-- `MYCHART_URL` — target MyChart login URL
-- `MYCHART_USERNAME` / `MYCHART_PASSWORD` — optional, skips stdin prompts
 - `GMAIL_USER` / `GMAIL_APP_PASSWORD` — optional, enables auto-2FA via Gmail IMAP
 - `BROWSER_PROVIDER` — `stagehand-local` (default) or `local`
 - `FORCE_LABS`, `FORCE_VISITS`, `FORCE_MEDS`, `FORCE_MSGS` — set to `1` to re-extract that section
 - `PROBE` — set to `1` to run probe mode (navigate + observe + screenshot, no PDF output)
+
+Provider URLs and credentials are configured in `providers.json` (see `providers.example.json`).
 
 ## Task tracking
 
