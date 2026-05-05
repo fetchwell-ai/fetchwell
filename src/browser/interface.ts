@@ -74,6 +74,9 @@ export interface SerializedSession {
     sameSite?: string;
   }>;
   savedAt: string;
+  /** Actual home URL after login (e.g. /UCSFMyChart/Home/). Used to verify
+   *  session is still alive without triggering MyChart's logout-on-login-URL behavior. */
+  homeUrl?: string;
 }
 
 export interface ObserveResult {

@@ -6,7 +6,7 @@ import { ImapFlow } from "imapflow";
 import { type BrowserProvider } from "./browser/interface.js";
 import { type ObserveResult } from "./browser/interface.js";
 import { extractVerificationCode } from "./imap.js";
-import { clearSession, saveSession } from "./session.js";
+import { clearSession, saveSession, loadSavedSession } from "./session.js";
 
 const OUTPUT_DIR = path.join(import.meta.dirname, "..", "output");
 
@@ -308,9 +308,15 @@ export async function ensureLoggedIn(
   browser: BrowserProvider,
   mychartUrl: string,
 ): Promise<void> {
-  // Check current URL — if we're not on an auth page, the session is still alive.
-  // Do NOT navigate to the home URL to verify — MyChart's lowercase/mixed-case
-  // path handling redirects that navigation to ?action=logout, killing the session.
+  // Navigate to the saved home URL (e.g. /UCSFMyChart/Home/) to put us in a
+  // known state for act() navigation and to verify the session is alive.
+  // Do NOT navigate to the login URL — that triggers ?action=logout when already authenticated.
+  const savedSession = loadSavedSession();
+  const homeUrl = savedSession?.homeUrl;
+  if (homeUrl) {
+    await browser.navigate(homeUrl);
+    await new Promise((r) => setTimeout(r, 2000));
+  }
   const currentUrl = await browser.url();
   if (!isAuthPage(currentUrl)) return;
 
@@ -321,7 +327,9 @@ export async function ensureLoggedIn(
   await new Promise((r) => setTimeout(r, 2000));
   await doLogin(browser, null);
   if (browser.saveSession) {
-    saveSession(await browser.saveSession());
+    const session = await browser.saveSession();
+    session.homeUrl = await browser.url();
+    saveSession(session);
     console.log("   Session re-saved.");
   }
 }
