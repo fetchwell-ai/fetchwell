@@ -7,6 +7,7 @@ import {
   makeItemFilename,
   mergePdfs,
   navigateWithRetry,
+  navigateToSection,
   logDepth,
 } from "./helpers.js";
 
@@ -17,19 +18,20 @@ import {
 export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
   console.log("[probe] Labs: navigating...");
   await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
-  await browser.act(
-    'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
-    'labeled "Test Results", "Labs", "Lab Results", or similar.',
-  );
+
+  const fallbackAct = 'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
+    'labeled "Test Results", "Labs", "Lab Results", or similar.';
+  const defaultObserve = "Find all clickable lab result or test result entries on this page. " +
+    "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
+    "Return each one as a separate result.";
+  const { listInstruction } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct });
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "labs");
 
+  const observeInstruction = listInstruction ?? defaultObserve;
   const panelLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") +
-    "Find all clickable lab result or test result entries on this page. " +
-    "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
-    "Return each one as a separate result.",
+    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
 
   console.log(`[probe] Labs: ${panelLinks.length} item(s) found`);
@@ -66,18 +68,19 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
 
   console.log("Step 6: Navigating to lab/test results...");
   await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
-  await browser.act(
-    'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
-    'labeled "Test Results", "Labs", "Lab Results", or similar.',
-  );
+
+  const fallbackAct = 'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
+    'labeled "Test Results", "Labs", "Lab Results", or similar.';
+  const defaultObserve = "Find all clickable lab result or test result entries on this page. " +
+    "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
+    "Return each one as a separate result.";
+  const { listInstruction } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct });
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "labs");
+  const observeInstruction = listInstruction ?? defaultObserve;
   const panelLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") +
-    "Find all clickable lab result or test result entries on this page. " +
-    "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
-    "Return each one as a separate result.",
+    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
   console.log(`   Found ${panelLinks.length} panel link(s).`);
 

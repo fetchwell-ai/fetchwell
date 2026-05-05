@@ -7,6 +7,7 @@ import {
   makeItemFilename,
   mergePdfs,
   navigateWithRetry,
+  navigateToSection,
   logDepth,
 } from "./helpers.js";
 
@@ -17,20 +18,21 @@ import {
 export async function probeVisits(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
   console.log("[probe] Visits: navigating...");
   await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
-  await browser.act(
-    'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
-    '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.',
-  );
+
+  const fallbackAct = 'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
+    '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.';
+  const defaultObserve = "Find all document links within past visit entries on this page. " +
+    "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
+    "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +
+    "Return each link separately.";
+  const { listInstruction } = await navigateToSection(browser, providerId, "visits", { act: fallbackAct });
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "visits");
 
+  const observeInstruction = listInstruction ?? defaultObserve;
   const visitLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") +
-    "Find all document links within past visit entries on this page. " +
-    "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
-    "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +
-    "Return each link separately.",
+    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
 
   console.log(`[probe] Visits: ${visitLinks.length} item(s) found`);
@@ -61,19 +63,20 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
 
   console.log("Step 7: Navigating to visits...");
   await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
-  await browser.act(
-    'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
-    '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.',
-  );
+
+  const fallbackAct = 'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
+    '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.';
+  const defaultObserve = "Find all document links within past visit entries on this page. " +
+    "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
+    "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +
+    "Return each link separately.";
+  const { listInstruction } = await navigateToSection(browser, providerId, "visits", { act: fallbackAct });
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "visits");
+  const observeInstruction = listInstruction ?? defaultObserve;
   const visitLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") +
-    "Find all document links within past visit entries on this page. " +
-    "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
-    "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +
-    "Return each link separately.",
+    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
   console.log(`   Found ${visitLinks.length} visit document link(s).`);
 
