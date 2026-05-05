@@ -12,6 +12,7 @@ output/
 
 # Credentials
 .env
+providers.json
 
 # Packaged health records — sensitive personal data, never commit
 mychart-*.zip

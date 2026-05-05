@@ -1,0 +1,10 @@
+{
+  "providers": [
+    {
+      "id": "ucsf",
+      "name": "UCSF MyChart",
+      "type": "mychart",
+      "url": "https://ucsfmychart.ucsfmedicalcenter.org/ucsfmychart/Authentication/Login?"
+    }
+  ]
+}
