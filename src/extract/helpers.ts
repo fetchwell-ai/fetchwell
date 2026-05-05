@@ -3,10 +3,23 @@ import * as path from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { type BrowserProvider } from "../browser/interface.js";
 
-export const OUTPUT_DIR = path.resolve(import.meta.dirname, "..", "..", "output");
+/** Base output directory (parent of all provider-scoped dirs). */
+export const OUTPUT_BASE = path.resolve(import.meta.dirname, "..", "..", "output");
 
-export function readNavNotes(): string {
-  const navNotesPath = path.join(OUTPUT_DIR, "nav-notes.md");
+/**
+ * @deprecated Use getOutputDir(providerId) for provider-scoped output.
+ * Kept temporarily so any transient callers still compile.
+ */
+export const OUTPUT_DIR = OUTPUT_BASE;
+
+/** Return the provider-scoped output directory: output/<providerId>/ */
+export function getOutputDir(providerId: string): string {
+  return path.join(OUTPUT_BASE, providerId);
+}
+
+export function readNavNotes(outputDir?: string): string {
+  const dir = outputDir ?? OUTPUT_BASE;
+  const navNotesPath = path.join(dir, "nav-notes.md");
   try {
     const contents = fs.readFileSync(navNotesPath, "utf8");
     console.log(`   Nav notes loaded from ${navNotesPath}`);
@@ -71,7 +84,8 @@ export async function navigateWithRetry(browser: BrowserProvider, url: string): 
   }
 }
 
-export function buildIndex(): void {
+export function buildIndex(outputDir?: string): void {
+  const dir = outputDir ?? OUTPUT_BASE;
   const sections: Array<{ name: string; pdf: string }> = [
     { name: "Lab Results", pdf: "labs.pdf" },
     { name: "Visits", pdf: "visits.pdf" },
@@ -84,7 +98,7 @@ export function buildIndex(): void {
   body += `<p>Upload these PDF files to Claude.ai to analyze your records.</p>\n<ul>\n`;
 
   for (const { name, pdf } of sections) {
-    const pdfPath = path.join(OUTPUT_DIR, pdf);
+    const pdfPath = path.join(dir, pdf);
     if (fs.existsSync(pdfPath)) {
       const size = (fs.statSync(pdfPath).size / 1024).toFixed(0);
       body += `  <li><a href="${pdf}">${name}</a> — ${size} KB</li>\n`;
@@ -111,6 +125,7 @@ export function buildIndex(): void {
 ${body}
 </body>
 </html>`;
-  fs.writeFileSync(path.join(OUTPUT_DIR, "index.html"), html, "utf8");
-  console.log(`   Index saved to output/index.html`);
+  fs.writeFileSync(path.join(dir, "index.html"), html, "utf8");
+  const relPath = path.relative(OUTPUT_BASE, dir);
+  console.log(`   Index saved to output/${relPath}/index.html`);
 }

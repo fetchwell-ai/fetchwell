@@ -31,7 +31,7 @@ import { createBrowserProvider } from "../browser/index.js";
 import { loadSavedSession, saveSession } from "../session.js";
 import { isAuthPage, doLogin, GMAIL_USER, prompt } from "../auth.js";
 import { loadProviders, findProvider, type ProviderConfig } from "../config.js";
-import { OUTPUT_DIR, buildIndex, readNavNotes } from "./helpers.js";
+import { getOutputDir, buildIndex, readNavNotes } from "./helpers.js";
 import { extractLabsDocs, probeLabsDocs } from "./labs.js";
 import { extractVisits, probeVisits } from "./visits.js";
 import { extractMedications, probeMedications } from "./medications.js";
@@ -154,11 +154,12 @@ async function probeProvider(provider: ProviderConfig) {
   console.log("=".repeat(60));
   console.log();
 
-  const probeDir = path.join(OUTPUT_DIR, "probe");
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  const outputDir = getOutputDir(provider.id);
+  const probeDir = path.join(outputDir, "probe");
+  fs.mkdirSync(outputDir, { recursive: true });
   fs.mkdirSync(probeDir, { recursive: true });
 
-  const savedSession = loadSavedSession();
+  const savedSession = loadSavedSession(provider.id);
   if (savedSession) {
     console.log(`   Found saved session from ${savedSession.savedAt} — will skip login.`);
     console.log();
@@ -203,52 +204,52 @@ async function probeProvider(provider: ProviderConfig) {
         console.log("   Session expired or invalid. Logging in fresh...");
         await browser.navigate(MYCHART_URL);
         await new Promise((r) => setTimeout(r, 2000));
-        await doLogin(browser, debugUrl, providerCredentials);
+        await doLogin(browser, debugUrl, providerCredentials, provider.id);
         if (browser.saveSession) {
           const session = await browser.saveSession();
           session.homeUrl = await browser.url();
-          saveSession(session);
-          console.log("   Session saved to output/session.json.");
+          saveSession(session, provider.id);
+          console.log(`   Session saved to output/${provider.id}/session.json.`);
         }
       }
     } else {
       console.log("Step 3: Login");
-      await doLogin(browser, debugUrl, providerCredentials);
+      await doLogin(browser, debugUrl, providerCredentials, provider.id);
       if (browser.saveSession) {
         const session = await browser.saveSession();
         session.homeUrl = await browser.url();
-        saveSession(session);
-        console.log("   Session saved to output/session.json (login + 2FA skipped next run).");
+        saveSession(session, provider.id);
+        console.log(`   Session saved to output/${provider.id}/session.json (login + 2FA skipped next run).`);
       }
     }
     console.log();
 
-    const navNotes = readNavNotes();
+    const navNotes = readNavNotes(outputDir);
 
     console.log("Step 4: Probing all sections...");
     console.log();
 
-    await probeLabsDocs(browser, MYCHART_URL, probeDir, navNotes, providerCredentials);
+    await probeLabsDocs(browser, MYCHART_URL, probeDir, navNotes, providerCredentials, provider.id);
     console.log();
 
-    await probeVisits(browser, MYCHART_URL, probeDir, navNotes, providerCredentials);
+    await probeVisits(browser, MYCHART_URL, probeDir, navNotes, providerCredentials, provider.id);
     console.log();
 
-    await probeMedications(browser, MYCHART_URL, probeDir, providerCredentials);
+    await probeMedications(browser, MYCHART_URL, probeDir, providerCredentials, provider.id);
     console.log();
 
-    await probeMessages(browser, MYCHART_URL, probeDir, navNotes, providerCredentials);
+    await probeMessages(browser, MYCHART_URL, probeDir, navNotes, providerCredentials, provider.id);
     console.log();
 
     console.log("=".repeat(60));
     console.log("  PROBE COMPLETE");
     console.log("=".repeat(60));
     console.log();
-    console.log("  Screenshots saved to output/probe/");
-    console.log("  [ok] output/probe/labs.png");
-    console.log("  [ok] output/probe/visits.png");
-    console.log("  [ok] output/probe/medications.png");
-    console.log("  [ok] output/probe/messages.png");
+    console.log(`  Screenshots saved to output/${provider.id}/probe/`);
+    console.log(`  [ok] output/${provider.id}/probe/labs.png`);
+    console.log(`  [ok] output/${provider.id}/probe/visits.png`);
+    console.log(`  [ok] output/${provider.id}/probe/medications.png`);
+    console.log(`  [ok] output/${provider.id}/probe/messages.png`);
     console.log();
     console.log("  No PDFs were written. Run pnpm extract for full extraction.");
     console.log();
@@ -290,14 +291,15 @@ async function extractProvider(provider: ProviderConfig) {
   console.log("=".repeat(60));
   console.log();
 
-  const savedSession = loadSavedSession();
+  const outputDir = getOutputDir(provider.id);
+  const savedSession = loadSavedSession(provider.id);
   if (savedSession) {
     console.log(`   Found saved session from ${savedSession.savedAt} — will skip login.`);
-    console.log("   (Delete output/session.json to force a fresh login.)");
+    console.log(`   (Delete output/${provider.id}/session.json to force a fresh login.)`);
     console.log();
   }
 
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  fs.mkdirSync(outputDir, { recursive: true });
 
   console.log(`Step 1: Creating ${providerType} browser session...`);
   const browser = await createBrowserProvider();
@@ -342,12 +344,12 @@ async function extractProvider(provider: ProviderConfig) {
         console.log("Step 3: Login");
         await browser.navigate(MYCHART_URL);
         await new Promise((r) => setTimeout(r, 2000));
-        await doLogin(browser, debugUrl, providerCredentials);
+        await doLogin(browser, debugUrl, providerCredentials, provider.id);
         if (browser.saveSession) {
           const session = await browser.saveSession();
           session.homeUrl = await browser.url();
-          saveSession(session);
-          console.log("   Session saved to output/session.json.");
+          saveSession(session, provider.id);
+          console.log(`   Session saved to output/${provider.id}/session.json.`);
         }
       }
     } else {
@@ -355,41 +357,41 @@ async function extractProvider(provider: ProviderConfig) {
       console.log("   Your credentials are entered locally and sent directly to MyChart.");
       console.log("   They are NOT stored or logged anywhere.");
       console.log();
-      await doLogin(browser, debugUrl, providerCredentials);
+      await doLogin(browser, debugUrl, providerCredentials, provider.id);
       if (browser.saveSession) {
         const session = await browser.saveSession();
         session.homeUrl = await browser.url();
-        saveSession(session);
-        console.log("   Session saved to output/session.json (login + 2FA skipped next run).");
+        saveSession(session, provider.id);
+        console.log(`   Session saved to output/${provider.id}/session.json (login + 2FA skipped next run).`);
       }
     }
     console.log();
 
-    const navNotes = readNavNotes();
+    const navNotes = readNavNotes(outputDir);
 
-    await extractLabsDocs(browser, MYCHART_URL, navNotes, providerCredentials);
+    await extractLabsDocs(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id);
     console.log();
 
-    await extractVisits(browser, MYCHART_URL, navNotes, providerCredentials);
+    await extractVisits(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id);
     console.log();
 
-    await extractMedications(browser, MYCHART_URL, providerCredentials);
+    await extractMedications(browser, MYCHART_URL, providerCredentials, outputDir, provider.id);
     console.log();
 
-    await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials);
+    await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id);
     console.log();
 
-    buildIndex();
+    buildIndex(outputDir);
 
     console.log("=".repeat(60));
     console.log("  EXTRACTION COMPLETE");
     console.log("=".repeat(60));
     console.log();
-    console.log("  [ok] output/labs.pdf");
-    console.log("  [ok] output/visits.pdf");
-    console.log("  [ok] output/medications.pdf");
-    console.log("  [ok] output/messages.pdf");
-    console.log("  [ok] output/index.html  (upload PDFs to Claude.ai)");
+    console.log(`  [ok] output/${provider.id}/labs.pdf`);
+    console.log(`  [ok] output/${provider.id}/visits.pdf`);
+    console.log(`  [ok] output/${provider.id}/medications.pdf`);
+    console.log(`  [ok] output/${provider.id}/messages.pdf`);
+    console.log(`  [ok] output/${provider.id}/index.html  (upload PDFs to Claude.ai)`);
     console.log();
   } catch (err) {
     failed = true;

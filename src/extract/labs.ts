@@ -3,7 +3,6 @@ import * as path from "node:path";
 import { type BrowserProvider } from "../browser/interface.js";
 import { ensureLoggedIn } from "../auth.js";
 import {
-  OUTPUT_DIR,
   readDirSafe,
   makeItemFilename,
   mergePdfs,
@@ -15,9 +14,9 @@ import {
  * Probe mode: navigate to labs list, observe items, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
+export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
   console.log("[probe] Labs: navigating...");
-  await ensureLoggedIn(browser, mychartUrl, credentials);
+  await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
   await browser.act(
     'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
     'labeled "Test Results", "Labs", "Lab Results", or similar.',
@@ -43,17 +42,18 @@ export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string
 
   const ss = await browser.screenshot();
   fs.writeFileSync(path.join(probeDir, "labs.png"), Buffer.from(ss, "base64"));
-  console.log(`[probe] Labs: screenshot saved to output/probe/labs.png`);
+  console.log(`[probe] Labs: screenshot saved to ${probeDir}/labs.png`);
 }
 
 /**
  * Drill into every lab/test-result panel and save each one as a PDF.
- * Merges all into output/labs.pdf for Claude.ai upload.
+ * Merges all into <outputDir>/labs.pdf for Claude.ai upload.
  *
- * Skip: if output/labs/ already has .pdf files (set FORCE_LABS=1 to re-run).
+ * Skip: if <outputDir>/labs/ already has .pdf files (set FORCE_LABS=1 to re-run).
  */
-export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
-  const labsDir = path.join(OUTPUT_DIR, "labs");
+export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string): Promise<void> {
+  const baseDir = outputDir ?? process.cwd();
+  const labsDir = path.join(baseDir, "labs");
   fs.mkdirSync(labsDir, { recursive: true });
 
   const existingPdfs = readDirSafe(labsDir).filter((f) => f.endsWith(".pdf"));
@@ -65,7 +65,7 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
   }
 
   console.log("Step 6: Navigating to lab/test results...");
-  await ensureLoggedIn(browser, mychartUrl, credentials);
+  await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
   await browser.act(
     'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
     'labeled "Test Results", "Labs", "Lab Results", or similar.',
@@ -130,5 +130,5 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
     await new Promise((r) => setTimeout(r, 1500));
   }
 
-  await mergePdfs(labsDir, path.join(OUTPUT_DIR, "labs.pdf"), "labs");
+  await mergePdfs(labsDir, path.join(baseDir, "labs.pdf"), "labs");
 }
