@@ -27,6 +27,7 @@ import * as path from "node:path";
 import { createBrowserProvider } from "../browser/index.js";
 import { loadSavedSession, saveSession } from "../session.js";
 import { isAuthPage, doLogin, GMAIL_USER, prompt } from "../auth.js";
+import { loadProviders, type ProviderConfig } from "../config.js";
 import { OUTPUT_DIR, buildIndex, readNavNotes } from "./helpers.js";
 import { extractLabsDocs, probeLabsDocs } from "./labs.js";
 import { extractVisits, probeVisits } from "./visits.js";
@@ -38,27 +39,19 @@ import { extractMessages, probeMessages } from "./messages.js";
 // ---------------------------------------------------------------------------
 const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
 
-if (!process.env.MYCHART_URL) {
-  console.error("Missing required env var: MYCHART_URL");
-  console.error("   Copy .env.example to .env and fill in the values.");
-  process.exit(1);
-}
+// Load provider config from providers.json (exits on error)
+const providers = loadProviders();
+// Single-provider mode: use the first provider. CLI selection (--provider) is added by task 09a.2.
+const activeProvider: ProviderConfig = providers[0];
+const MYCHART_URL = activeProvider.url;
+const providerCredentials = activeProvider.username || activeProvider.password
+  ? { username: activeProvider.username, password: activeProvider.password }
+  : undefined;
 
 if (providerType !== "local" && !process.env.ANTHROPIC_API_KEY) {
   console.error("Missing required env var: ANTHROPIC_API_KEY");
   process.exit(1);
 }
-
-if (providerType === "browserbase") {
-  for (const key of ["BROWSERBASE_API_KEY", "BROWSERBASE_PROJECT_ID"] as const) {
-    if (!process.env[key]) {
-      console.error(`Missing required env var for browserbase mode: ${key}`);
-      process.exit(1);
-    }
-  }
-}
-
-const MYCHART_URL = process.env.MYCHART_URL!;
 
 // ---------------------------------------------------------------------------
 // Probe mode
@@ -127,7 +120,7 @@ async function probe() {
         console.log("   Session expired or invalid. Logging in fresh...");
         await browser.navigate(MYCHART_URL);
         await new Promise((r) => setTimeout(r, 2000));
-        await doLogin(browser, debugUrl);
+        await doLogin(browser, debugUrl, providerCredentials);
         if (browser.saveSession) {
           const session = await browser.saveSession();
           session.homeUrl = await browser.url();
@@ -137,7 +130,7 @@ async function probe() {
       }
     } else {
       console.log("Step 3: Login");
-      await doLogin(browser, debugUrl);
+      await doLogin(browser, debugUrl, providerCredentials);
       if (browser.saveSession) {
         const session = await browser.saveSession();
         session.homeUrl = await browser.url();
@@ -260,7 +253,7 @@ async function main() {
         console.log("Step 3: Login");
         await browser.navigate(MYCHART_URL);
         await new Promise((r) => setTimeout(r, 2000));
-        await doLogin(browser, debugUrl);
+        await doLogin(browser, debugUrl, providerCredentials);
         if (browser.saveSession) {
           const session = await browser.saveSession();
           session.homeUrl = await browser.url();
@@ -273,7 +266,7 @@ async function main() {
       console.log("   Your credentials are entered locally and sent directly to MyChart.");
       console.log("   They are NOT stored or logged anywhere.");
       console.log();
-      await doLogin(browser, debugUrl);
+      await doLogin(browser, debugUrl, providerCredentials);
       if (browser.saveSession) {
         const session = await browser.saveSession();
         session.homeUrl = await browser.url();
