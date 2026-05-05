@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "extract": "tsx src/extract/index.ts",
+    "discover": "tsx src/discover/cli.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

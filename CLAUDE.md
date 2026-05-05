@@ -23,6 +23,10 @@ browser-agent-team/
 │   │   ├── medications.ts  # extractMedications() → output/medications.pdf
 │   │   ├── messages.ts     # extractMessages() → output/messages/*.pdf + output/messages.pdf
 │   │   └── helpers.ts      # Shared: slugify, makeItemFilename, mergePdfs, navigateWithRetry, buildIndex, logDepth, readNavNotes
+│   ├── discover/
+│   │   ├── cli.ts          # pnpm discover entry point
+│   │   ├── index.ts        # discoverPortal() — portal navigation explorer
+│   │   └── nav-map.ts      # NavMap types, loadNavMap, saveNavMap
 │   ├── auth.ts          # doLogin, ensureLoggedIn, fetchGmailVerificationCode
 │   ├── session.ts       # loadSavedSession, saveSession, clearSession
 │   ├── 2fa-relay.ts     # Standalone Gmail IMAP 2FA helper
@@ -36,6 +40,7 @@ browser-agent-team/
 │           └── playwright-local.ts   # Plain Playwright, no AI
 ├── output/              # Runtime output — gitignored
 │   ├── session.json     # Saved browser session (12h TTL, skip login on reuse)
+│   ├── nav-map.json     # Discovered portal navigation structure (from pnpm discover)
 │   ├── 2fa.code         # Drop a 6-digit code here to relay 2FA manually
 │   ├── nav-notes.md     # Optional: instructions prepended to every observe() call
 │   ├── labs.pdf         # All lab results merged — upload to Claude.ai
@@ -57,6 +62,7 @@ browser-agent-team/
 pnpm extract        # Extract all records → output/*.pdf
 pnpm typecheck      # TypeScript type check (tsc --noEmit)
 PROBE=1 pnpm extract  # Probe mode: navigate + observe + screenshot, no PDFs (fast smoke test)
+pnpm discover --provider <id>  # Discover portal navigation structure → output/<id>/nav-map.json
 ```
 
 ## Testing and linting

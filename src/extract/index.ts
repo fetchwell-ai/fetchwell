@@ -32,6 +32,7 @@ import { loadSavedSession, saveSession } from "../session.js";
 import { isAuthPage, GMAIL_USER, prompt, getAuthModule } from "../auth.js";
 import { loadProviders, findProvider, type ProviderConfig } from "../config.js";
 import { getOutputDir, buildIndex, readNavNotes } from "./helpers.js";
+import { loadNavMap } from "../discover/nav-map.js";
 import { extractLabsDocs, probeLabsDocs } from "./labs.js";
 import { extractVisits, probeVisits } from "./visits.js";
 import { extractMedications, probeMedications } from "./medications.js";
@@ -440,6 +441,12 @@ async function run() {
       console.log("#".repeat(60));
       console.log();
     }
+    // Warn if no nav-map exists for this provider
+    if (!loadNavMap(provider.id)) {
+      console.log(`Warning: No nav-map found for ${provider.id}. Run 'pnpm discover --provider ${provider.id}' first for better navigation.`);
+      console.log();
+    }
+
     await runFn(provider);
   }
 }
