@@ -163,3 +163,123 @@ export async function navigateToSection(
   await browser.act(fallback.act);
   return {};
 }
+
+// ---------------------------------------------------------------------------
+// Incremental extraction helpers
+// ---------------------------------------------------------------------------
+
+/** Section names that support incremental extraction. */
+export type IncrementalSection = "labs" | "visits" | "medications" | "messages";
+
+interface LastExtractedData {
+  [section: string]: string; // ISO 8601 timestamp
+}
+
+/** Path to the last-extracted.json file for a given provider output directory. */
+function lastExtractedPath(outputDir: string): string {
+  return path.join(outputDir, "last-extracted.json");
+}
+
+/**
+ * Read the last extraction date for a section from last-extracted.json.
+ * Returns a Date if a previous extraction timestamp exists, or null if not.
+ */
+export function getLastExtractedDate(outputDir: string, section: IncrementalSection): Date | null {
+  try {
+    const raw = fs.readFileSync(lastExtractedPath(outputDir), "utf8");
+    const data: LastExtractedData = JSON.parse(raw);
+    const ts = data[section];
+    if (!ts) return null;
+    const d = new Date(ts);
+    return isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Record the current time as the last extraction timestamp for a section.
+ * Writes (or updates) last-extracted.json in the provider output directory.
+ */
+export function setLastExtractedDate(outputDir: string, section: IncrementalSection): void {
+  let data: LastExtractedData = {};
+  try {
+    const raw = fs.readFileSync(lastExtractedPath(outputDir), "utf8");
+    data = JSON.parse(raw);
+  } catch {
+    // File doesn't exist or is malformed — start fresh
+  }
+  data[section] = new Date().toISOString();
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(lastExtractedPath(outputDir), JSON.stringify(data, null, 2), "utf8");
+}
+
+/**
+ * Attempt to parse a date from a portal item description string.
+ * Portal descriptions typically include dates like "CBC 04/28/2026" or
+ * "Annual Physical 2026-01-15". Returns a Date if a date is found, or null
+ * if no recognisable date pattern is present.
+ *
+ * This helper is intentionally permissive: if date parsing fails we return
+ * null so the caller falls back to extracting the item rather than skipping.
+ */
+export function parseItemDate(description: string): Date | null {
+  if (!description) return null;
+
+  // MM/DD/YYYY  or  M/D/YYYY
+  const slashMatch = description.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{4})\b/);
+  if (slashMatch) {
+    const d = new Date(
+      Number(slashMatch[3]),
+      Number(slashMatch[1]) - 1,
+      Number(slashMatch[2]),
+    );
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // YYYY-MM-DD
+  const isoMatch = description.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+  if (isoMatch) {
+    const d = new Date(
+      Number(isoMatch[1]),
+      Number(isoMatch[2]) - 1,
+      Number(isoMatch[3]),
+    );
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Month name: "Jan 15, 2026", "January 15 2026", "15 Jan 2026"
+  const monthNames =
+    "january|february|march|april|may|june|july|august|september|october|november|december|" +
+    "jan|feb|mar|apr|jun|jul|aug|sep|oct|nov|dec";
+  const longMatch = description.match(
+    new RegExp(
+      `\\b(\\d{1,2})\\s+(?:${monthNames})\\s+(\\d{4})\\b|\\b(?:${monthNames})\\s+(\\d{1,2})[,\\s]+(\\d{4})\\b`,
+      "i",
+    ),
+  );
+  if (longMatch) {
+    const d = new Date(longMatch[0]);
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  return null;
+}
+
+/**
+ * Return true if the item described by `description` should be skipped
+ * because its date is on or before the incremental cutoff.
+ *
+ * Always returns false (extract the item) when:
+ *   - `cutoff` is null (no previous extraction / full run)
+ *   - the item date cannot be parsed from `description`
+ */
+export function shouldSkipIncremental(description: string, cutoff: Date | null): boolean {
+  if (!cutoff) return false;
+  const itemDate = parseItemDate(description);
+  if (!itemDate) return false; // cannot determine date — extract to be safe
+  // Normalise both dates to midnight for day-level comparison
+  const itemDay = new Date(itemDate.getFullYear(), itemDate.getMonth(), itemDate.getDate()).getTime();
+  const cutoffDay = new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate()).getTime();
+  return itemDay <= cutoffDay;
+}

@@ -31,7 +31,14 @@ import { createBrowserProvider } from "../browser/index.js";
 import { loadSavedSession, saveSession } from "../session.js";
 import { isAuthPage, GMAIL_USER, prompt, getAuthModule } from "../auth.js";
 import { loadProviders, findProvider, type ProviderConfig } from "../config.js";
-import { getOutputDir, buildIndex, readNavNotes } from "./helpers.js";
+import {
+  getOutputDir,
+  buildIndex,
+  readNavNotes,
+  getLastExtractedDate,
+  setLastExtractedDate,
+  type IncrementalSection,
+} from "./helpers.js";
 import { loadNavMap } from "../discover/nav-map.js";
 import { extractLabsDocs, probeLabsDocs } from "./labs.js";
 import { extractVisits, probeVisits } from "./visits.js";
@@ -45,12 +52,14 @@ import { extractMessages, probeMessages } from "./messages.js";
 interface CliArgs {
   providerFlag: string | null; // --provider <id>
   allFlag: boolean;            // --all
+  incremental: boolean;        // --incremental
 }
 
 function parseCliArgs(): CliArgs {
   const args = process.argv.slice(2);
   let providerFlag: string | null = null;
   let allFlag = false;
+  let incremental = false;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--provider" && i + 1 < args.length) {
@@ -58,6 +67,8 @@ function parseCliArgs(): CliArgs {
       i++; // skip the value
     } else if (args[i] === "--all") {
       allFlag = true;
+    } else if (args[i] === "--incremental") {
+      incremental = true;
     }
   }
 
@@ -66,7 +77,7 @@ function parseCliArgs(): CliArgs {
     process.exit(1);
   }
 
-  return { providerFlag, allFlag };
+  return { providerFlag, allFlag, incremental };
 }
 
 // ---------------------------------------------------------------------------
@@ -276,7 +287,7 @@ async function probeProvider(provider: ProviderConfig) {
 // ---------------------------------------------------------------------------
 // Main extraction (per provider)
 // ---------------------------------------------------------------------------
-async function extractProvider(provider: ProviderConfig) {
+async function extractProvider(provider: ProviderConfig, incremental = false) {
   const MYCHART_URL = provider.url;
   const providerCredentials = provider.username || provider.password
     ? { username: provider.username, password: provider.password }
@@ -288,6 +299,9 @@ async function extractProvider(provider: ProviderConfig) {
   console.log("  MyChart Agent — Record Extraction");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
   console.log(`  Mode: ${providerType}`);
+  if (incremental) {
+    console.log("  Incremental: ON (skipping items already extracted)");
+  }
   if (GMAIL_USER) {
     console.log(`  2FA: auto via Gmail (${GMAIL_USER})`);
   } else {
@@ -374,16 +388,31 @@ async function extractProvider(provider: ProviderConfig) {
 
     const navNotes = readNavNotes(outputDir);
 
+    if (incremental) {
+      // Log the last-extracted timestamps so the user can see what the cutoff is
+      const sections: IncrementalSection[] = ["labs", "visits", "medications", "messages"];
+      console.log("   Incremental cutoffs (items on/before these dates will be skipped):");
+      for (const sec of sections) {
+        const cutoff = getLastExtractedDate(outputDir, sec);
+        console.log(`     ${sec.padEnd(12)}: ${cutoff?.toISOString() ?? "none (full run)"}`);
+      }
+      console.log();
+    }
+
     await extractLabsDocs(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id);
+    if (incremental) setLastExtractedDate(outputDir, "labs" as IncrementalSection);
     console.log();
 
     await extractVisits(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id);
+    if (incremental) setLastExtractedDate(outputDir, "visits" as IncrementalSection);
     console.log();
 
     await extractMedications(browser, MYCHART_URL, providerCredentials, outputDir, provider.id);
+    if (incremental) setLastExtractedDate(outputDir, "medications" as IncrementalSection);
     console.log();
 
     await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id);
+    if (incremental) setLastExtractedDate(outputDir, "messages" as IncrementalSection);
     console.log();
 
     buildIndex(outputDir, provider.id);
@@ -431,7 +460,6 @@ async function run() {
   const selectedProviders = await selectProviders(allProviders, cli);
 
   const isProbe = process.env.PROBE === "1";
-  const runFn = isProbe ? probeProvider : extractProvider;
 
   for (const provider of selectedProviders) {
     if (selectedProviders.length > 1) {
@@ -447,7 +475,11 @@ async function run() {
       console.log();
     }
 
-    await runFn(provider);
+    if (isProbe) {
+      await probeProvider(provider);
+    } else {
+      await extractProvider(provider, cli.incremental);
+    }
   }
 }
 
