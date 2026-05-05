@@ -106,7 +106,7 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
       try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
       const pageTitle = await browser.title();
-      const filename = makeItemFilename(i, pageTitle || link.description);
+      const filename = makeItemFilename(i, pageTitle || link.description, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
         fs.writeFileSync(path.join(msgsDir, filename), pdfBuf);
@@ -124,5 +124,6 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
   }
 
   console.log(`   Messages saved to ${msgsDir}`);
-  await mergePdfs(msgsDir, path.join(baseDir, "messages.pdf"), "threads");
+  const mergedFilename = providerId ? `messages-${providerId}.pdf` : "messages.pdf";
+  await mergePdfs(msgsDir, path.join(baseDir, mergedFilename), "threads");
 }

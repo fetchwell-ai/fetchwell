@@ -113,7 +113,7 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
       const cleanDesc = link.description
         .replace(/^Lab\/test result entry:\s*/i, "")
         .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
-      const filename = makeItemFilename(i, cleanDesc || link.description);
+      const filename = makeItemFilename(i, cleanDesc || link.description, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
         fs.writeFileSync(path.join(labsDir, filename), pdfBuf);
@@ -133,5 +133,6 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
     await new Promise((r) => setTimeout(r, 1500));
   }
 
-  await mergePdfs(labsDir, path.join(baseDir, "labs.pdf"), "labs");
+  const mergedFilename = providerId ? `labs-${providerId}.pdf` : "labs.pdf";
+  await mergePdfs(labsDir, path.join(baseDir, mergedFilename), "labs");
 }
