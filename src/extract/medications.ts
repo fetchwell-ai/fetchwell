@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { type BrowserProvider } from "../browser/interface.js";
 import { ensureLoggedIn } from "../auth.js";
-import { logDepth } from "./helpers.js";
+import { logDepth, navigateToSection } from "./helpers.js";
 
 /**
  * Probe mode: navigate to medications page, log URL, take a screenshot.
@@ -11,10 +11,10 @@ import { logDepth } from "./helpers.js";
 export async function probeMedications(browser: BrowserProvider, mychartUrl: string, probeDir: string, credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
   console.log("[probe] Medications: navigating...");
   await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
-  await browser.act(
-    'Click the Medications link in the navigation menu or on the home page. ' +
-    'Look for text that says "Medications", "My Medications", or "Medication List".',
-  );
+
+  const fallbackAct = 'Click the Medications link in the navigation menu or on the home page. ' +
+    'Look for text that says "Medications", "My Medications", or "Medication List".';
+  await navigateToSection(browser, providerId, "medications", { act: fallbackAct });
   await new Promise((r) => setTimeout(r, 3000));
   try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
@@ -38,10 +38,10 @@ export async function extractMedications(browser: BrowserProvider, mychartUrl: s
 
   console.log("Step 8: Navigating to medications...");
   await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
-  await browser.act(
-    'Click the Medications link in the navigation menu or on the home page. ' +
-    'Look for text that says "Medications", "My Medications", or "Medication List".',
-  );
+
+  const fallbackAct = 'Click the Medications link in the navigation menu or on the home page. ' +
+    'Look for text that says "Medications", "My Medications", or "Medication List".';
+  await navigateToSection(browser, providerId, "medications", { act: fallbackAct });
   await new Promise((r) => setTimeout(r, 3000));
   try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 

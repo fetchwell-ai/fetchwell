@@ -7,6 +7,7 @@ import {
   makeItemFilename,
   mergePdfs,
   navigateWithRetry,
+  navigateToSection,
   logDepth,
 } from "./helpers.js";
 
@@ -17,18 +18,19 @@ import {
 export async function probeMessages(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
   console.log("[probe] Messages: navigating...");
   await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
-  await browser.act(
-    'Click the Messages or Inbox link in the navigation menu. ' +
-    'It may be labeled "Messages", "Inbox", or "MyChart Messages".',
-  );
+
+  const fallbackAct = 'Click the Messages or Inbox link in the navigation menu. ' +
+    'It may be labeled "Messages", "Inbox", or "MyChart Messages".';
+  const defaultObserve = "Find all clickable message threads or conversations on this page. " +
+    "Each entry is a row with a subject line, sender, and date. Return each one separately.";
+  const { listInstruction } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct });
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "messages");
 
+  const observeInstruction = listInstruction ?? defaultObserve;
   const threadLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") +
-    "Find all clickable message threads or conversations on this page. " +
-    "Each entry is a row with a subject line, sender, and date. Return each one separately.",
+    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
 
   console.log(`[probe] Messages: ${threadLinks.length} thread(s) found`);
@@ -56,17 +58,18 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
 
   console.log("Step 9: Navigating to messages...");
   await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
-  await browser.act(
-    'Click the Messages or Inbox link in the navigation menu. ' +
-    'It may be labeled "Messages", "Inbox", or "MyChart Messages".',
-  );
+
+  const fallbackAct = 'Click the Messages or Inbox link in the navigation menu. ' +
+    'It may be labeled "Messages", "Inbox", or "MyChart Messages".';
+  const defaultObserve = "Find all clickable message threads or conversations on this page. " +
+    "Each entry is a row with a subject line, sender, and date. Return each one separately.";
+  const { listInstruction } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct });
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "messages");
+  const observeInstruction = listInstruction ?? defaultObserve;
   const threadLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") +
-    "Find all clickable message threads or conversations on this page. " +
-    "Each entry is a row with a subject line, sender, and date. Return each one separately.",
+    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
   console.log(`   Found ${threadLinks.length} message thread(s).`);
 

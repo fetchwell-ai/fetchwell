@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { type BrowserProvider } from "../browser/interface.js";
+import { loadNavMap } from "../discover/nav-map.js";
 
 /** Base output directory (parent of all provider-scoped dirs). */
 export const OUTPUT_BASE = path.resolve(import.meta.dirname, "..", "..", "output");
@@ -128,4 +129,35 @@ ${body}
   fs.writeFileSync(path.join(dir, "index.html"), html, "utf8");
   const relPath = path.relative(OUTPUT_BASE, dir);
   console.log(`   Index saved to output/${relPath}/index.html`);
+}
+
+type SectionName = "labs" | "visits" | "medications" | "messages";
+
+/**
+ * Navigate to a section using nav-map steps if available, otherwise fall back
+ * to the hardcoded act() instruction.
+ *
+ * Returns { listInstruction } from the nav-map if present, so callers can use
+ * it for observe() instead of their hardcoded observe instruction.
+ */
+export async function navigateToSection(
+  browser: BrowserProvider,
+  providerId: string | undefined,
+  section: SectionName,
+  fallback: { act: string; observe?: string },
+): Promise<{ listInstruction?: string }> {
+  const navMap = providerId ? loadNavMap(providerId) : null;
+  const entry = navMap?.sections?.[section];
+
+  if (entry && entry.steps.length > 0) {
+    console.log(`   Using nav-map for ${section} navigation (${entry.steps.length} step(s))`);
+    for (const step of entry.steps) {
+      await browser.act(step);
+    }
+    return { listInstruction: entry.listInstruction };
+  }
+
+  // No nav-map or no entry for this section — use hardcoded fallback
+  await browser.act(fallback.act);
+  return {};
 }
