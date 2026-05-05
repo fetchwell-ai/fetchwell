@@ -69,3 +69,12 @@ export function loadProviders(): ProviderConfig[] {
 
   return result.data.providers;
 }
+
+/**
+ * Find a provider by its id.
+ *
+ * Returns the matching ProviderConfig or null if not found.
+ */
+export function findProvider(providers: ProviderConfig[], id: string): ProviderConfig | null {
+  return providers.find((p) => p.id === id) ?? null;
+}

@@ -5,7 +5,10 @@
  * builds a browsable local index.
  *
  * Usage:
- *   pnpm extract
+ *   pnpm extract                      # single provider (or picker if multiple)
+ *   pnpm extract --provider ucsf      # run against a specific provider
+ *   pnpm extract --all                # run against all configured providers
+ *   PROBE=1 pnpm extract --provider ucsf   # probe mode for a specific provider
  *
  * Session persistence:
  *   After a successful login the browser cookies are saved to output/session.json.
@@ -27,7 +30,7 @@ import * as path from "node:path";
 import { createBrowserProvider } from "../browser/index.js";
 import { loadSavedSession, saveSession } from "../session.js";
 import { isAuthPage, doLogin, GMAIL_USER, prompt } from "../auth.js";
-import { loadProviders, type ProviderConfig } from "../config.js";
+import { loadProviders, findProvider, type ProviderConfig } from "../config.js";
 import { OUTPUT_DIR, buildIndex, readNavNotes } from "./helpers.js";
 import { extractLabsDocs, probeLabsDocs } from "./labs.js";
 import { extractVisits, probeVisits } from "./visits.js";
@@ -35,26 +38,100 @@ import { extractMedications, probeMedications } from "./medications.js";
 import { extractMessages, probeMessages } from "./messages.js";
 
 // ---------------------------------------------------------------------------
+// CLI argument parsing
+// ---------------------------------------------------------------------------
+
+interface CliArgs {
+  providerFlag: string | null; // --provider <id>
+  allFlag: boolean;            // --all
+}
+
+function parseCliArgs(): CliArgs {
+  const args = process.argv.slice(2);
+  let providerFlag: string | null = null;
+  let allFlag = false;
+
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--provider" && i + 1 < args.length) {
+      providerFlag = args[i + 1];
+      i++; // skip the value
+    } else if (args[i] === "--all") {
+      allFlag = true;
+    }
+  }
+
+  if (providerFlag && allFlag) {
+    console.error("Cannot use both --provider and --all.");
+    process.exit(1);
+  }
+
+  return { providerFlag, allFlag };
+}
+
+// ---------------------------------------------------------------------------
+// Provider selection
+// ---------------------------------------------------------------------------
+
+/**
+ * Determine which providers to run against based on CLI flags.
+ *
+ * - --provider <id> -> single provider
+ * - --all -> all providers
+ * - no flag + 1 provider -> that provider
+ * - no flag + multiple providers -> interactive picker
+ */
+async function selectProviders(
+  allProviders: ProviderConfig[],
+  cli: CliArgs,
+): Promise<ProviderConfig[]> {
+  if (cli.providerFlag) {
+    const match = findProvider(allProviders, cli.providerFlag);
+    if (!match) {
+      console.error(`Unknown provider: "${cli.providerFlag}"`);
+      console.error("Available providers:");
+      for (const p of allProviders) {
+        console.error(`   ${p.id} — ${p.name}`);
+      }
+      process.exit(1);
+    }
+    return [match];
+  }
+
+  if (cli.allFlag) {
+    return allProviders;
+  }
+
+  // No flag
+  if (allProviders.length === 1) {
+    return [allProviders[0]];
+  }
+
+  // Multiple providers — interactive picker
+  console.log("Multiple providers configured. Select one:");
+  console.log();
+  for (let i = 0; i < allProviders.length; i++) {
+    console.log(`   ${i + 1}) ${allProviders[i].name} (${allProviders[i].id})`);
+  }
+  console.log();
+
+  const answer = await prompt(`Enter number (1-${allProviders.length}): `);
+  const idx = parseInt(answer, 10) - 1;
+
+  if (isNaN(idx) || idx < 0 || idx >= allProviders.length) {
+    console.error("Invalid selection.");
+    process.exit(1);
+  }
+
+  return [allProviders[idx]];
+}
+
+// ---------------------------------------------------------------------------
 // Env validation
 // ---------------------------------------------------------------------------
 const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
 
-// Load provider config from providers.json (exits on error)
-const providers = loadProviders();
-// Single-provider mode: use the first provider. CLI selection (--provider) is added by task 09a.2.
-const activeProvider: ProviderConfig = providers[0];
-const MYCHART_URL = activeProvider.url;
-const providerCredentials = activeProvider.username || activeProvider.password
-  ? { username: activeProvider.username, password: activeProvider.password }
-  : undefined;
-
-if (providerType !== "local" && !process.env.ANTHROPIC_API_KEY) {
-  console.error("Missing required env var: ANTHROPIC_API_KEY");
-  process.exit(1);
-}
-
 // ---------------------------------------------------------------------------
-// Probe mode
+// Probe mode (per provider)
 // ---------------------------------------------------------------------------
 /**
  * Lightweight navigation smoke test. Navigates to each section, calls
@@ -63,9 +140,15 @@ if (providerType !== "local" && !process.env.ANTHROPIC_API_KEY) {
  *
  * Activate with: PROBE=1 pnpm extract
  */
-async function probe() {
+async function probeProvider(provider: ProviderConfig) {
+  const MYCHART_URL = provider.url;
+  const providerCredentials = provider.username || provider.password
+    ? { username: provider.username, password: provider.password }
+    : undefined;
+
   console.log("=".repeat(60));
   console.log("  MyChart Agent — Probe Mode");
+  console.log(`  Provider: ${provider.name} (${provider.id})`);
   console.log(`  Mode: ${providerType}`);
   console.log("  (navigation smoke test — no PDFs will be written)");
   console.log("=".repeat(60));
@@ -187,11 +270,17 @@ async function probe() {
 }
 
 // ---------------------------------------------------------------------------
-// Main
+// Main extraction (per provider)
 // ---------------------------------------------------------------------------
-async function main() {
+async function extractProvider(provider: ProviderConfig) {
+  const MYCHART_URL = provider.url;
+  const providerCredentials = provider.username || provider.password
+    ? { username: provider.username, password: provider.password }
+    : undefined;
+
   console.log("=".repeat(60));
   console.log("  MyChart Agent — Record Extraction");
+  console.log(`  Provider: ${provider.name} (${provider.id})`);
   console.log(`  Mode: ${providerType}`);
   if (GMAIL_USER) {
     console.log(`  2FA: auto via Gmail (${GMAIL_USER})`);
@@ -319,9 +408,37 @@ async function main() {
   }
 }
 
-const entryPoint = process.env.PROBE === "1" ? probe : main;
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
 
-entryPoint().catch((err) => {
+async function run() {
+  // Validate ANTHROPIC_API_KEY early (before provider selection)
+  if (providerType !== "local" && !process.env.ANTHROPIC_API_KEY) {
+    console.error("Missing required env var: ANTHROPIC_API_KEY");
+    process.exit(1);
+  }
+
+  const cli = parseCliArgs();
+  const allProviders = loadProviders();
+  const selectedProviders = await selectProviders(allProviders, cli);
+
+  const isProbe = process.env.PROBE === "1";
+  const runFn = isProbe ? probeProvider : extractProvider;
+
+  for (const provider of selectedProviders) {
+    if (selectedProviders.length > 1) {
+      console.log();
+      console.log("#".repeat(60));
+      console.log(`#  Provider: ${provider.name} (${provider.id})`);
+      console.log("#".repeat(60));
+      console.log();
+    }
+    await runFn(provider);
+  }
+}
+
+run().catch((err) => {
   console.error();
   console.error("Unexpected error:");
   console.error(err);
