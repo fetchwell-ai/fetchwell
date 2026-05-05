@@ -399,20 +399,23 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
       console.log();
     }
 
-    await extractLabsDocs(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id);
-    if (incremental) setLastExtractedDate(outputDir, "labs" as IncrementalSection);
+    const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
+    await extractLabsDocs(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, labsCutoff);
+    setLastExtractedDate(outputDir, "labs");
     console.log();
 
-    await extractVisits(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id);
-    if (incremental) setLastExtractedDate(outputDir, "visits" as IncrementalSection);
+    const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
+    await extractVisits(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff);
+    setLastExtractedDate(outputDir, "visits");
     console.log();
 
     await extractMedications(browser, MYCHART_URL, providerCredentials, outputDir, provider.id);
-    if (incremental) setLastExtractedDate(outputDir, "medications" as IncrementalSection);
+    setLastExtractedDate(outputDir, "medications");
     console.log();
 
-    await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id);
-    if (incremental) setLastExtractedDate(outputDir, "messages" as IncrementalSection);
+    const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
+    await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff);
+    setLastExtractedDate(outputDir, "messages");
     console.log();
 
     buildIndex(outputDir, provider.id);
