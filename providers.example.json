@@ -4,19 +4,31 @@
       "id": "ucsf",
       "name": "UCSF MyChart",
       "type": "mychart",
-      "url": "https://ucsfmychart.ucsfmedicalcenter.org/ucsfmychart/Authentication/Login?"
+      "url": "https://ucsfmychart.ucsfmedicalcenter.org/ucsfmychart/Authentication/Login?",
+      "auth": {
+        "loginForm": "two-step",
+        "twoFactor": "email"
+      }
     },
     {
       "id": "onemedical",
       "name": "One Medical",
       "type": "onemedical",
-      "url": "https://app.onemedical.com/login"
+      "url": "https://app.onemedical.com/login",
+      "auth": {
+        "loginForm": "single-page",
+        "twoFactor": "manual"
+      }
     },
     {
       "id": "stanford",
       "name": "Stanford MyChart",
       "type": "mychart",
-      "url": "https://mystanfordchart.stanfordhealthcare.org/MyChart/Authentication/Login"
+      "url": "https://mystanfordchart.stanfordhealthcare.org/MyChart/Authentication/Login",
+      "auth": {
+        "loginForm": "two-step",
+        "twoFactor": "manual"
+      }
     }
   ]
 }

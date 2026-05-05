@@ -145,7 +145,7 @@ async function probeProvider(provider: ProviderConfig) {
   const providerCredentials = provider.username || provider.password
     ? { username: provider.username, password: provider.password }
     : undefined;
-  const authModule = getAuthModule(provider.type);
+  const authModule = getAuthModule(provider.auth, provider.id);
   const authConfig = { url: MYCHART_URL, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
@@ -280,7 +280,7 @@ async function extractProvider(provider: ProviderConfig) {
   const providerCredentials = provider.username || provider.password
     ? { username: provider.username, password: provider.password }
     : undefined;
-  const authModule = getAuthModule(provider.type);
+  const authModule = getAuthModule(provider.auth, provider.id);
   const authConfig = { url: MYCHART_URL, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));

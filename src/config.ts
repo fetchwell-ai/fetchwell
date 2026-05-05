@@ -11,6 +11,13 @@ import { z } from "zod";
 
 const PROJECT_ROOT = path.join(import.meta.dirname, "..");
 
+const AuthSchema = z.object({
+  loginForm: z.enum(["two-step", "single-page"]).default("two-step"),
+  twoFactor: z.enum(["none", "email", "manual"]).default("manual"),
+});
+
+export type AuthSettings = z.infer<typeof AuthSchema>;
+
 const ProviderConfigSchema = z.object({
   id: z.string().min(1, "Provider id must not be empty"),
   name: z.string().min(1, "Provider name must not be empty"),
@@ -18,6 +25,7 @@ const ProviderConfigSchema = z.object({
   url: z.string().url("Provider url must be a valid URL"),
   username: z.string().optional(),
   password: z.string().optional(),
+  auth: AuthSchema.default({ loginForm: "two-step", twoFactor: "manual" }),
 });
 
 const ProvidersFileSchema = z.object({
