@@ -15,9 +15,9 @@ import {
  * Probe mode: navigate to messages inbox, observe threads, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeMessages(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = ""): Promise<void> {
+export async function probeMessages(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
   console.log("[probe] Messages: navigating...");
-  await ensureLoggedIn(browser, mychartUrl);
+  await ensureLoggedIn(browser, mychartUrl, credentials);
   await browser.act(
     'Click the Messages or Inbox link in the navigation menu. ' +
     'It may be labeled "Messages", "Inbox", or "MyChart Messages".',
@@ -45,7 +45,7 @@ export async function probeMessages(browser: BrowserProvider, mychartUrl: string
   console.log(`[probe] Messages: screenshot saved to output/probe/messages.png`);
 }
 
-export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = ""): Promise<void> {
+export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }): Promise<void> {
   const msgsDir = path.join(OUTPUT_DIR, "messages");
   fs.mkdirSync(msgsDir, { recursive: true });
 
@@ -55,7 +55,7 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
   }
 
   console.log("Step 9: Navigating to messages...");
-  await ensureLoggedIn(browser, mychartUrl);
+  await ensureLoggedIn(browser, mychartUrl, credentials);
   await browser.act(
     'Click the Messages or Inbox link in the navigation menu. ' +
     'It may be labeled "Messages", "Inbox", or "MyChart Messages".',
