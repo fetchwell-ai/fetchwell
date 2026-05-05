@@ -9,7 +9,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { type BrowserProvider, type ObserveResult } from "../browser/interface.js";
-import { type NavMap, type NavMapSection, saveNavMap } from "./nav-map.js";
+import { type NavMap, saveNavMap } from "./nav-map.js";
 import { OUTPUT_BASE } from "../extract/helpers.js";
 
 // ---------------------------------------------------------------------------

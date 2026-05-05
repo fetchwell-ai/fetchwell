@@ -28,7 +28,7 @@ FORCE_LABS=1 pnpm extract             # Force re-extract a section (FORCE_VISITS
 ## Testing and linting
 
 **No test suite.** Validate via `pnpm extract` against the live portal.
-**No linter.** Only `pnpm typecheck` (tsc --noEmit). ESLint is not installed.
+`pnpm lint` (ESLint + typescript-eslint). `pnpm typecheck` (tsc --noEmit).
 
 ## Key constraints
 

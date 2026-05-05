@@ -9,7 +9,7 @@
 
 export { type AuthModule, type AuthConfig } from "./interface.js";
 
-import { type AuthModule, type AuthConfig } from "./interface.js";
+import { type AuthModule } from "./interface.js";
 import { type AuthSettings } from "../config.js";
 import { ensureLoggedIn as sharedEnsureLoggedIn, registerLoginFn } from "./shared.js";
 import { getLoginFormHandler } from "./strategies/login-form.js";
