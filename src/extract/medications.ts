@@ -31,7 +31,8 @@ export async function extractMedications(browser: BrowserProvider, mychartUrl: s
   const medsDir = path.join(baseDir, "medications");
   fs.mkdirSync(medsDir, { recursive: true });
 
-  const pdfPath = path.join(baseDir, "medications.pdf");
+  const medsFilename = providerId ? `medications-${providerId}.pdf` : "medications.pdf";
+  const pdfPath = path.join(baseDir, medsFilename);
   if (fs.existsSync(pdfPath) && process.env.FORCE_MEDS !== "1") {
     console.log("Step 8: Medications already extracted — skipping (FORCE_MEDS=1 to re-run).");
     return;
@@ -50,6 +51,6 @@ export async function extractMedications(browser: BrowserProvider, mychartUrl: s
   if (browser.pdf) {
     const pdfBuf = await browser.pdf();
     fs.writeFileSync(pdfPath, pdfBuf);
-    console.log(`   ✓ medications.pdf (${(pdfBuf.length / 1024).toFixed(0)} KB)`);
+    console.log(`   ✓ ${medsFilename} (${(pdfBuf.length / 1024).toFixed(0)} KB)`);
   }
 }

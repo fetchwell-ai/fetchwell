@@ -386,16 +386,16 @@ async function extractProvider(provider: ProviderConfig) {
     await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id);
     console.log();
 
-    buildIndex(outputDir);
+    buildIndex(outputDir, provider.id);
 
     console.log("=".repeat(60));
     console.log("  EXTRACTION COMPLETE");
     console.log("=".repeat(60));
     console.log();
-    console.log(`  [ok] output/${provider.id}/labs.pdf`);
-    console.log(`  [ok] output/${provider.id}/visits.pdf`);
-    console.log(`  [ok] output/${provider.id}/medications.pdf`);
-    console.log(`  [ok] output/${provider.id}/messages.pdf`);
+    console.log(`  [ok] output/${provider.id}/labs-${provider.id}.pdf`);
+    console.log(`  [ok] output/${provider.id}/visits-${provider.id}.pdf`);
+    console.log(`  [ok] output/${provider.id}/medications-${provider.id}.pdf`);
+    console.log(`  [ok] output/${provider.id}/messages-${provider.id}.pdf`);
     console.log(`  [ok] output/${provider.id}/index.html  (upload PDFs to Claude.ai)`);
     console.log();
   } catch (err) {

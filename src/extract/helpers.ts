@@ -42,8 +42,9 @@ export function slugify(s: string): string {
     .slice(0, 60) || "unknown";
 }
 
-export function makeItemFilename(index: number, label: string, ext = ".pdf"): string {
-  return `${String(index + 1).padStart(3, "0")}_${slugify(label)}${ext}`;
+export function makeItemFilename(index: number, label: string, ext = ".pdf", providerId?: string): string {
+  const suffix = providerId ? `-${providerId}` : "";
+  return `${String(index + 1).padStart(3, "0")}_${slugify(label)}${suffix}${ext}`;
 }
 
 /** Merge all .pdf files in pdfDir into a single PDF at outputPath. */
@@ -85,13 +86,14 @@ export async function navigateWithRetry(browser: BrowserProvider, url: string): 
   }
 }
 
-export function buildIndex(outputDir?: string): void {
+export function buildIndex(outputDir?: string, providerId?: string): void {
   const dir = outputDir ?? OUTPUT_BASE;
+  const suffix = providerId ? `-${providerId}` : "";
   const sections: Array<{ name: string; pdf: string }> = [
-    { name: "Lab Results", pdf: "labs.pdf" },
-    { name: "Visits", pdf: "visits.pdf" },
-    { name: "Medications", pdf: "medications.pdf" },
-    { name: "Messages", pdf: "messages.pdf" },
+    { name: "Lab Results", pdf: `labs${suffix}.pdf` },
+    { name: "Visits", pdf: `visits${suffix}.pdf` },
+    { name: "Medications", pdf: `medications${suffix}.pdf` },
+    { name: "Messages", pdf: `messages${suffix}.pdf` },
   ];
 
   let body = `<h1>MyChart Health Records</h1>\n`;

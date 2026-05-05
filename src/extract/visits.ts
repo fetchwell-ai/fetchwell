@@ -106,7 +106,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
       try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
       const pageTitle = await browser.title();
-      const filename = makeItemFilename(i, pageTitle || link.description);
+      const filename = makeItemFilename(i, pageTitle || link.description, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
         fs.writeFileSync(path.join(visitsDir, filename), pdfBuf);
@@ -124,5 +124,6 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   }
 
   console.log(`   Visits saved to ${visitsDir}`);
-  await mergePdfs(visitsDir, path.join(baseDir, "visits.pdf"), "visits");
+  const mergedFilename = providerId ? `visits-${providerId}.pdf` : "visits.pdf";
+  await mergePdfs(visitsDir, path.join(baseDir, mergedFilename), "visits");
 }
