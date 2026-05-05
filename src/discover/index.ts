@@ -1,0 +1,329 @@
+/**
+ * Portal Structure Discovery Engine
+ *
+ * Explores a health portal's navigation after login, uses AI (via observe/act)
+ * to identify extraction-relevant sections (labs, visits, medications, messages),
+ * and builds a NavMap recording the navigation steps to reach each section.
+ */
+
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { type BrowserProvider, type ObserveResult } from "../browser/interface.js";
+import { type NavMap, type NavMapSection, saveNavMap } from "./nav-map.js";
+import { OUTPUT_BASE } from "../extract/helpers.js";
+
+// ---------------------------------------------------------------------------
+// Keyword mapping: extraction target -> words the AI might use to describe it
+// ---------------------------------------------------------------------------
+
+const SECTION_KEYWORDS: Record<string, string[]> = {
+  labs: ["test results", "labs", "lab results", "results", "laboratory", "imaging", "radiology", "diagnostics"],
+  visits: ["visits", "appointments", "past visits", "after visit summary", "office visits", "encounter", "avs", "notes"],
+  medications: ["medications", "medicines", "prescriptions", "medication list", "pharmacy", "drugs", "rx"],
+  messages: ["messages", "inbox", "message center", "messaging", "secure messages", "compose"],
+};
+
+type SectionKey = "labs" | "visits" | "medications" | "messages";
+
+/**
+ * Match a page description (from observe()) against our known extraction targets.
+ * Returns the section key if matched, or null.
+ */
+function matchSection(description: string): SectionKey | null {
+  const lower = description.toLowerCase();
+  // Score each section by how many keywords match
+  let bestSection: SectionKey | null = null;
+  let bestCount = 0;
+
+  for (const [section, keywords] of Object.entries(SECTION_KEYWORDS)) {
+    const count = keywords.filter((kw) => lower.includes(kw)).length;
+    if (count > bestCount) {
+      bestCount = count;
+      bestSection = section as SectionKey;
+    }
+  }
+
+  return bestSection;
+}
+
+/**
+ * Build an observe() instruction for listing items within a matched section.
+ */
+function buildListInstruction(section: SectionKey): string {
+  switch (section) {
+    case "labs":
+      return (
+        "Find all clickable lab result or test result entries on this page. " +
+        "Each entry is a row or link representing a specific lab panel or test result " +
+        "(e.g. CBC, MRI, Lipid Panel). Return each one as a separate result."
+      );
+    case "visits":
+      return (
+        "Find all clickable visit entries on this page. " +
+        "Each entry is a row or link representing a specific past visit, appointment, " +
+        "or after-visit summary. Return each one as a separate result."
+      );
+    case "medications":
+      return (
+        "Find the medication list on this page. Look for a table or list of " +
+        "current medications, prescriptions, or medicines."
+      );
+    case "messages":
+      return (
+        "Find all clickable message threads on this page. " +
+        "Each entry is a row or link representing a message thread or conversation. " +
+        "Return each one as a separate result."
+      );
+  }
+}
+
+/**
+ * Build an observe() instruction for drilling into individual items.
+ */
+function buildItemInstruction(section: SectionKey): string {
+  switch (section) {
+    case "labs":
+      return (
+        "Find the detailed lab result content on this page — the result values, " +
+        "reference ranges, and any associated notes or comments."
+      );
+    case "visits":
+      return (
+        "Find the visit detail content on this page — the visit summary, " +
+        "notes, diagnoses, instructions, and any attached documents."
+      );
+    case "medications":
+      return (
+        "Find the medication detail — dosage, frequency, prescribing provider, " +
+        "pharmacy, and refill information."
+      );
+    case "messages":
+      return (
+        "Find the message thread content — all messages in the conversation, " +
+        "sender names, dates, and message bodies."
+      );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Discovery engine
+// ---------------------------------------------------------------------------
+
+/**
+ * Discover the portal's navigation structure and build a NavMap.
+ *
+ * Assumes the browser is already logged in and on the post-login dashboard.
+ *
+ * @param browser  - A logged-in BrowserProvider instance
+ * @param providerId - The provider ID (e.g. "ucsf") for output paths
+ * @param homeUrl  - The post-login dashboard URL
+ * @returns The discovered NavMap
+ */
+export async function discoverPortal(
+  browser: BrowserProvider,
+  providerId: string,
+  homeUrl: string,
+): Promise<NavMap> {
+  const discoverDir = path.join(OUTPUT_BASE, providerId, "discover");
+  fs.mkdirSync(discoverDir, { recursive: true });
+
+  console.log("Discovery: starting portal navigation exploration...");
+  console.log(`   Home URL: ${homeUrl}`);
+
+  // Step 1: Navigate to home/dashboard
+  await browser.navigate(homeUrl);
+  await new Promise((r) => setTimeout(r, 3000));
+
+  // Step 2: Observe all navigation elements on the dashboard
+  console.log("Discovery: observing dashboard navigation elements...");
+  const navElements = await browser.observe(
+    "List all navigation elements visible on this page — top navigation bar items, " +
+    "sidebar links, hamburger menu items, tab labels. For each, return its visible text " +
+    "label and what kind of navigation element it is.",
+  );
+
+  console.log(`Discovery: found ${navElements.length} navigation element(s)`);
+  for (const el of navElements) {
+    console.log(`   - ${el.description}`);
+  }
+
+  // Take a screenshot of the dashboard
+  const dashSs = await browser.screenshot();
+  fs.writeFileSync(path.join(discoverDir, "dashboard.png"), Buffer.from(dashSs, "base64"));
+  console.log("Discovery: dashboard screenshot saved");
+
+  // Get the portal name from the page title
+  const portalName = await browser.title();
+
+  // Step 3: Click through each nav element and classify the page
+  const sections: NavMap["sections"] = {};
+  const visited = new Set<SectionKey>();
+
+  for (const navEl of navElements) {
+    // Skip nav elements that are clearly not health-record sections
+    const lowerDesc = navEl.description.toLowerCase();
+    const skipPatterns = [
+      "log out", "logout", "sign out", "signout",
+      "home", "dashboard",
+      "profile", "account", "settings", "preferences",
+      "help", "support", "contact",
+      "billing", "payment", "insurance",
+      "proxy", "family", "dependents",
+    ];
+    if (skipPatterns.some((p) => lowerDesc.includes(p))) {
+      console.log(`Discovery: skipping "${navEl.description}" (not a health record section)`);
+      continue;
+    }
+
+    // All 4 sections found — stop exploring
+    if (visited.size === 4) break;
+
+    console.log(`Discovery: exploring "${navEl.description}"...`);
+
+    // Navigate back to home first to have a clean starting point
+    await browser.navigate(homeUrl);
+    await new Promise((r) => setTimeout(r, 2000));
+
+    // Click the nav element
+    const actInstruction = `Click the navigation element labeled "${navEl.description}"`;
+    try {
+      await browser.act(actInstruction);
+    } catch (err: any) {
+      console.log(`   Failed to click "${navEl.description}": ${err?.message?.slice(0, 80)}`);
+      continue;
+    }
+    await new Promise((r) => setTimeout(r, 3000));
+
+    // Observe what kind of page this is
+    const pageObs = await browser.observe(
+      "What section of a health portal is this page? Describe what kind of medical " +
+      "content is shown: test results/labs, visits/appointments, medications/prescriptions, " +
+      "messages/inbox, or other. Also list any sub-navigation tabs or sidebar items.",
+    );
+
+    const pageDescription = pageObs.map((o) => o.description).join(" ");
+    console.log(`   Page description: ${pageDescription.slice(0, 120)}`);
+
+    // Take a screenshot
+    const sectionSs = await browser.screenshot();
+    const screenshotName = navEl.description.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40) + ".png";
+    fs.writeFileSync(path.join(discoverDir, screenshotName), Buffer.from(sectionSs, "base64"));
+
+    // Match to an extraction target
+    const matched = matchSection(pageDescription);
+    if (!matched || visited.has(matched)) {
+      if (matched && visited.has(matched)) {
+        console.log(`   Matched "${matched}" but already found — skipping`);
+      } else {
+        console.log(`   No extraction target matched — skipping`);
+      }
+      continue;
+    }
+
+    console.log(`   Matched extraction target: ${matched}`);
+    visited.add(matched);
+
+    // Build the nav steps
+    const steps = [actInstruction];
+
+    // Step 5: For sections with sub-tabs, explore one level deeper
+    // (e.g. visits page might have "Past (AVS/Notes)" sub-tab)
+    const subNavObs = await browser.observe(
+      "List any sub-navigation tabs, sub-tabs, or secondary navigation items on this page " +
+      "that might lead to more specific content (e.g. 'Past Visits', 'AVS/Notes', 'Documents').",
+    );
+
+    if (subNavObs.length > 0) {
+      console.log(`   Found ${subNavObs.length} sub-nav item(s):`);
+      for (const sub of subNavObs) {
+        console.log(`      - ${sub.description}`);
+      }
+
+      // Try to find a sub-tab that leads to the content we want
+      const relevantSubTab = findRelevantSubTab(subNavObs, matched);
+      if (relevantSubTab) {
+        console.log(`   Clicking sub-tab: "${relevantSubTab.description}"`);
+        const subActInstruction = `Click the sub-tab or secondary navigation item labeled "${relevantSubTab.description}"`;
+        try {
+          await browser.act(subActInstruction);
+          await new Promise((r) => setTimeout(r, 2000));
+          steps.push(subActInstruction);
+
+          // Take another screenshot after sub-nav click
+          const subSs = await browser.screenshot();
+          const subScreenshotName = matched + "-subtab.png";
+          fs.writeFileSync(path.join(discoverDir, subScreenshotName), Buffer.from(subSs, "base64"));
+        } catch (err: any) {
+          console.log(`   Failed to click sub-tab: ${err?.message?.slice(0, 80)}`);
+        }
+      }
+    }
+
+    // Record the section
+    const section: NavMapSection = {
+      steps,
+      listInstruction: buildListInstruction(matched),
+      itemInstruction: buildItemInstruction(matched),
+    };
+
+    sections[matched] = section;
+    console.log(`   Recorded ${matched} section with ${steps.length} step(s)`);
+  }
+
+  // Build the NavMap
+  const navMap: NavMap = {
+    discoveredAt: new Date().toISOString(),
+    portalName: portalName || providerId,
+    sections,
+  };
+
+  // Step 6: Save the nav-map
+  saveNavMap(navMap, providerId);
+  console.log();
+  console.log(`Discovery complete. Found ${Object.keys(sections).length}/4 sections:`);
+  for (const [key, sec] of Object.entries(sections)) {
+    console.log(`   ${key}: ${sec.steps.length} navigation step(s)`);
+  }
+  const missing = (["labs", "visits", "medications", "messages"] as const).filter(
+    (k) => !sections[k],
+  );
+  if (missing.length > 0) {
+    console.log(`   Missing: ${missing.join(", ")}`);
+  }
+
+  return navMap;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Given sub-navigation observations, find the most relevant one for a section.
+ * For visits, look for "past", "notes", "AVS", "documents".
+ * For labs, look for "results", "completed".
+ * For messages, look for "inbox", "received".
+ * For medications, look for "current", "active".
+ */
+function findRelevantSubTab(
+  subNavObs: ObserveResult[],
+  section: SectionKey,
+): ObserveResult | null {
+  const relevanceKeywords: Record<SectionKey, string[]> = {
+    labs: ["results", "completed", "past", "all"],
+    visits: ["past", "notes", "avs", "documents", "summary", "after visit", "completed"],
+    medications: ["current", "active", "all"],
+    messages: ["inbox", "received", "all"],
+  };
+
+  const keywords = relevanceKeywords[section];
+
+  for (const obs of subNavObs) {
+    const lower = obs.description.toLowerCase();
+    if (keywords.some((kw) => lower.includes(kw))) {
+      return obs;
+    }
+  }
+
+  return null;
+}
