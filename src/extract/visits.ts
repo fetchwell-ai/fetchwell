@@ -9,6 +9,7 @@ import {
   navigateWithRetry,
   navigateToSection,
   logDepth,
+  shouldSkipIncremental,
 } from "./helpers.js";
 
 /**
@@ -48,7 +49,7 @@ export async function probeVisits(browser: BrowserProvider, mychartUrl: string, 
   console.log(`[probe] Visits: screenshot saved to ${probeDir}/visits.png`);
 }
 
-export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string): Promise<void> {
+export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null): Promise<void> {
   const baseDir = outputDir ?? process.cwd();
   const visitsDir = path.join(baseDir, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
@@ -96,6 +97,10 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
     const prefix = String(i + 1).padStart(3, "0") + "_";
     if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
       console.log(`   Visit ${i + 1}/${maxVisits}: already saved — skipping`);
+      continue;
+    }
+    if (shouldSkipIncremental(link.description, cutoff ?? null)) {
+      console.log(`   Visit ${i + 1}/${maxVisits}: before cutoff — skipping (${link.description})`);
       continue;
     }
 

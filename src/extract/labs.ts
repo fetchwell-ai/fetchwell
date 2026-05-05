@@ -9,6 +9,7 @@ import {
   navigateWithRetry,
   navigateToSection,
   logDepth,
+  shouldSkipIncremental,
 } from "./helpers.js";
 
 /**
@@ -53,7 +54,7 @@ export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string
  *
  * Skip: if <outputDir>/labs/ already has .pdf files (set FORCE_LABS=1 to re-run).
  */
-export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string): Promise<void> {
+export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null): Promise<void> {
   const baseDir = outputDir ?? process.cwd();
   const labsDir = path.join(baseDir, "labs");
   fs.mkdirSync(labsDir, { recursive: true });
@@ -100,6 +101,10 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
     const prefix = String(i + 1).padStart(3, "0") + "_";
     if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
       console.log(`   Doc ${i + 1}/${maxPanels}: already saved — skipping`);
+      continue;
+    }
+    if (shouldSkipIncremental(link.description, cutoff ?? null)) {
+      console.log(`   Doc ${i + 1}/${maxPanels}: before cutoff — skipping (${link.description})`);
       continue;
     }
 
