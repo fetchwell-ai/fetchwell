@@ -169,6 +169,7 @@ export async function discoverPortal(
       "help", "support", "contact",
       "billing", "payment", "insurance",
       "proxy", "family", "dependents",
+      "share access", "personalize", "security", "verification",
     ];
     if (skipPatterns.some((p) => lowerDesc.includes(p))) {
       console.log(`Discovery: skipping "${navEl.description}" (not a health record section)`);
@@ -194,11 +195,13 @@ export async function discoverPortal(
     }
     await new Promise((r) => setTimeout(r, 3000));
 
-    // Observe what kind of page this is
+    // Observe what kind of page this is — focus on main content, not nav elements
     const pageObs = await browser.observe(
-      "What section of a health portal is this page? Describe what kind of medical " +
-      "content is shown: test results/labs, visits/appointments, medications/prescriptions, " +
-      "messages/inbox, or other. Also list any sub-navigation tabs or sidebar items.",
+      "Look at the MAIN CONTENT AREA of this page (not the navigation bar or sidebar). " +
+      "What is the page heading or title? What kind of content is displayed — " +
+      "test results/labs, visit records/appointments, medication list/prescriptions, " +
+      "message inbox/threads, or something else (settings, profile, billing, etc.)? " +
+      "Describe only what the main content shows, not what navigation links are visible.",
     );
 
     const pageDescription = pageObs.map((o) => o.description).join(" ");
@@ -360,7 +363,10 @@ export async function discoverPortal(
  * For visits, look for "past", "notes", "AVS", "documents".
  * For labs, look for "results", "completed".
  * For messages, look for "inbox", "received".
- * For medications, look for "current", "active".
+ * For medications, look for "current medications", "active prescriptions".
+ *
+ * IMPORTANT: Keywords must be specific enough to not match unrelated items.
+ * "current" alone matches "Current Health Issues" — use "current medications" instead.
  */
 function findRelevantSubTab(
   subNavObs: ObserveResult[],
@@ -369,7 +375,7 @@ function findRelevantSubTab(
   const relevanceKeywords: Record<SectionKey, string[]> = {
     labs: ["results", "completed", "past", "all"],
     visits: ["past", "notes", "avs", "documents", "summary", "after visit", "completed"],
-    medications: ["current", "active", "all"],
+    medications: ["current medications", "active prescriptions", "current meds"],
     messages: ["inbox", "received", "all"],
   };
 
