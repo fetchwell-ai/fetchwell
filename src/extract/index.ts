@@ -29,7 +29,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { createBrowserProvider } from "../browser/index.js";
 import { loadSavedSession, saveSession } from "../session.js";
-import { isAuthPage, doLogin, GMAIL_USER, prompt } from "../auth.js";
+import { isAuthPage, GMAIL_USER, prompt, getAuthModule } from "../auth.js";
 import { loadProviders, findProvider, type ProviderConfig } from "../config.js";
 import { getOutputDir, buildIndex, readNavNotes } from "./helpers.js";
 import { extractLabsDocs, probeLabsDocs } from "./labs.js";
@@ -145,6 +145,8 @@ async function probeProvider(provider: ProviderConfig) {
   const providerCredentials = provider.username || provider.password
     ? { username: provider.username, password: provider.password }
     : undefined;
+  const authModule = getAuthModule(provider.type);
+  const authConfig = { url: MYCHART_URL, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
   console.log("  MyChart Agent — Probe Mode");
@@ -204,7 +206,7 @@ async function probeProvider(provider: ProviderConfig) {
         console.log("   Session expired or invalid. Logging in fresh...");
         await browser.navigate(MYCHART_URL);
         await new Promise((r) => setTimeout(r, 2000));
-        await doLogin(browser, debugUrl, providerCredentials, provider.id);
+        await authModule.login(browser, authConfig, debugUrl);
         if (browser.saveSession) {
           const session = await browser.saveSession();
           session.homeUrl = await browser.url();
@@ -214,7 +216,7 @@ async function probeProvider(provider: ProviderConfig) {
       }
     } else {
       console.log("Step 3: Login");
-      await doLogin(browser, debugUrl, providerCredentials, provider.id);
+      await authModule.login(browser, authConfig, debugUrl);
       if (browser.saveSession) {
         const session = await browser.saveSession();
         session.homeUrl = await browser.url();
@@ -278,6 +280,8 @@ async function extractProvider(provider: ProviderConfig) {
   const providerCredentials = provider.username || provider.password
     ? { username: provider.username, password: provider.password }
     : undefined;
+  const authModule = getAuthModule(provider.type);
+  const authConfig = { url: MYCHART_URL, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
   console.log("  MyChart Agent — Record Extraction");
@@ -344,7 +348,7 @@ async function extractProvider(provider: ProviderConfig) {
         console.log("Step 3: Login");
         await browser.navigate(MYCHART_URL);
         await new Promise((r) => setTimeout(r, 2000));
-        await doLogin(browser, debugUrl, providerCredentials, provider.id);
+        await authModule.login(browser, authConfig, debugUrl);
         if (browser.saveSession) {
           const session = await browser.saveSession();
           session.homeUrl = await browser.url();
@@ -357,7 +361,7 @@ async function extractProvider(provider: ProviderConfig) {
       console.log("   Your credentials are entered locally and sent directly to MyChart.");
       console.log("   They are NOT stored or logged anywhere.");
       console.log();
-      await doLogin(browser, debugUrl, providerCredentials, provider.id);
+      await authModule.login(browser, authConfig, debugUrl);
       if (browser.saveSession) {
         const session = await browser.saveSession();
         session.homeUrl = await browser.url();
