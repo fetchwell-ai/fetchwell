@@ -33,7 +33,6 @@ browser-agent-team/
 │       ├── page-eval.ts  # Shared browser-side eval functions
 │       └── providers/
 │           ├── stagehand-local.ts    # Stagehand + local Chromium (default)
-│           ├── stagehand-browserbase.ts  # Stagehand + Browserbase cloud
 │           └── playwright-local.ts   # Plain Playwright, no AI
 ├── output/              # Runtime output — gitignored
 │   ├── session.json     # Saved browser session (12h TTL, skip login on reuse)
@@ -104,7 +103,6 @@ All records are captured as PDFs using Playwright's `page.pdf()`. This solves tw
 ### BrowserProvider abstraction
 All browser operations go through the `BrowserProvider` interface (`src/browser/interface.ts`). Three implementations, selected via `BROWSER_PROVIDER` env var:
 - `stagehand-local` (default) — local Chromium + Stagehand + Claude
-- `browserbase` — cloud Chromium via Browserbase + Stagehand + Claude
 - `local` — plain Playwright, no AI (brittle, rarely used)
 
 Swap providers without changing any extraction logic.
@@ -144,7 +142,7 @@ See `.env.example`. Key vars:
 - `MYCHART_URL` — target MyChart login URL
 - `MYCHART_USERNAME` / `MYCHART_PASSWORD` — optional, skips stdin prompts
 - `GMAIL_USER` / `GMAIL_APP_PASSWORD` — optional, enables auto-2FA via Gmail IMAP
-- `BROWSER_PROVIDER` — `stagehand-local` (default), `browserbase`, or `local`
+- `BROWSER_PROVIDER` — `stagehand-local` (default) or `local`
 - `FORCE_LABS`, `FORCE_VISITS`, `FORCE_MEDS`, `FORCE_MSGS` — set to `1` to re-extract that section
 - `PROBE` — set to `1` to run probe mode (navigate + observe + screenshot, no PDF output)
 
