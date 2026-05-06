@@ -84,10 +84,6 @@ export function makeVisitFilename(
   // Use description if non-empty and more informative than the fallback
   const labelSource = description.trim() || fallbackLabel;
 
-  if (!date && !labelSource) {
-    return makeItemFilename(index, fallbackLabel, ext, providerId);
-  }
-
   if (!date) {
     // No date found — just use the description as label (same as makeItemFilename)
     return `${prefix}${slugify(labelSource)}${suffix}${ext}`;
