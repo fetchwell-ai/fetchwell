@@ -216,9 +216,10 @@ async function probeProvider(provider: ProviderConfig) {
 
       const currentUrl = await browser.url();
       const onAuthPage = isAuthPage(currentUrl);
-      const hasAuthElement = onAuthPage ? false : await checkAuthenticatedElement(browser);
+      const selectors = provider.authenticatedSelectors ?? [];
+      const hasAuthElement = onAuthPage || selectors.length === 0 ? false : await checkAuthenticatedElement(browser, selectors);
 
-      if (!onAuthPage && hasAuthElement) {
+      if (!onAuthPage && (selectors.length === 0 || hasAuthElement)) {
         console.log("   Session restored — skipping login and 2FA.");
         console.log();
       } else {
@@ -256,16 +257,16 @@ async function probeProvider(provider: ProviderConfig) {
     console.log("Step 4: Probing all sections...");
     console.log();
 
-    await probeLabsDocs(browser, portalUrl, probeDir, navNotes, providerCredentials, provider.id);
+    await probeLabsDocs(browser, portalUrl, probeDir, navNotes, providerCredentials, provider.id, provider.authenticatedSelectors);
     console.log();
 
-    await probeVisits(browser, portalUrl, probeDir, navNotes, providerCredentials, provider.id);
+    await probeVisits(browser, portalUrl, probeDir, navNotes, providerCredentials, provider.id, provider.authenticatedSelectors);
     console.log();
 
-    await probeMedications(browser, portalUrl, probeDir, providerCredentials, provider.id);
+    await probeMedications(browser, portalUrl, probeDir, providerCredentials, provider.id, provider.authenticatedSelectors);
     console.log();
 
-    await probeMessages(browser, portalUrl, probeDir, navNotes, providerCredentials, provider.id);
+    await probeMessages(browser, portalUrl, probeDir, navNotes, providerCredentials, provider.id, provider.authenticatedSelectors);
     console.log();
 
     console.log("=".repeat(60));
@@ -369,9 +370,10 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
 
       const currentUrl = await browser.url();
       const onAuthPage = isAuthPage(currentUrl);
-      const hasAuthElement = onAuthPage ? false : await checkAuthenticatedElement(browser);
+      const selectors = provider.authenticatedSelectors ?? [];
+      const hasAuthElement = onAuthPage || selectors.length === 0 ? false : await checkAuthenticatedElement(browser, selectors);
 
-      if (!onAuthPage && hasAuthElement) {
+      if (!onAuthPage && (selectors.length === 0 || hasAuthElement)) {
         console.log("   Session restored — skipping login and 2FA.");
         console.log();
       } else {
@@ -423,23 +425,23 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     }
 
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    const labsCount = await extractLabsDocs(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental);
+    const labsCount = await extractLabsDocs(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental, provider.authenticatedSelectors);
     // Only record the timestamp when items were actually extracted; a 0-item run should not
     // advance the cutoff, or the section would be skipped as "already extracted" on the next run.
     if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
     console.log();
 
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    const visitsCount = await extractVisits(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental);
+    const visitsCount = await extractVisits(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental, provider.authenticatedSelectors);
     if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
     console.log();
 
-    const medsCount = await extractMedications(browser, portalUrl, providerCredentials, outputDir, provider.id, incremental);
+    const medsCount = await extractMedications(browser, portalUrl, providerCredentials, outputDir, provider.id, incremental, provider.authenticatedSelectors);
     if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
     console.log();
 
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    const msgsCount = await extractMessages(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental);
+    const msgsCount = await extractMessages(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental, provider.authenticatedSelectors);
     if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
     console.log();
 

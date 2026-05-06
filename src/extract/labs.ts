@@ -16,9 +16,9 @@ import {
  * Probe mode: navigate to labs list, observe items, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeLabsDocs(browser: BrowserProvider, portalUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
+export async function probeLabsDocs(browser: BrowserProvider, portalUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string, authenticatedSelectors?: string[]): Promise<void> {
   console.log("[probe] Labs: navigating...");
-  await ensureLoggedIn(browser, portalUrl, credentials, providerId);
+  await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
     'labeled "Test Results", "Labs", "Lab Results", or similar.';
@@ -57,7 +57,7 @@ export async function probeLabsDocs(browser: BrowserProvider, portalUrl: string,
  * Returns the number of PDFs written in this run (0 if none extracted).
  * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractLabsDocs(browser: BrowserProvider, portalUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<number> {
+export async function extractLabsDocs(browser: BrowserProvider, portalUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false, authenticatedSelectors?: string[]): Promise<number> {
   const baseDir = outputDir ?? process.cwd();
   const labsDir = path.join(baseDir, "labs");
   fs.mkdirSync(labsDir, { recursive: true });
@@ -71,7 +71,7 @@ export async function extractLabsDocs(browser: BrowserProvider, portalUrl: strin
   }
 
   console.log("Step 6: Navigating to lab/test results...");
-  await ensureLoggedIn(browser, portalUrl, credentials, providerId);
+  await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
     'labeled "Test Results", "Labs", "Lab Results", or similar.';

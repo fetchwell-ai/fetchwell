@@ -68,51 +68,18 @@ export function isAuthPage(url: string): boolean {
 }
 
 /**
- * CSS selectors for DOM elements that are only present when the user is
- * authenticated in an Epic MyChart portal. These are checked after session
- * restore to detect the "silent unauthenticated" failure mode where the
- * portal serves the same URL for logged-in and logged-out users.
+ * Check whether the browser is currently showing an authenticated session
+ * by looking for known authenticated-only DOM elements.
  *
- * Selectors are matched against common MyChart navigation patterns:
- * - nav links to Visits, Messages, Test Results
- * - user greeting / patient name elements
- * - account/profile menu links
- */
-const AUTHENTICATED_SELECTORS = [
-  // MyChart global nav links (common across Epic portals)
-  'a[href*="Visits"]',
-  'a[href*="Messages"]',
-  'a[href*="TestResults"]',
-  'a[href*="Medications"]',
-  'a[href*="Appointments"]',
-  // User greeting / account menu
-  '[data-testid="account-menu"]',
-  '[aria-label*="Account"]',
-  '[aria-label*="account"]',
-  // MyChart-specific authenticated nav elements
-  '.MyChartGlobalNav',
-  '#MyChartGlobalNav',
-  'nav[aria-label*="MyChart"]',
-  // Generic "logged in" indicators
-  '[class*="UserGreeting"]',
-  '[class*="user-greeting"]',
-  '[class*="PatientName"]',
-  '[class*="patient-name"]',
-];
-
-/**
- * Check whether the browser is currently showing an authenticated MyChart
- * session by looking for known authenticated-only DOM elements.
- *
- * Tries each selector in AUTHENTICATED_SELECTORS and returns true as soon
- * as any one is found. Returns false if none are found (within a short
+ * Tries each selector in the provided array and returns true as soon as
+ * any one is found. Returns false if none are found (within a short
  * timeout already elapsed from the caller's navigate + delay).
  *
  * This catches the "silent unauthenticated" failure mode where the portal
  * returns HTTP 200 on the home URL regardless of session state.
  */
-export async function checkAuthenticatedElement(browser: BrowserProvider): Promise<boolean> {
-  for (const selector of AUTHENTICATED_SELECTORS) {
+export async function checkAuthenticatedElement(browser: BrowserProvider, selectors: string[]): Promise<boolean> {
+  for (const selector of selectors) {
     try {
       const el = await browser.querySelector(selector);
       if (el) {
@@ -388,6 +355,7 @@ export async function ensureLoggedIn(
   loginUrl: string,
   credentials?: { username?: string; password?: string },
   providerId?: string,
+  authenticatedSelectors?: string[],
 ): Promise<void> {
   // Navigate to the saved home URL (e.g. /UCSFMyChart/Home/) to put us in a
   // known state for act() navigation and to verify the session is alive.
@@ -424,7 +392,10 @@ export async function ensureLoggedIn(
   // authenticated-only DOM elements are present. Some portals return the same
   // URL for logged-in and logged-out users (e.g. /Home/ serves the page either
   // way) so a URL check alone is insufficient.
-  const hasAuthElement = await checkAuthenticatedElement(browser);
+  // If no selectors are configured, skip the DOM check entirely — URL check alone
+  // is sufficient for portals like OneMedical.
+  if (!authenticatedSelectors || authenticatedSelectors.length === 0) return;
+  const hasAuthElement = await checkAuthenticatedElement(browser, authenticatedSelectors);
   if (hasAuthElement) return;
 
   console.log(`   Session validation failed — URL looks authenticated (${currentUrl}) but no authenticated elements found.`);
