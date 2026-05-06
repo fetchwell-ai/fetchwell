@@ -103,7 +103,7 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
   for (let i = 0; i < maxPanels; i++) {
     const link = panelLinks[i];
     const prefix = String(i + 1).padStart(3, "0") + "_";
-    if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
+    if (incremental && savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
       console.log(`   Doc ${i + 1}/${maxPanels}: already saved — skipping`);
       continue;
     }
