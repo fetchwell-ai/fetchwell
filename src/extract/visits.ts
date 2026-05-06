@@ -100,7 +100,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   for (let i = 0; i < maxVisits; i++) {
     const link = visitLinks[i];
     const prefix = String(i + 1).padStart(3, "0") + "_";
-    if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
+    if (incremental && savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
       console.log(`   Visit ${i + 1}/${maxVisits}: already saved — skipping`);
       continue;
     }
