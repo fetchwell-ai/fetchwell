@@ -47,6 +47,66 @@ export function makeItemFilename(index: number, label: string, ext = ".pdf", pro
   return `${String(index + 1).padStart(3, "0")}_${slugify(label)}${suffix}${ext}`;
 }
 
+/**
+ * Format a Date as a short slug like "aug-02-2024".
+ * Used to embed human-readable dates into PDF filenames.
+ */
+export function formatDateSlug(date: Date): string {
+  const months = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+  const month = months[date.getMonth()];
+  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getFullYear();
+  return `${month}-${day}-${year}`;
+}
+
+/**
+ * Build a visit PDF filename that includes the visit description and date.
+ *
+ * Uses `description` (from the observe result) to extract date and visit info.
+ * Falls back to `makeItemFilename(index, fallbackLabel, ext, providerId)` when
+ * neither a date nor useful description can be extracted.
+ *
+ * Example output: `001_office-visit-dr-keyashian-aug-02-2024-stanford.pdf`
+ */
+export function makeVisitFilename(
+  index: number,
+  description: string,
+  fallbackLabel: string,
+  ext = ".pdf",
+  providerId?: string,
+): string {
+  const suffix = providerId ? `-${providerId}` : "";
+  const prefix = String(index + 1).padStart(3, "0") + "_";
+
+  // Try to parse a date from the description
+  const date = parseItemDate(description);
+
+  // Use description if non-empty and more informative than the fallback
+  const labelSource = description.trim() || fallbackLabel;
+
+  if (!date && !labelSource) {
+    return makeItemFilename(index, fallbackLabel, ext, providerId);
+  }
+
+  if (!date) {
+    // No date found — just use the description as label (same as makeItemFilename)
+    return `${prefix}${slugify(labelSource)}${suffix}${ext}`;
+  }
+
+  const dateSlug = formatDateSlug(date);
+
+  // Remove the raw date patterns from the label to avoid duplication
+  const cleanedLabel = labelSource
+    .replace(/\b\d{1,2}\/\d{1,2}\/\d{4}\b/g, "")   // MM/DD/YYYY
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, "")           // YYYY-MM-DD
+    .replace(/\b(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}[,\s]+\d{4}\b/gi, "")
+    .replace(/\b\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{4}\b/gi, "")
+    .trim();
+
+  const labelSlug = slugify(cleanedLabel || fallbackLabel);
+  return `${prefix}${labelSlug}-${dateSlug}${suffix}${ext}`;
+}
+
 /** Merge all .pdf files in pdfDir into a single PDF at outputPath. */
 export async function mergePdfs(pdfDir: string, outputPath: string, label: string): Promise<void> {
   const pdfFiles = readDirSafe(pdfDir).filter((f) => f.endsWith(".pdf")).sort();

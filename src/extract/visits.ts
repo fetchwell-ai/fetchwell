@@ -4,7 +4,7 @@ import { type BrowserProvider } from "../browser/interface.js";
 import { ensureLoggedIn } from "../auth.js";
 import {
   readDirSafe,
-  makeItemFilename,
+  makeVisitFilename,
   mergePdfs,
   navigateWithRetry,
   navigateToSection,
@@ -116,7 +116,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
       try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
       const pageTitle = await browser.title();
-      const filename = makeItemFilename(i, pageTitle || link.description, ".pdf", providerId);
+      const filename = makeVisitFilename(i, link.description, pageTitle || link.description, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
         fs.writeFileSync(path.join(visitsDir, filename), pdfBuf);
