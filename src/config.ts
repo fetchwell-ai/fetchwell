@@ -26,6 +26,7 @@ const ProviderConfigSchema = z.object({
   username: z.string().optional(),
   password: z.string().optional(),
   auth: AuthSchema.default({ loginForm: "two-step", twoFactor: "manual" }),
+  authenticatedSelectors: z.array(z.string()).optional(),
 });
 
 const ProvidersFileSchema = z.object({
