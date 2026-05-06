@@ -8,7 +8,7 @@ import {
   ElementHandle,
   SerializedSession,
 } from "../interface.js";
-import { getPageText, getPageHtml } from "../page-eval.js";
+import { getPageText, getPageHtml, stripFixedElements } from "../page-eval.js";
 
 export class StagehandLocalProvider implements BrowserProvider {
   private stagehand!: Stagehand;
@@ -129,6 +129,7 @@ export class StagehandLocalProvider implements BrowserProvider {
   }
 
   async pdf(): Promise<Buffer> {
+    await this.stagehand.page.evaluate(stripFixedElements);
     return this.stagehand.page.pdf({ format: "A4", printBackground: true });
   }
 

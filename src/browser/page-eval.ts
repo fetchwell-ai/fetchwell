@@ -6,6 +6,22 @@
  * self-contained (no closure over outer-scope variables).
  */
 
+/**
+ * Convert all fixed and sticky positioned elements to relative so they do not
+ * overlap page content in PDF output. Fixed/sticky elements render on top of
+ * content in Chromium's print/PDF mode, obscuring medical data.
+ *
+ * Call this via page.evaluate(stripFixedElements) immediately before page.pdf().
+ */
+export const stripFixedElements = (): void => {
+  document.querySelectorAll<HTMLElement>("*").forEach((el) => {
+    const pos = getComputedStyle(el).position;
+    if (pos === "fixed" || pos === "sticky") {
+      el.style.position = "relative";
+    }
+  });
+};
+
 export const getPageText = (): string => {
   const el =
     document.querySelector("main") ??
