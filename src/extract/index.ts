@@ -31,8 +31,8 @@ dotenv.config({ override: true });
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createBrowserProvider } from "../browser/index.js";
-import { loadSavedSession, saveSession } from "../session.js";
-import { isAuthPage, GMAIL_USER, prompt, getAuthModule } from "../auth.js";
+import { loadSavedSession, saveSession, clearSession } from "../session.js";
+import { isAuthPage, checkAuthenticatedElement, GMAIL_USER, prompt, getAuthModule } from "../auth.js";
 import { loadProviders, findProvider, type ProviderConfig } from "../config.js";
 import {
   getOutputDir,
@@ -214,11 +214,21 @@ async function probeProvider(provider: ProviderConfig) {
       await browser.navigate(verifyUrl);
       await new Promise((r) => setTimeout(r, 2000));
 
-      if (!isAuthPage(await browser.url())) {
+      const currentUrl = await browser.url();
+      const onAuthPage = isAuthPage(currentUrl);
+      const hasAuthElement = onAuthPage ? false : await checkAuthenticatedElement(browser);
+
+      if (!onAuthPage && hasAuthElement) {
         console.log("   Session restored — skipping login and 2FA.");
         console.log();
       } else {
-        console.log("   Session expired or invalid. Logging in fresh...");
+        if (onAuthPage) {
+          console.log(`   Session expired — redirected to auth page: ${currentUrl}`);
+        } else {
+          console.log(`   Session validation failed — no authenticated elements found at ${currentUrl}`);
+        }
+        console.log("   Logging in fresh...");
+        clearSession(provider.id);
         await browser.navigate(MYCHART_URL);
         await new Promise((r) => setTimeout(r, 2000));
         await authModule.login(browser, authConfig, debugUrl);
@@ -357,11 +367,21 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
       await browser.navigate(verifyUrl);
       await new Promise((r) => setTimeout(r, 2000));
 
-      if (!isAuthPage(await browser.url())) {
+      const currentUrl = await browser.url();
+      const onAuthPage = isAuthPage(currentUrl);
+      const hasAuthElement = onAuthPage ? false : await checkAuthenticatedElement(browser);
+
+      if (!onAuthPage && hasAuthElement) {
         console.log("   Session restored — skipping login and 2FA.");
         console.log();
       } else {
-        console.log("   Session expired or invalid. Logging in fresh...");
+        if (onAuthPage) {
+          console.log(`   Session expired — redirected to auth page: ${currentUrl}`);
+        } else {
+          console.log(`   Session validation failed — no authenticated elements found at ${currentUrl}`);
+        }
+        console.log("   Logging in fresh...");
+        clearSession(provider.id);
         console.log();
         console.log("Step 3: Login");
         await browser.navigate(MYCHART_URL);
