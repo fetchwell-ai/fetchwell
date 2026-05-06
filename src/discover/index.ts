@@ -17,10 +17,14 @@ import { OUTPUT_BASE } from "../extract/helpers.js";
 // ---------------------------------------------------------------------------
 
 const SECTION_KEYWORDS: Record<string, string[]> = {
-  labs: ["test results", "labs", "lab results", "results", "laboratory", "imaging", "radiology", "diagnostics"],
-  visits: ["visits", "appointments", "past visits", "after visit summary", "office visits", "encounter", "avs", "notes"],
-  medications: ["medications", "medicines", "prescriptions", "medication list", "pharmacy", "drugs", "rx"],
-  messages: ["messages", "inbox", "message center", "messaging", "secure messages", "compose"],
+  labs: ["test results", "labs", "lab results", "results", "laboratory", "imaging", "radiology", "diagnostics", "pathology"],
+  visits: [
+    "visits", "appointments", "past visits", "after visit summary", "after-visit summary",
+    "office visits", "encounter", "avs", "notes", "visit summaries", "visit summary",
+    "care plan", "care summary", "clinical notes", "clinical summary",
+  ],
+  medications: ["medications", "medicines", "prescriptions", "medication list", "pharmacy", "drugs", "rx", "current medications", "active medications"],
+  messages: ["messages", "inbox", "message center", "messaging", "secure messages", "compose", "conversations"],
 };
 
 type SectionKey = "labs" | "visits" | "medications" | "messages";
@@ -392,10 +396,10 @@ function findRelevantSubTab(
   section: SectionKey,
 ): ObserveResult | null {
   const relevanceKeywords: Record<SectionKey, string[]> = {
-    labs: ["results", "completed", "past results", "all results", "all test"],
-    visits: ["past", "notes", "avs", "documents", "summary", "after visit", "completed"],
-    medications: ["current medications", "active prescriptions", "current meds"],
-    messages: ["inbox", "received", "all messages", "sent"],
+    labs: ["results", "completed", "past results", "all results", "all test", "lab results", "test results"],
+    visits: ["past", "notes", "avs", "documents", "summary", "after visit", "completed", "visit summaries", "visit summary", "care summary"],
+    medications: ["current medications", "active prescriptions", "current meds", "medications", "medicines"],
+    messages: ["inbox", "received", "all messages", "sent", "conversations"],
   };
 
   const keywords = relevanceKeywords[section];
