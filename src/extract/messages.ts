@@ -16,9 +16,9 @@ import {
  * Probe mode: navigate to messages inbox, observe threads, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeMessages(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
+export async function probeMessages(browser: BrowserProvider, portalUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
   console.log("[probe] Messages: navigating...");
-  await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
+  await ensureLoggedIn(browser, portalUrl, credentials, providerId);
 
   const fallbackAct = 'Click the Messages or Inbox link in the navigation menu. ' +
     'It may be labeled "Messages", "Inbox", or "MyChart Messages".';
@@ -51,7 +51,7 @@ export async function probeMessages(browser: BrowserProvider, mychartUrl: string
  * Returns the number of PDFs written in this run (0 if none extracted).
  * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<number> {
+export async function extractMessages(browser: BrowserProvider, portalUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<number> {
   const baseDir = outputDir ?? process.cwd();
   const msgsDir = path.join(baseDir, "messages");
   fs.mkdirSync(msgsDir, { recursive: true });
@@ -62,7 +62,7 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
   }
 
   console.log("Step 9: Navigating to messages...");
-  await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
+  await ensureLoggedIn(browser, portalUrl, credentials, providerId);
 
   const fallbackAct = 'Click the Messages or Inbox link in the navigation menu. ' +
     'It may be labeled "Messages", "Inbox", or "MyChart Messages".';
