@@ -26,7 +26,11 @@ export async function probeMedications(browser: BrowserProvider, mychartUrl: str
   console.log(`[probe] Medications: screenshot saved to ${probeDir}/medications.png`);
 }
 
-export async function extractMedications(browser: BrowserProvider, mychartUrl: string, credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, incremental = false): Promise<void> {
+/**
+ * Returns 1 if the medications PDF was written, 0 otherwise.
+ * The caller should only record a timestamp in last-extracted.json when the count is > 0.
+ */
+export async function extractMedications(browser: BrowserProvider, mychartUrl: string, credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, incremental = false): Promise<number> {
   const baseDir = outputDir ?? process.cwd();
   const medsDir = path.join(baseDir, "medications");
   fs.mkdirSync(medsDir, { recursive: true });
@@ -35,7 +39,7 @@ export async function extractMedications(browser: BrowserProvider, mychartUrl: s
   const pdfPath = path.join(baseDir, medsFilename);
   if (incremental && fs.existsSync(pdfPath) && process.env.FORCE_MEDS !== "1") {
     console.log("Step 8: Medications already extracted — skipping (FORCE_MEDS=1 to re-run).");
-    return;
+    return 0;
   }
 
   console.log("Step 8: Navigating to medications...");
@@ -52,5 +56,7 @@ export async function extractMedications(browser: BrowserProvider, mychartUrl: s
     const pdfBuf = await browser.pdf();
     fs.writeFileSync(pdfPath, pdfBuf);
     console.log(`   ✓ ${medsFilename} (${(pdfBuf.length / 1024).toFixed(0)} KB)`);
+    return 1;
   }
+  return 0;
 }

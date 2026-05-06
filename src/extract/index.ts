@@ -403,22 +403,24 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     }
 
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    await extractLabsDocs(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental);
-    setLastExtractedDate(outputDir, "labs");
+    const labsCount = await extractLabsDocs(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental);
+    // Only record the timestamp when items were actually extracted; a 0-item run should not
+    // advance the cutoff, or the section would be skipped as "already extracted" on the next run.
+    if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
     console.log();
 
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    await extractVisits(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental);
-    setLastExtractedDate(outputDir, "visits");
+    const visitsCount = await extractVisits(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental);
+    if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
     console.log();
 
-    await extractMedications(browser, MYCHART_URL, providerCredentials, outputDir, provider.id, incremental);
-    setLastExtractedDate(outputDir, "medications");
+    const medsCount = await extractMedications(browser, MYCHART_URL, providerCredentials, outputDir, provider.id, incremental);
+    if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
     console.log();
 
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff);
-    setLastExtractedDate(outputDir, "messages");
+    const msgsCount = await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff);
+    if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
     console.log();
 
     buildIndex(outputDir, provider.id);

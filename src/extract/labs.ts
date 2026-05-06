@@ -53,8 +53,11 @@ export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string
  * Merges all into <outputDir>/labs.pdf for Claude.ai upload.
  *
  * Skip (incremental mode only): if <outputDir>/labs/ already has .pdf files (set FORCE_LABS=1 to re-run).
+ *
+ * Returns the number of PDFs written in this run (0 if none extracted).
+ * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<void> {
+export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<number> {
   const baseDir = outputDir ?? process.cwd();
   const labsDir = path.join(baseDir, "labs");
   fs.mkdirSync(labsDir, { recursive: true });
@@ -64,7 +67,7 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
     console.log(
       `Step 6: Labs already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_LABS=1 to re-run).`,
     );
-    return;
+    return 0;
   }
 
   console.log("Step 6: Navigating to lab/test results...");
@@ -89,12 +92,13 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
     console.log("   No panels found — saving screenshot.");
     const ss = await browser.screenshot();
     fs.writeFileSync(path.join(labsDir, "labs-list.png"), Buffer.from(ss, "base64"));
-    return;
+    return 0;
   }
 
   const listUrl = await browser.url();
   const maxPanels = Math.min(panelLinks.length, 50);
   const savedFiles = readDirSafe(labsDir);
+  let extracted = 0;
 
   for (let i = 0; i < maxPanels; i++) {
     const link = panelLinks[i];
@@ -122,6 +126,7 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
         fs.writeFileSync(path.join(labsDir, filename), pdfBuf);
+        extracted++;
       }
       console.log(`      → saved ${filename}`);
     } catch (err: any) {
@@ -140,4 +145,5 @@ export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: stri
 
   const mergedFilename = providerId ? `labs-${providerId}.pdf` : "labs.pdf";
   await mergePdfs(labsDir, path.join(baseDir, mergedFilename), "labs");
+  return extracted;
 }

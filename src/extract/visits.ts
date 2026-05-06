@@ -49,7 +49,11 @@ export async function probeVisits(browser: BrowserProvider, mychartUrl: string, 
   console.log(`[probe] Visits: screenshot saved to ${probeDir}/visits.png`);
 }
 
-export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<void> {
+/**
+ * Returns the number of PDFs written in this run (0 if none extracted).
+ * The caller should only record a timestamp in last-extracted.json when the count is > 0.
+ */
+export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<number> {
   const baseDir = outputDir ?? process.cwd();
   const visitsDir = path.join(baseDir, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
@@ -59,7 +63,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
     console.log(
       `Step 7: Visits already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_VISITS=1 to re-run).`,
     );
-    return;
+    return 0;
   }
 
   console.log("Step 7: Navigating to visits...");
@@ -85,12 +89,13 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
     console.log("   No visits found — saving screenshot.");
     const ss = await browser.screenshot();
     fs.writeFileSync(path.join(visitsDir, "visits-list.png"), Buffer.from(ss, "base64"));
-    return;
+    return 0;
   }
 
   const listUrl = await browser.url();
   const maxVisits = Math.min(visitLinks.length, 50);
   const savedFiles = readDirSafe(visitsDir);
+  let extracted = 0;
 
   for (let i = 0; i < maxVisits; i++) {
     const link = visitLinks[i];
@@ -115,6 +120,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
         fs.writeFileSync(path.join(visitsDir, filename), pdfBuf);
+        extracted++;
       }
       console.log(`      → saved ${filename}`);
     } catch (err: any) {
@@ -131,4 +137,5 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   console.log(`   Visits saved to ${visitsDir}`);
   const mergedFilename = providerId ? `visits-${providerId}.pdf` : "visits.pdf";
   await mergePdfs(visitsDir, path.join(baseDir, mergedFilename), "visits");
+  return extracted;
 }
