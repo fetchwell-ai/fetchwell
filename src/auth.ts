@@ -14,6 +14,7 @@
 
 export {
   isAuthPage,
+  checkAuthenticatedElement,
   prompt,
   waitForObservation,
   fetchGmailVerificationCode,
