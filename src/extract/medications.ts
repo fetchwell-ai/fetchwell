@@ -26,14 +26,14 @@ export async function probeMedications(browser: BrowserProvider, mychartUrl: str
   console.log(`[probe] Medications: screenshot saved to ${probeDir}/medications.png`);
 }
 
-export async function extractMedications(browser: BrowserProvider, mychartUrl: string, credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string): Promise<void> {
+export async function extractMedications(browser: BrowserProvider, mychartUrl: string, credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, incremental = false): Promise<void> {
   const baseDir = outputDir ?? process.cwd();
   const medsDir = path.join(baseDir, "medications");
   fs.mkdirSync(medsDir, { recursive: true });
 
   const medsFilename = providerId ? `medications-${providerId}.pdf` : "medications.pdf";
   const pdfPath = path.join(baseDir, medsFilename);
-  if (fs.existsSync(pdfPath) && process.env.FORCE_MEDS !== "1") {
+  if (incremental && fs.existsSync(pdfPath) && process.env.FORCE_MEDS !== "1") {
     console.log("Step 8: Medications already extracted — skipping (FORCE_MEDS=1 to re-run).");
     return;
   }

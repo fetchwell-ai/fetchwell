@@ -52,15 +52,15 @@ export async function probeLabsDocs(browser: BrowserProvider, mychartUrl: string
  * Drill into every lab/test-result panel and save each one as a PDF.
  * Merges all into <outputDir>/labs.pdf for Claude.ai upload.
  *
- * Skip: if <outputDir>/labs/ already has .pdf files (set FORCE_LABS=1 to re-run).
+ * Skip (incremental mode only): if <outputDir>/labs/ already has .pdf files (set FORCE_LABS=1 to re-run).
  */
-export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null): Promise<void> {
+export async function extractLabsDocs(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<void> {
   const baseDir = outputDir ?? process.cwd();
   const labsDir = path.join(baseDir, "labs");
   fs.mkdirSync(labsDir, { recursive: true });
 
   const existingPdfs = readDirSafe(labsDir).filter((f) => f.endsWith(".pdf"));
-  if (existingPdfs.length > 0 && process.env.FORCE_LABS !== "1") {
+  if (incremental && existingPdfs.length > 0 && process.env.FORCE_LABS !== "1") {
     console.log(
       `Step 6: Labs already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_LABS=1 to re-run).`,
     );

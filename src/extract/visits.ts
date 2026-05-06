@@ -49,13 +49,13 @@ export async function probeVisits(browser: BrowserProvider, mychartUrl: string, 
   console.log(`[probe] Visits: screenshot saved to ${probeDir}/visits.png`);
 }
 
-export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null): Promise<void> {
+export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<void> {
   const baseDir = outputDir ?? process.cwd();
   const visitsDir = path.join(baseDir, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
 
   const existingPdfs = readDirSafe(visitsDir).filter((f) => f.endsWith(".pdf"));
-  if (existingPdfs.length > 0 && process.env.FORCE_VISITS !== "1") {
+  if (incremental && existingPdfs.length > 0 && process.env.FORCE_VISITS !== "1") {
     console.log(
       `Step 7: Visits already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_VISITS=1 to re-run).`,
     );
