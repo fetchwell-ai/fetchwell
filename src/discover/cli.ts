@@ -70,12 +70,12 @@ async function run() {
     process.exit(1);
   }
 
-  const MYCHART_URL = provider.url;
+  const portalUrl = provider.url;
   const providerCredentials = provider.username || provider.password
     ? { username: provider.username, password: provider.password }
     : undefined;
   const authModule = getAuthModule(provider.auth, provider.id);
-  const authConfig = { url: MYCHART_URL, credentials: providerCredentials, providerId: provider.id };
+  const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
   console.log("  MyChart Agent — Portal Discovery");
@@ -112,8 +112,8 @@ async function run() {
   let failed = false;
 
   try {
-    console.log(`Step 2: Navigating to ${MYCHART_URL}...`);
-    await browser.navigate(MYCHART_URL);
+    console.log(`Step 2: Navigating to ${portalUrl}...`);
+    await browser.navigate(portalUrl);
     console.log("Page loaded.");
     console.log();
 
@@ -123,7 +123,7 @@ async function run() {
     if (savedSession && browser.loadSession) {
       console.log("Step 3: Restoring saved session...");
       await browser.loadSession(savedSession);
-      const verifyUrl = savedSession.homeUrl ?? MYCHART_URL;
+      const verifyUrl = savedSession.homeUrl ?? portalUrl;
       await browser.navigate(verifyUrl);
       await new Promise((r) => setTimeout(r, 2000));
 
@@ -132,7 +132,7 @@ async function run() {
         homeUrl = await browser.url();
       } else {
         console.log("   Session expired or invalid. Logging in fresh...");
-        await browser.navigate(MYCHART_URL);
+        await browser.navigate(portalUrl);
         await new Promise((r) => setTimeout(r, 2000));
         await authModule.login(browser, authConfig, debugUrl);
         homeUrl = await browser.url();

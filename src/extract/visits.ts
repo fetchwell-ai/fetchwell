@@ -16,9 +16,9 @@ import {
  * Probe mode: navigate to visits list, observe items, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeVisits(browser: BrowserProvider, mychartUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
+export async function probeVisits(browser: BrowserProvider, portalUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
   console.log("[probe] Visits: navigating...");
-  await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
+  await ensureLoggedIn(browser, portalUrl, credentials, providerId);
 
   const fallbackAct = 'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
     '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.';
@@ -53,7 +53,7 @@ export async function probeVisits(browser: BrowserProvider, mychartUrl: string, 
  * Returns the number of PDFs written in this run (0 if none extracted).
  * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractVisits(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<number> {
+export async function extractVisits(browser: BrowserProvider, portalUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<number> {
   const baseDir = outputDir ?? process.cwd();
   const visitsDir = path.join(baseDir, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
@@ -67,7 +67,7 @@ export async function extractVisits(browser: BrowserProvider, mychartUrl: string
   }
 
   console.log("Step 7: Navigating to visits...");
-  await ensureLoggedIn(browser, mychartUrl, credentials, providerId);
+  await ensureLoggedIn(browser, portalUrl, credentials, providerId);
 
   const fallbackAct = 'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
     '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.';
