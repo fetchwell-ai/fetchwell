@@ -23,7 +23,7 @@ pnpm extract --incremental            # Only fetch items newer than last run
 pnpm typecheck                        # TypeScript type check (tsc --noEmit)
 PROBE=1 pnpm extract                  # Probe mode: screenshot only, no PDFs
 pnpm discover --provider <id>         # Discover portal nav structure → output/<id>/nav-map.json
-FORCE_LABS=1 pnpm extract             # Force re-extract a section (FORCE_VISITS, FORCE_MEDS, FORCE_MSGS)
+FORCE_LABS=1 pnpm extract --incremental  # Force re-extract a section (FORCE_VISITS, FORCE_MEDS, FORCE_MSGS)
 ```
 
 ## Testing and linting
