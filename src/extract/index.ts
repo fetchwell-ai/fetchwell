@@ -419,7 +419,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     console.log();
 
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    const msgsCount = await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff);
+    const msgsCount = await extractMessages(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental);
     if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
     console.log();
 

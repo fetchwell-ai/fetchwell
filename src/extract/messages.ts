@@ -51,7 +51,7 @@ export async function probeMessages(browser: BrowserProvider, mychartUrl: string
  * Returns the number of PDFs written in this run (0 if none extracted).
  * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null): Promise<number> {
+export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false): Promise<number> {
   const baseDir = outputDir ?? process.cwd();
   const msgsDir = path.join(baseDir, "messages");
   fs.mkdirSync(msgsDir, { recursive: true });
@@ -93,7 +93,7 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
   for (let i = 0; i < maxThreads; i++) {
     const link = threadLinks[i];
     const prefix = String(i + 1).padStart(3, "0") + "_";
-    if (savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
+    if (incremental && savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
       console.log(`   Thread ${i + 1}/${maxThreads}: already saved — skipping`);
       continue;
     }
