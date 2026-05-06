@@ -304,10 +304,21 @@ export async function waitForFileBasedCode(providerId?: string): Promise<string 
 
 /**
  * Enter a 2FA code into the browser and submit.
+ *
+ * Uses observe() + fill() instead of act() to avoid AI misinterpreting the
+ * input field structure (e.g. OneMedical's single-box OTP input).
  */
 export async function enterCodeInBrowser(browser: BrowserProvider, code: string): Promise<void> {
   console.log(`   Got code: ${code}`);
-  await browser.act(`Type "${code}" into the verification code or security code input field`);
+  const fields = await browser.observe(
+    "the verification code, security code, or one-time password input field",
+  );
+  if (fields.length > 0) {
+    await browser.fill(fields[0].selector, code);
+  } else {
+    // Fallback: act()-based entry if observe finds nothing
+    await browser.act(`Type "${code}" into the verification code or security code input field`);
+  }
   console.log("   Code entered.");
   await browser.act("Click the Submit, Verify, or Continue button to submit the verification code");
   console.log("   Submitted.");
