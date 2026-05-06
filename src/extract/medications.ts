@@ -8,9 +8,9 @@ import { logDepth, navigateToSection } from "./helpers.js";
  * Probe mode: navigate to medications page, log URL, take a screenshot.
  * Does NOT extract any PDFs.
  */
-export async function probeMedications(browser: BrowserProvider, portalUrl: string, probeDir: string, credentials?: { username?: string; password?: string }, providerId?: string): Promise<void> {
+export async function probeMedications(browser: BrowserProvider, portalUrl: string, probeDir: string, credentials?: { username?: string; password?: string }, providerId?: string, authenticatedSelectors?: string[]): Promise<void> {
   console.log("[probe] Medications: navigating...");
-  await ensureLoggedIn(browser, portalUrl, credentials, providerId);
+  await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Click the Medications or Medicines link in the navigation menu, sidebar, or home page. ' +
     'Look for text that says "Medications", "Medicines", "My Medications", or "Medication List". ' +
@@ -30,7 +30,7 @@ export async function probeMedications(browser: BrowserProvider, portalUrl: stri
  * Returns 1 if the medications PDF was written, 0 otherwise.
  * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractMedications(browser: BrowserProvider, portalUrl: string, credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, incremental = false): Promise<number> {
+export async function extractMedications(browser: BrowserProvider, portalUrl: string, credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, incremental = false, authenticatedSelectors?: string[]): Promise<number> {
   const baseDir = outputDir ?? process.cwd();
   const medsDir = path.join(baseDir, "medications");
   fs.mkdirSync(medsDir, { recursive: true });
@@ -43,7 +43,7 @@ export async function extractMedications(browser: BrowserProvider, portalUrl: st
   }
 
   console.log("Step 8: Navigating to medications...");
-  await ensureLoggedIn(browser, portalUrl, credentials, providerId);
+  await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Click the Medications or Medicines link in the navigation menu, sidebar, or home page. ' +
     'Look for text that says "Medications", "Medicines", "My Medications", or "Medication List". ' +
