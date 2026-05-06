@@ -15,11 +15,14 @@
  *   On subsequent runs the saved session is restored so login + 2FA are skipped.
  *   Delete output/session.json to force a fresh login.
  *
- * Force re-extraction of any section:
- *   FORCE_LABS=1 pnpm extract
- *   FORCE_VISITS=1 pnpm extract
- *   FORCE_MEDS=1 pnpm extract
- *   FORCE_MSGS=1 pnpm extract
+ * Force re-extraction of a section in incremental mode:
+ *   FORCE_LABS=1 pnpm extract --incremental
+ *   FORCE_VISITS=1 pnpm extract --incremental
+ *   FORCE_MEDS=1 pnpm extract --incremental
+ *   FORCE_MSGS=1 pnpm extract --incremental
+ *
+ * Note: FORCE_* vars are only needed in --incremental mode. A plain
+ * `pnpm extract` always re-extracts all sections regardless of existing PDFs.
  */
 
 import dotenv from "dotenv";
@@ -400,16 +403,16 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     }
 
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    await extractLabsDocs(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, labsCutoff);
+    await extractLabsDocs(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental);
     setLastExtractedDate(outputDir, "labs");
     console.log();
 
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    await extractVisits(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff);
+    await extractVisits(browser, MYCHART_URL, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental);
     setLastExtractedDate(outputDir, "visits");
     console.log();
 
-    await extractMedications(browser, MYCHART_URL, providerCredentials, outputDir, provider.id);
+    await extractMedications(browser, MYCHART_URL, providerCredentials, outputDir, provider.id, incremental);
     setLastExtractedDate(outputDir, "medications");
     console.log();
 
