@@ -47,7 +47,11 @@ export async function probeMessages(browser: BrowserProvider, mychartUrl: string
   console.log(`[probe] Messages: screenshot saved to ${probeDir}/messages.png`);
 }
 
-export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null): Promise<void> {
+/**
+ * Returns the number of PDFs written in this run (0 if none extracted).
+ * The caller should only record a timestamp in last-extracted.json when the count is > 0.
+ */
+export async function extractMessages(browser: BrowserProvider, mychartUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null): Promise<number> {
   const baseDir = outputDir ?? process.cwd();
   const msgsDir = path.join(baseDir, "messages");
   fs.mkdirSync(msgsDir, { recursive: true });
@@ -78,12 +82,13 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
     console.log("   No messages found — saving screenshot.");
     const ss = await browser.screenshot();
     fs.writeFileSync(path.join(msgsDir, "inbox.png"), Buffer.from(ss, "base64"));
-    return;
+    return 0;
   }
 
   const listUrl = await browser.url();
   const maxThreads = Math.min(threadLinks.length, 50);
   const savedFiles = readDirSafe(msgsDir);
+  let extracted = 0;
 
   for (let i = 0; i < maxThreads; i++) {
     const link = threadLinks[i];
@@ -115,6 +120,7 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
         fs.writeFileSync(path.join(msgsDir, filename), pdfBuf);
+        extracted++;
       }
       console.log(`      → saved ${filename}`);
     } catch (err: any) {
@@ -131,4 +137,5 @@ export async function extractMessages(browser: BrowserProvider, mychartUrl: stri
   console.log(`   Messages saved to ${msgsDir}`);
   const mergedFilename = providerId ? `messages-${providerId}.pdf` : "messages.pdf";
   await mergePdfs(msgsDir, path.join(baseDir, mergedFilename), "threads");
+  return extracted;
 }
