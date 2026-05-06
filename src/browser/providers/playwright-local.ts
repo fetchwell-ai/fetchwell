@@ -6,7 +6,7 @@ import {
   ObserveResult,
   ElementHandle,
 } from "../interface.js";
-import { getPageText, getPageHtml } from "../page-eval.js";
+import { getPageText, getPageHtml, stripFixedElements } from "../page-eval.js";
 
 export class PlaywrightLocalProvider implements BrowserProvider {
   private browser!: Browser;
@@ -98,6 +98,11 @@ export class PlaywrightLocalProvider implements BrowserProvider {
 
   async pageHtml(): Promise<string> {
     return this.page.evaluate(getPageHtml);
+  }
+
+  async pdf(): Promise<Buffer> {
+    await this.page.evaluate(stripFixedElements);
+    return this.page.pdf({ format: "A4", printBackground: true });
   }
 
   async clickSelector(selector: string): Promise<void> {
