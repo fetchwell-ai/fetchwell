@@ -57,14 +57,14 @@ export function loadProviders(): ProviderConfig[] {
   try {
     raw = fs.readFileSync(filePath, "utf8");
   } catch (err) {
-    throw new Error(`Failed to read providers.json: ${(err as Error).message}`);
+    throw new Error(`Failed to read providers.json: ${(err as Error).message}`, { cause: err });
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    throw new Error(`providers.json is not valid JSON: ${(err as Error).message}`);
+    throw new Error(`providers.json is not valid JSON: ${(err as Error).message}`, { cause: err });
   }
 
   const result = ProvidersFileSchema.safeParse(parsed);
