@@ -13,7 +13,7 @@ function createWindow(): void {
     },
   });
 
-  win.loadFile(path.join(__dirname, 'index.html'));
+  win.loadFile(path.join(__dirname, '..', 'dist-renderer', 'index.html'));
 }
 
 app.whenReady().then(() => {

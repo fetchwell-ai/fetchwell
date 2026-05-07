@@ -13,6 +13,7 @@ docs/BROWSER_RESEARCH.md
 node_modules/
 dist/
 dist-electron/
+dist-renderer/
 
 # Extracted health records — sensitive personal data, never commit
 output/
