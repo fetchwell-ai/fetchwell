@@ -19,24 +19,38 @@ export interface NavMap {
   };
 }
 
-/** Return the nav-map.json path for a given provider. */
-function navMapPath(providerId: string): string {
-  return path.join(OUTPUT_BASE, providerId, "nav-map.json");
+/**
+ * Return the nav-map.json path for a given provider.
+ *
+ * If `basePath` is provided it is used as the parent output directory;
+ * otherwise falls back to the dirname-relative OUTPUT_BASE default.
+ */
+function navMapPath(providerId: string, basePath?: string): string {
+  const base = basePath ?? OUTPUT_BASE;
+  return path.join(base, providerId, "nav-map.json");
 }
 
-/** Load a previously saved nav-map for the given provider, or null if none exists. */
-export function loadNavMap(providerId: string): NavMap | null {
+/**
+ * Load a previously saved nav-map for the given provider, or null if none exists.
+ *
+ * If `basePath` is provided, nav-map.json is looked up under `<basePath>/<providerId>/`.
+ */
+export function loadNavMap(providerId: string, basePath?: string): NavMap | null {
   try {
-    const data = JSON.parse(fs.readFileSync(navMapPath(providerId), "utf8")) as NavMap;
+    const data = JSON.parse(fs.readFileSync(navMapPath(providerId, basePath), "utf8")) as NavMap;
     return data;
   } catch {
     return null;
   }
 }
 
-/** Save a nav-map to output/<providerId>/nav-map.json. */
-export function saveNavMap(navMap: NavMap, providerId: string): void {
-  const filePath = navMapPath(providerId);
+/**
+ * Save a nav-map to <basePath>/<providerId>/nav-map.json.
+ *
+ * If `basePath` is omitted, falls back to the default OUTPUT_BASE.
+ */
+export function saveNavMap(navMap: NavMap, providerId: string, basePath?: string): void {
+  const filePath = navMapPath(providerId, basePath);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, JSON.stringify(navMap, null, 2));
 }

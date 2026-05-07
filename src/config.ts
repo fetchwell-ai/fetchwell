@@ -38,42 +38,41 @@ export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 /**
  * Load and validate providers.json from the project root.
  *
- * Exits with a clear error if the file is missing or malformed.
+ * Throws an error if the file is missing or malformed, so callers can catch it.
+ * CLI entry points may catch and call process.exit; library callers may propagate.
  */
 export function loadProviders(): ProviderConfig[] {
   const filePath = path.join(PROJECT_ROOT, "providers.json");
 
   if (!fs.existsSync(filePath)) {
-    console.error("Missing providers.json in project root.");
-    console.error("   Copy providers.example.json to providers.json and fill in your providers.");
-    console.error("");
-    console.error("   cp providers.example.json providers.json");
-    process.exit(1);
+    throw new Error(
+      "Missing providers.json in project root.\n" +
+      "   Copy providers.example.json to providers.json and fill in your providers.\n" +
+      "\n" +
+      "   cp providers.example.json providers.json",
+    );
   }
 
   let raw: string;
   try {
     raw = fs.readFileSync(filePath, "utf8");
   } catch (err) {
-    console.error(`Failed to read providers.json: ${(err as Error).message}`);
-    process.exit(1);
+    throw new Error(`Failed to read providers.json: ${(err as Error).message}`);
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    console.error(`providers.json is not valid JSON: ${(err as Error).message}`);
-    process.exit(1);
+    throw new Error(`providers.json is not valid JSON: ${(err as Error).message}`);
   }
 
   const result = ProvidersFileSchema.safeParse(parsed);
   if (!result.success) {
-    console.error("providers.json has invalid schema:");
-    for (const issue of result.error.issues) {
-      console.error(`   ${issue.path.join(".")}: ${issue.message}`);
-    }
-    process.exit(1);
+    const issues = result.error.issues
+      .map((issue) => `   ${issue.path.join(".")}: ${issue.message}`)
+      .join("\n");
+    throw new Error(`providers.json has invalid schema:\n${issues}`);
   }
 
   return result.data.providers;
