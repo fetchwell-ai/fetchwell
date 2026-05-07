@@ -52,6 +52,9 @@ export class CredentialsManager {
   }
 
   private encrypt(value: string): string {
+    if (!this.storage.isEncryptionAvailable()) {
+      throw new Error('System keychain is not available — cannot store credentials securely');
+    }
     const buf = this.storage.encryptString(value);
     return buf.toString('base64');
   }
