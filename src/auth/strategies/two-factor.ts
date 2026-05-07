@@ -112,6 +112,48 @@ const manual: TwoFactorHandler = async (browser, providerId) => {
 };
 
 /**
+ * Module-level OTP callback for the "ui" 2FA strategy.
+ * Injected at runtime by the pipeline bridge (e.g. Electron IPC).
+ */
+let otpCallback: (() => Promise<string | null>) | null = null;
+
+/**
+ * Set (or clear) the OTP callback used by the "ui" 2FA strategy.
+ */
+export function setOtpCallback(cb: (() => Promise<string | null>) | null): void {
+  otpCallback = cb;
+}
+
+/**
+ * UI 2FA: calls an injected callback to get the OTP instead of Gmail or file relay.
+ * The callback is expected to be set by the Electron bridge before auth runs.
+ */
+const ui: TwoFactorHandler = async (browser) => {
+  await new Promise((r) => setTimeout(r, 3000));
+
+  console.log("Step 5: Checking for 2FA/verification prompt...");
+  const twoFaObservations = await detect2FA(browser);
+
+  if (twoFaObservations.length > 0) {
+    console.log("2FA/MFA detected!");
+
+    if (!otpCallback) {
+      throw new Error("No OTP callback registered for ui 2FA strategy");
+    }
+
+    const code = await otpCallback();
+    if (code === null) {
+      throw new Error("2FA code not provided — user may have timed out or cancelled");
+    }
+
+    await enterCodeInBrowser(browser, code);
+    await waitForPostLoginNavigation(browser);
+  } else {
+    await verifyLoginSuccess(browser);
+  }
+};
+
+/**
  * Registry of 2FA strategies.
  *
  * To add a new method, add a new key+function here.
@@ -120,6 +162,7 @@ export const twoFactorRegistry: Record<string, TwoFactorHandler> = {
   none,
   email,
   manual,
+  ui,
 };
 
 /**
