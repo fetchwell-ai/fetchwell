@@ -78,6 +78,12 @@ export class ConfigManager {
 
   addPortal(input: Omit<PortalEntry, 'id' | 'hasCredentials' | 'discoveredAt' | 'lastExtractedAt'>): PortalEntry {
     const id = slugify(input.name);
+    if (!id) {
+      throw new Error('Portal name must produce a valid slug');
+    }
+    if (this.config.portals.some((p) => p.id === id)) {
+      throw new Error(`A portal with id "${id}" already exists`);
+    }
     const entry: PortalEntry = {
       id,
       name: input.name,
