@@ -19,8 +19,12 @@ import { detectLoginFormType } from "../auth/detect-login-form.js";
 /**
  * Run portal discovery for a single provider.
  * Throws on failure (does not call process.exit).
+ *
+ * @param provider  - Provider configuration
+ * @param basePath  - Optional base output directory (Electron download folder).
+ *                    Defaults to OUTPUT_BASE (CLI mode) when omitted.
  */
-export async function discoverProviderById(provider: ProviderConfig): Promise<void> {
+export async function discoverProviderById(provider: ProviderConfig, basePath?: string): Promise<void> {
   const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
   const portalUrl = provider.url;
   const providerCredentials = provider.username || provider.password
@@ -36,10 +40,10 @@ export async function discoverProviderById(provider: ProviderConfig): Promise<vo
   console.log("=".repeat(60));
   console.log();
 
-  const outputDir = getOutputDir(provider.id);
+  const outputDir = getOutputDir(provider.id, basePath);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const savedSession = loadSavedSession(provider.id);
+  const savedSession = loadSavedSession(provider.id, basePath);
   if (savedSession) {
     console.log(`   Found saved session from ${savedSession.savedAt} — will skip login.`);
     console.log();
@@ -64,7 +68,7 @@ export async function discoverProviderById(provider: ProviderConfig): Promise<vo
   // Check whether a nav-map already exists for this provider.
   // If it does, this is a re-run and we should skip login form detection
   // (the user may have overridden the setting manually).
-  const existingNavMap = loadNavMap(provider.id);
+  const existingNavMap = loadNavMap(provider.id, basePath);
   const isFirstDiscovery = existingNavMap === null;
 
   try {
@@ -108,7 +112,7 @@ export async function discoverProviderById(provider: ProviderConfig): Promise<vo
         if (browser.saveSession) {
           const session = await browser.saveSession();
           session.homeUrl = homeUrl;
-          saveSession(session, provider.id);
+          saveSession(session, provider.id, basePath);
           console.log(`   Session saved to output/${provider.id}/session.json.`);
         }
       }
@@ -119,7 +123,7 @@ export async function discoverProviderById(provider: ProviderConfig): Promise<vo
       if (browser.saveSession) {
         const session = await browser.saveSession();
         session.homeUrl = homeUrl;
-        saveSession(session, provider.id);
+        saveSession(session, provider.id, basePath);
         console.log(`   Session saved to output/${provider.id}/session.json (login + 2FA skipped next run).`);
       }
     }
@@ -132,7 +136,7 @@ export async function discoverProviderById(provider: ProviderConfig): Promise<vo
     // Persist the detected login form type in the nav-map (first discovery only).
     if (detectedLoginForm !== undefined) {
       navMap.detectedLoginForm = detectedLoginForm;
-      saveNavMap(navMap, provider.id);
+      saveNavMap(navMap, provider.id, basePath);
       console.log(`   Detected login form type "${detectedLoginForm}" stored in nav-map.`);
     }
 
