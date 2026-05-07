@@ -24,7 +24,7 @@ let credentialsManager: CredentialsManager | null = null;
  * a temp directory without a running Electron app.
  */
 export function registerIpcHandlers(userDataPath?: string): void {
-  const dataPath = userDataPath ?? app.getPath('userData');
+  const dataPath = userDataPath ?? process.env.HRF_USER_DATA_PATH ?? app.getPath('userData');
 
   const safeStorageBackend: SafeStorageBackend = {
     isEncryptionAvailable: () => safeStorage.isEncryptionAvailable(),
