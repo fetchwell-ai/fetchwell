@@ -1,6 +1,7 @@
-import { ipcMain, safeStorage, app } from 'electron';
+import { ipcMain, safeStorage, app, BrowserWindow } from 'electron';
 import { ConfigManager, PortalEntry } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
+import { runExtraction, runDiscovery } from './pipeline-bridge';
 
 /** Input shape for adding/updating a portal (id is derived from name). */
 interface PortalInput {
@@ -115,5 +116,63 @@ export function registerIpcHandlers(userDataPath?: string): void {
 
   ipcMain.handle('validateApiKey', (_event, key: string): boolean => {
     return validateApiKeyFormat(key);
+  });
+
+  // --- Pipeline operations ---
+
+  ipcMain.handle('runExtraction', async (_event, portalId: string): Promise<void> => {
+    const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    if (!win) throw new Error('No active window');
+
+    const portal = configManager!.getPortal(portalId);
+    if (!portal) throw new Error(`Portal not found: ${portalId}`);
+
+    const settings = configManager!.getSettings();
+    const apiKey = credentialsManager!.getApiKey();
+    if (!apiKey) throw new Error('API key not configured');
+
+    const creds = credentialsManager!.getPortalCredentials(portalId);
+    if (!creds) throw new Error(`No credentials stored for portal: ${portalId}`);
+
+    await runExtraction(portalId, win, {
+      apiKey,
+      credentials: creds,
+      portalUrl: portal.url,
+      portalId: portal.id,
+      portalName: portal.name,
+      downloadFolder: settings.downloadFolder,
+      showBrowser: settings.showBrowser,
+      incremental: settings.incrementalExtraction,
+      loginForm: portal.loginForm,
+      twoFactor: portal.twoFactor,
+    });
+  });
+
+  ipcMain.handle('runDiscovery', async (_event, portalId: string): Promise<void> => {
+    const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    if (!win) throw new Error('No active window');
+
+    const portal = configManager!.getPortal(portalId);
+    if (!portal) throw new Error(`Portal not found: ${portalId}`);
+
+    const settings = configManager!.getSettings();
+    const apiKey = credentialsManager!.getApiKey();
+    if (!apiKey) throw new Error('API key not configured');
+
+    const creds = credentialsManager!.getPortalCredentials(portalId);
+    if (!creds) throw new Error(`No credentials stored for portal: ${portalId}`);
+
+    await runDiscovery(portalId, win, {
+      apiKey,
+      credentials: creds,
+      portalUrl: portal.url,
+      portalId: portal.id,
+      portalName: portal.name,
+      downloadFolder: settings.downloadFolder,
+      showBrowser: settings.showBrowser,
+      incremental: settings.incrementalExtraction,
+      loginForm: portal.loginForm,
+      twoFactor: portal.twoFactor,
+    });
   });
 }
