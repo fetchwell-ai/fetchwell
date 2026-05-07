@@ -24,11 +24,9 @@ export type LoginFormHandler = (
 const twoStep: LoginFormHandler = async (browser, credentials) => {
   const username =
     credentials?.username ??
-    process.env.MYCHART_USERNAME ??
     (await prompt("   Enter username: "));
   const password =
     credentials?.password ??
-    process.env.MYCHART_PASSWORD ??
     (await prompt("   Enter password: "));
   console.log();
 
@@ -55,11 +53,9 @@ const twoStep: LoginFormHandler = async (browser, credentials) => {
 const singlePage: LoginFormHandler = async (browser, credentials) => {
   const email =
     credentials?.username ??
-    process.env.ONEMEDICAL_EMAIL ??
     (await prompt("   Enter email: "));
   const password =
     credentials?.password ??
-    process.env.ONEMEDICAL_PASSWORD ??
     (await prompt("   Enter password: "));
   console.log();
 

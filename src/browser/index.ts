@@ -6,6 +6,7 @@ export type ProviderType = "stagehand-local" | "local";
 
 export async function createBrowserProvider(
   type?: ProviderType,
+  apiKey?: string,
 ): Promise<BrowserProvider> {
   const providerType =
     type ?? (process.env.BROWSER_PROVIDER as ProviderType) ?? "stagehand-local";
@@ -16,6 +17,7 @@ export async function createBrowserProvider(
     case "stagehand-local":
       provider = new StagehandLocalProvider({
         headless: process.env.HEADLESS === "true",
+        apiKey,
       });
       break;
     case "local":

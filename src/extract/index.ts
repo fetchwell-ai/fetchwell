@@ -183,7 +183,7 @@ async function probeProvider(provider: ProviderConfig) {
   }
 
   console.log("Step 1: Creating browser session...");
-  const browser = await createBrowserProvider();
+  const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
   console.log("Browser session created!");
 
   const debugUrl = await browser.getDebugUrl();
@@ -335,7 +335,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
   fs.mkdirSync(outputDir, { recursive: true });
 
   console.log(`Step 1: Creating ${providerType} browser session...`);
-  const browser = await createBrowserProvider();
+  const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
   console.log("Browser session created!");
 
   const debugUrl = await browser.getDebugUrl();
