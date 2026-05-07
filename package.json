@@ -8,7 +8,9 @@
     "discover": "tsx src/discover/cli.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "electron:dev": "vite build && tsc -p electron/tsconfig.json && electron dist-electron/main.js"
+    "electron:dev": "vite build && tsc -p electron/tsconfig.json && electron dist-electron/main.js",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test --config playwright.config.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
@@ -22,6 +24,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.59.1",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -34,7 +37,8 @@
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.11"
+    "vite": "^8.0.11",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=22"
