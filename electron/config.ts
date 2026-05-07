@@ -48,12 +48,12 @@ export class ConfigManager {
       if (fs.existsSync(this.configPath)) {
         const raw = fs.readFileSync(this.configPath, 'utf-8');
         const parsed = JSON.parse(raw) as Partial<AppConfig>;
-        return { ...DEFAULT_CONFIG, ...parsed };
+        return { ...DEFAULT_CONFIG, ...parsed, portals: parsed.portals ?? [] };
       }
     } catch {
       // Fall through to default
     }
-    return { ...DEFAULT_CONFIG };
+    return { ...DEFAULT_CONFIG, portals: [] };
   }
 
   save(): void {
