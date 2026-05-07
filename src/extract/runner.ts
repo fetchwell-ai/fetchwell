@@ -28,8 +28,13 @@ import { extractMessages } from "./messages.js";
 /**
  * Run the full extraction pipeline for a single provider.
  * Throws on failure (does not call process.exit).
+ *
+ * @param provider   - Provider configuration
+ * @param incremental - Only fetch items newer than the last run
+ * @param basePath   - Optional base output directory (Electron download folder).
+ *                     Defaults to OUTPUT_BASE (CLI mode) when omitted.
  */
-export async function extractProvider(provider: ProviderConfig, incremental = false): Promise<void> {
+export async function extractProvider(provider: ProviderConfig, incremental = false, basePath?: string): Promise<void> {
   const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
   const portalUrl = provider.url;
   const providerCredentials = provider.username || provider.password
@@ -48,8 +53,8 @@ export async function extractProvider(provider: ProviderConfig, incremental = fa
   console.log("=".repeat(60));
   console.log();
 
-  const outputDir = getOutputDir(provider.id);
-  const savedSession = loadSavedSession(provider.id);
+  const outputDir = getOutputDir(provider.id, basePath);
+  const savedSession = loadSavedSession(provider.id, basePath);
   if (savedSession) {
     console.log(`   Found saved session from ${savedSession.savedAt} — will skip login.`);
     console.log(`   (Delete output/${provider.id}/session.json to force a fresh login.)`);
@@ -103,7 +108,7 @@ export async function extractProvider(provider: ProviderConfig, incremental = fa
           console.log(`   Session validation failed — no authenticated elements found at ${currentUrl}`);
         }
         console.log("   Logging in fresh...");
-        clearSession(provider.id);
+        clearSession(provider.id, basePath);
         console.log();
         console.log("Step 3: Login");
         await browser.navigate(portalUrl);
@@ -112,7 +117,7 @@ export async function extractProvider(provider: ProviderConfig, incremental = fa
         if (browser.saveSession) {
           const session = await browser.saveSession();
           session.homeUrl = await browser.url();
-          saveSession(session, provider.id);
+          saveSession(session, provider.id, basePath);
           console.log(`   Session saved to output/${provider.id}/session.json.`);
         }
       }
@@ -122,14 +127,14 @@ export async function extractProvider(provider: ProviderConfig, incremental = fa
       if (browser.saveSession) {
         const session = await browser.saveSession();
         session.homeUrl = await browser.url();
-        saveSession(session, provider.id);
+        saveSession(session, provider.id, basePath);
         console.log(`   Session saved to output/${provider.id}/session.json (login + 2FA skipped next run).`);
       }
     }
     console.log();
 
     // Warn if no nav-map exists
-    if (!loadNavMap(provider.id)) {
+    if (!loadNavMap(provider.id, basePath)) {
       console.log(`Warning: No nav-map found for ${provider.id}. Run discovery first for better navigation.`);
       console.log();
     }

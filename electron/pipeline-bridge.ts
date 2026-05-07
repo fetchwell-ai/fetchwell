@@ -69,6 +69,7 @@ interface RunnerCommand {
   command: 'extract' | 'discover';
   portalId: string;
   incremental: boolean;
+  downloadFolder?: string;
   providerConfig: {
     id: string;
     name: string;
@@ -205,6 +206,7 @@ function runSubprocess(
       command,
       portalId: config.portalId,
       incremental: config.incremental,
+      downloadFolder: config.downloadFolder || undefined,
       providerConfig: {
         id: config.portalId,
         name: config.portalName,

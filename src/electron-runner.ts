@@ -27,6 +27,7 @@ interface RunnerCommand {
   command: 'extract' | 'discover';
   portalId: string;
   incremental: boolean;
+  downloadFolder?: string;
   providerConfig: {
     id: string;
     name: string;
@@ -141,10 +142,10 @@ async function main(): Promise<void> {
   if (cmd.command === 'extract') {
     // Dynamically import to avoid top-level side effects (dotenv, arg parsing, run())
     const { extractProvider } = await import('./extract/runner.js');
-    await extractProvider(provider, cmd.incremental);
+    await extractProvider(provider, cmd.incremental, cmd.downloadFolder);
   } else if (cmd.command === 'discover') {
     const { discoverProviderById } = await import('./discover/runner.js');
-    await discoverProviderById(provider);
+    await discoverProviderById(provider, cmd.downloadFolder);
   }
 }
 
