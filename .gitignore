@@ -1,6 +1,13 @@
 scratch.md
 .DS_Store
 .vscode/
+brainstorm.md
+PRD.md
+
+# Working docs — design notes and research, not for public repo
+docs/electron-app.md
+docs/electron-app-prd.md
+docs/BROWSER_RESEARCH.md
 
 # Dependencies and build output
 node_modules/
