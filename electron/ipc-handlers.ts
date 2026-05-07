@@ -1,4 +1,4 @@
-import { ipcMain, safeStorage, app, BrowserWindow } from 'electron';
+import { ipcMain, safeStorage, app, BrowserWindow, dialog } from 'electron';
 import { ConfigManager, PortalEntry } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
 import { runExtraction, runDiscovery } from './pipeline-bridge';
@@ -146,6 +146,14 @@ export function registerIpcHandlers(userDataPath?: string): void {
       loginForm: portal.loginForm,
       twoFactor: portal.twoFactor,
     });
+  });
+
+  // --- Folder picker ---
+
+  ipcMain.handle('chooseFolder', async (): Promise<string | null> => {
+    const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
+    if (result.canceled) return null;
+    return result.filePaths[0];
   });
 
   ipcMain.handle('runDiscovery', async (_event, portalId: string): Promise<void> => {

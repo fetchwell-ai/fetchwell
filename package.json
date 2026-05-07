@@ -8,7 +8,7 @@
     "discover": "tsx src/discover/cli.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "electron:dev": "tsc -p electron/tsconfig.json && cp electron/index.html dist-electron/ && electron dist-electron/main.js"
+    "electron:dev": "vite build && tsc -p electron/tsconfig.json && electron dist-electron/main.js"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
@@ -23,12 +23,18 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^22.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
     "electron": "^42.0.0",
     "electron-builder": "^26.8.1",
     "eslint": "^10.3.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
-    "typescript-eslint": "^8.59.2"
+    "typescript-eslint": "^8.59.2",
+    "vite": "^8.0.11"
   },
   "engines": {
     "node": ">=22"

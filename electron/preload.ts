@@ -17,4 +17,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onProgress: notImplemented,
   on2FARequest: notImplemented,
   submit2FACode: notImplemented,
+  chooseFolder: notImplemented,
 });
