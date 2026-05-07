@@ -12,6 +12,7 @@ docs/BROWSER_RESEARCH.md
 # Dependencies and build output
 node_modules/
 dist/
+dist-electron/
 
 # Extracted health records — sensitive personal data, never commit
 output/
