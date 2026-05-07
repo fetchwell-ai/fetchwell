@@ -12,7 +12,7 @@ function createWindow(): void {
     },
   });
 
-  win.loadFile(path.join(__dirname, '..', 'electron', 'index.html'));
+  win.loadFile(path.join(__dirname, 'index.html'));
 }
 
 app.whenReady().then(() => {
