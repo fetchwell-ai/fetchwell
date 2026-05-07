@@ -4,7 +4,7 @@ import { PDFDocument } from "pdf-lib";
 import { type BrowserProvider } from "../browser/interface.js";
 import { loadNavMap } from "../discover/nav-map.js";
 
-/** Base output directory (parent of all provider-scoped dirs). */
+/** Default base output directory (parent of all provider-scoped dirs). */
 export const OUTPUT_BASE = path.resolve(import.meta.dirname, "..", "..", "output");
 
 /**
@@ -13,9 +13,15 @@ export const OUTPUT_BASE = path.resolve(import.meta.dirname, "..", "..", "output
  */
 export const OUTPUT_DIR = OUTPUT_BASE;
 
-/** Return the provider-scoped output directory: output/<providerId>/ */
-export function getOutputDir(providerId: string): string {
-  return path.join(OUTPUT_BASE, providerId);
+/**
+ * Return the provider-scoped output directory: <basePath>/<providerId>/
+ *
+ * If `basePath` is omitted, falls back to the default `OUTPUT_BASE`
+ * (dirname-relative), preserving backward compatibility for CLI mode.
+ */
+export function getOutputDir(providerId: string, basePath?: string): string {
+  const base = basePath ?? OUTPUT_BASE;
+  return path.join(base, providerId);
 }
 
 export function readNavNotes(outputDir?: string): string {
