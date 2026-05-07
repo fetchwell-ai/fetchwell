@@ -1,4 +1,4 @@
-import { ipcMain, safeStorage, app, BrowserWindow, dialog } from 'electron';
+import { ipcMain, safeStorage, app, BrowserWindow, dialog, shell } from 'electron';
 import { ConfigManager, PortalEntry } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
 import { runExtraction, runDiscovery } from './pipeline-bridge';
@@ -154,6 +154,12 @@ export function registerIpcHandlers(userDataPath?: string): void {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
     if (result.canceled) return null;
     return result.filePaths[0];
+  });
+
+  // --- Open in Finder ---
+
+  ipcMain.handle('openInFinder', async (_event, folderPath: string): Promise<void> => {
+    await shell.openPath(folderPath);
   });
 
   ipcMain.handle('runDiscovery', async (_event, portalId: string): Promise<void> => {

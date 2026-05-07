@@ -35,10 +35,14 @@ interface ElectronAPI {
   validateApiKey(key: string): Promise<boolean>;
   runDiscovery(portalId: string): Promise<void>;
   runExtraction(portalId: string): Promise<void>;
+  chooseFolder(): Promise<string | null>;
+  openInFinder(folderPath: string): Promise<void>;
   onProgress(callback: (message: string) => void): void;
+  onComplete(callback: (operation: string, data: { portalId: string }) => void): void;
+  onError(callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void): void;
   on2FARequest(callback: (payload: { portalId: string }) => void): void;
   submit2FACode(payload: { portalId: string; code: string | null }): void;
-  chooseFolder(): Promise<string | null>;
+  removeAllListeners(channel: string): void;
 }
 
 interface Window {

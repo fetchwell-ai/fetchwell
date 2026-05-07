@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import AddPortal from './AddPortal';
+import ProgressPanel from '../components/ProgressPanel';
 
 interface PortalListProps {
   onOpenSettings: () => void;
@@ -9,6 +10,11 @@ type View =
   | { type: 'list' }
   | { type: 'add' }
   | { type: 'edit'; portal: PortalEntry };
+
+interface RunningOperation {
+  portalId: string;
+  operation: 'discovery' | 'extraction';
+}
 
 function formatDate(iso: string | null): string {
   if (!iso) return '';
@@ -27,28 +33,23 @@ interface PortalCardProps {
   portal: PortalEntry;
   onEdit: (portal: PortalEntry) => void;
   onRemove: (portal: PortalEntry) => void;
+  onMap: (portalId: string) => void;
+  onExtract: (portalId: string) => void;
+  runningOperation: RunningOperation | null;
 }
 
-function PortalCard({ portal, onEdit, onRemove }: PortalCardProps) {
-  const [mapStarted, setMapStarted] = useState(false);
-  const [extractStarted, setExtractStarted] = useState(false);
+function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperation }: PortalCardProps) {
+  const isThisRunning =
+    runningOperation !== null && runningOperation.portalId === portal.id;
+  const isAnotherRunning =
+    runningOperation !== null && runningOperation.portalId !== portal.id;
 
-  const handleMap = async () => {
-    setMapStarted(true);
-    try {
-      await window.electronAPI.runDiscovery(portal.id);
-    } finally {
-      setTimeout(() => setMapStarted(false), 2000);
-    }
+  const handleMap = () => {
+    onMap(portal.id);
   };
 
-  const handleExtract = async () => {
-    setExtractStarted(true);
-    try {
-      await window.electronAPI.runExtraction(portal.id);
-    } finally {
-      setTimeout(() => setExtractStarted(false), 2000);
-    }
+  const handleExtract = () => {
+    onExtract(portal.id);
   };
 
   const handleRemove = () => {
@@ -61,6 +62,24 @@ function PortalCard({ portal, onEdit, onRemove }: PortalCardProps) {
   };
 
   const extractDisabled = portal.discoveredAt === null;
+  const anyOperationRunning = runningOperation !== null;
+
+  const mapDisabled = anyOperationRunning;
+  const extractBtnDisabled = extractDisabled || anyOperationRunning;
+
+  const mapTitle = isAnotherRunning
+    ? 'Another operation is in progress'
+    : isThisRunning && runningOperation?.operation === 'discovery'
+      ? 'Discovery running…'
+      : undefined;
+
+  const extractTitle = isAnotherRunning
+    ? 'Another operation is in progress'
+    : extractDisabled
+      ? 'Run Map first to enable extraction.'
+      : isThisRunning && runningOperation?.operation === 'extraction'
+        ? 'Extraction running…'
+        : undefined;
 
   return (
     <div className="portal-card">
@@ -100,9 +119,10 @@ function PortalCard({ portal, onEdit, onRemove }: PortalCardProps) {
           type="button"
           className="btn btn-secondary"
           onClick={handleMap}
-          disabled={mapStarted}
+          disabled={mapDisabled}
+          title={mapTitle}
         >
-          {mapStarted ? 'Started…' : 'Map'}
+          {isThisRunning && runningOperation?.operation === 'discovery' ? 'Running…' : 'Map'}
         </button>
 
         <div className="extract-btn-wrapper">
@@ -110,15 +130,16 @@ function PortalCard({ portal, onEdit, onRemove }: PortalCardProps) {
             type="button"
             className="btn btn-primary"
             onClick={handleExtract}
-            disabled={extractDisabled || extractStarted}
-            title={
-              extractDisabled ? 'Run Map first to enable extraction.' : undefined
-            }
+            disabled={extractBtnDisabled}
+            title={extractTitle}
           >
-            {extractStarted ? 'Started…' : 'Extract'}
+            {isThisRunning && runningOperation?.operation === 'extraction' ? 'Running…' : 'Extract'}
           </button>
-          {extractDisabled && (
+          {extractDisabled && !anyOperationRunning && (
             <p className="extract-tooltip">Run Map first to enable extraction.</p>
+          )}
+          {isAnotherRunning && (
+            <p className="extract-tooltip">Another operation is in progress</p>
           )}
         </div>
 
@@ -138,6 +159,7 @@ export default function PortalList({ onOpenSettings }: PortalListProps) {
   const [view, setView] = useState<View>({ type: 'list' });
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
 
   const loadPortals = useCallback(() => {
     window.electronAPI
@@ -173,6 +195,31 @@ export default function PortalList({ onOpenSettings }: PortalListProps) {
     } catch {
       // Removal failed silently — user can retry
     }
+  };
+
+  const handleMap = async (portalId: string) => {
+    if (runningOperation !== null) return;
+    setRunningOperation({ portalId, operation: 'discovery' });
+    try {
+      await window.electronAPI.runDiscovery(portalId);
+    } catch {
+      // Errors are surfaced via the ProgressPanel error state
+    }
+  };
+
+  const handleExtract = async (portalId: string) => {
+    if (runningOperation !== null) return;
+    setRunningOperation({ portalId, operation: 'extraction' });
+    try {
+      await window.electronAPI.runExtraction(portalId);
+    } catch {
+      // Errors are surfaced via the ProgressPanel error state
+    }
+  };
+
+  const handleProgressPanelClose = () => {
+    setRunningOperation(null);
+    loadPortals();
   };
 
   if (view.type === 'add') {
@@ -233,9 +280,20 @@ export default function PortalList({ onOpenSettings }: PortalListProps) {
               portal={portal}
               onEdit={(p) => setView({ type: 'edit', portal: p })}
               onRemove={handleRemove}
+              onMap={handleMap}
+              onExtract={handleExtract}
+              runningOperation={runningOperation}
             />
           ))}
         </div>
+      )}
+
+      {runningOperation !== null && (
+        <ProgressPanel
+          portalId={runningOperation.portalId}
+          operation={runningOperation.operation}
+          onClose={handleProgressPanelClose}
+        />
       )}
     </div>
   );

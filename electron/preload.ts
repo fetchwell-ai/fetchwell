@@ -1,21 +1,53 @@
-import { contextBridge } from 'electron';
-
-const notImplemented = async (): Promise<never> => {
-  throw new Error('Not implemented');
-};
+import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  getPortals: notImplemented,
-  addPortal: notImplemented,
-  updatePortal: notImplemented,
-  removePortal: notImplemented,
-  getSettings: notImplemented,
-  updateSettings: notImplemented,
-  validateApiKey: notImplemented,
-  runDiscovery: notImplemented,
-  runExtraction: notImplemented,
-  onProgress: notImplemented,
-  on2FARequest: notImplemented,
-  submit2FACode: notImplemented,
-  chooseFolder: notImplemented,
+  // --- Portal management ---
+  getPortals: () => ipcRenderer.invoke('getPortals'),
+  addPortal: (input: unknown) => ipcRenderer.invoke('addPortal', input),
+  updatePortal: (id: string, updates: unknown) => ipcRenderer.invoke('updatePortal', id, updates),
+  removePortal: (id: string) => ipcRenderer.invoke('removePortal', id),
+
+  // --- Settings ---
+  getSettings: () => ipcRenderer.invoke('getSettings'),
+  updateSettings: (updates: unknown) => ipcRenderer.invoke('updateSettings', updates),
+
+  // --- Validation ---
+  validateApiKey: (key: string) => ipcRenderer.invoke('validateApiKey', key),
+
+  // --- Pipeline operations ---
+  runDiscovery: (portalId: string) => ipcRenderer.invoke('runDiscovery', portalId),
+  runExtraction: (portalId: string) => ipcRenderer.invoke('runExtraction', portalId),
+
+  // --- Folder picker ---
+  chooseFolder: () => ipcRenderer.invoke('chooseFolder'),
+
+  // --- Open in Finder ---
+  openInFinder: (folderPath: string) => ipcRenderer.invoke('openInFinder', folderPath),
+
+  // --- Progress event listeners ---
+  onProgress: (callback: (message: string) => void) => {
+    ipcRenderer.on('extraction:log', (_event, message: string) => callback(message));
+    ipcRenderer.on('discovery:log', (_event, message: string) => callback(message));
+  },
+  onComplete: (callback: (operation: string, data: { portalId: string }) => void) => {
+    ipcRenderer.on('extraction:complete', (_event, data: { portalId: string }) => callback('extraction', data));
+    ipcRenderer.on('discovery:complete', (_event, data: { portalId: string }) => callback('discovery', data));
+  },
+  onError: (callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void) => {
+    ipcRenderer.on('extraction:error', (_event, data: { type: string; category: string; message: string; suggestion: string }) => callback('extraction', data));
+    ipcRenderer.on('discovery:error', (_event, data: { type: string; category: string; message: string; suggestion: string }) => callback('discovery', data));
+  },
+
+  // --- 2FA ---
+  on2FARequest: (callback: (payload: { portalId: string }) => void) => {
+    ipcRenderer.on('2fa:request', (_event, data: { portalId: string }) => callback(data));
+  },
+  submit2FACode: (payload: { portalId: string; code: string | null }) => {
+    ipcRenderer.send('2fa:submit', payload);
+  },
+
+  // --- Cleanup ---
+  removeAllListeners: (channel: string) => {
+    ipcRenderer.removeAllListeners(channel);
+  },
 });
