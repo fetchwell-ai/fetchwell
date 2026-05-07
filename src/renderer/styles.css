@@ -851,3 +851,93 @@ body {
   justify-content: flex-end;
   margin-top: 16px;
 }
+
+/* ── ErrorSummary (din.13) ──────────────────────────────────────────── */
+
+.error-summary {
+  border-radius: 10px;
+  border-left: 4px solid #ef4444;
+  background: #fff1f0;
+  padding: 14px 16px;
+  margin-bottom: 4px;
+}
+
+.error-summary--credentials {
+  border-left-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.error-summary--2fa_timeout {
+  border-left-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.error-summary--network {
+  border-left-color: #ef4444;
+  background: #fff1f0;
+}
+
+.error-summary--portal_structure {
+  border-left-color: #f97316;
+  background: #fff7ed;
+}
+
+.error-summary--unknown {
+  border-left-color: #ef4444;
+  background: #fff1f0;
+}
+
+.error-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.error-summary-icon {
+  font-size: 15px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.error-summary-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d1d1f;
+}
+
+.error-summary-message {
+  font-size: 14px;
+  color: #1d1d1f;
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+
+.error-summary-suggestion {
+  font-size: 13px;
+  color: #3d3d3f;
+  margin: 0 0 6px;
+  line-height: 1.5;
+}
+
+.error-summary-rediscover {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.error-summary-rediscover-text {
+  font-size: 13px;
+  color: #3d3d3f;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.error-summary-copy-log {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}

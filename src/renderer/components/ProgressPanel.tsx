@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import ErrorSummary, { resetFailureCount } from './ErrorSummary';
 
 export interface ProgressPanelProps {
   portalId: string;
   operation: 'discovery' | 'extraction';
   onClose: () => void;
+  onReDiscover?: () => void;
 }
 
 type PanelState = 'running' | 'complete' | 'error';
@@ -15,7 +17,7 @@ interface ErrorData {
   suggestion: string;
 }
 
-export default function ProgressPanel({ portalId, operation, onClose }: ProgressPanelProps) {
+export default function ProgressPanel({ portalId, operation, onClose, onReDiscover }: ProgressPanelProps) {
   const [logs, setLogs] = useState<string[]>([]);
   const [panelState, setPanelState] = useState<PanelState>('running');
   const [errorData, setErrorData] = useState<ErrorData | null>(null);
@@ -37,6 +39,7 @@ export default function ProgressPanel({ portalId, operation, onClose }: Progress
 
     const handleComplete = (op: string, data: { portalId: string }) => {
       if (op === operation) {
+        resetFailureCount(data.portalId);
         setCompletedPortalId(data.portalId);
         setPanelState('complete');
       }
@@ -139,12 +142,12 @@ export default function ProgressPanel({ portalId, operation, onClose }: Progress
 
         {panelState === 'error' && errorData && (
           <div className="progress-panel-footer">
-            <div className="progress-error-message">
-              <strong>Error:</strong> {errorData.message}
-            </div>
-            {errorData.suggestion && (
-              <div className="progress-error-suggestion">{errorData.suggestion}</div>
-            )}
+            <ErrorSummary
+              portalId={portalId}
+              error={errorData}
+              logs={logs}
+              onReDiscover={operation === 'extraction' ? onReDiscover : undefined}
+            />
             <div className="progress-panel-actions">
               <button
                 type="button"
