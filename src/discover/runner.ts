@@ -34,7 +34,7 @@ export async function discoverProviderById(provider: ProviderConfig, basePath?: 
   const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
-  console.log("  Health Record Fetcher — Portal Discovery");
+  console.log("  FetchWell — Portal Discovery");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
   console.log(`  Mode: ${providerType}`);
   console.log("=".repeat(60));

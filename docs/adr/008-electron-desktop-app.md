@@ -15,7 +15,7 @@ The extraction pipeline works well as a CLI tool, but the target audience for pu
 
 ## Decision
 
-Ship as an Electron desktop app called "Health Record Fetcher". The existing `src/` extraction and discovery pipeline runs in Electron's main process (full Node.js environment). A React renderer provides the GUI. Credentials are encrypted via Electron `safeStorage` (macOS Keychain). The user provides their own Anthropic API key.
+Ship as an Electron desktop app called "FetchWell". The existing `src/` extraction and discovery pipeline runs in Electron's main process (full Node.js environment). A React renderer provides the GUI. Credentials are encrypted via Electron `safeStorage` (macOS Keychain). The user provides their own Anthropic API key.
 
 Key design choices:
 - Discovery and extraction are separate user-visible operations (discover maps the portal, extract pulls records).
@@ -29,5 +29,5 @@ Key design choices:
 - The existing pipeline code needs thin adapter layers (env-bridge, IPC logging, UI-based 2FA) but no fundamental rewrites.
 - The project gains a significant new surface area: Electron shell, React UI, IPC layer, credential management, app signing/notarization.
 - Distribution via DMG + GitHub Releases with electron-updater for auto-updates.
-- The app name "Health Record Fetcher" is portal-agnostic — supports future non-MyChart portals.
+- The app name "FetchWell" is portal-agnostic — supports future non-MyChart portals.
 - Users must obtain and pay for their own Anthropic API key, which is a friction point but eliminates all data-handling liability.
