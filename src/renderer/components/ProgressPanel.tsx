@@ -57,12 +57,12 @@ export default function ProgressPanel({ portalId, operation, onClose }: Progress
     window.electronAPI.onError(handleError);
 
     return () => {
-      const logChannel = operation === 'extraction' ? 'extraction:log' : 'discovery:log';
-      const completeChannel = operation === 'extraction' ? 'extraction:complete' : 'discovery:complete';
-      const errorChannel = operation === 'extraction' ? 'extraction:error' : 'discovery:error';
-      window.electronAPI.removeAllListeners(logChannel);
-      window.electronAPI.removeAllListeners(completeChannel);
-      window.electronAPI.removeAllListeners(errorChannel);
+      window.electronAPI.removeAllListeners('extraction:log');
+      window.electronAPI.removeAllListeners('discovery:log');
+      window.electronAPI.removeAllListeners('extraction:complete');
+      window.electronAPI.removeAllListeners('discovery:complete');
+      window.electronAPI.removeAllListeners('extraction:error');
+      window.electronAPI.removeAllListeners('discovery:error');
     };
   }, [operation]);
 
