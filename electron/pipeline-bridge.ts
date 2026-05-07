@@ -89,6 +89,9 @@ interface RunnerCommand {
  */
 const pendingOtpResolvers = new Map<string, (code: string | null) => void>();
 
+/** Track active pipeline runs to prevent concurrent runs for the same portal. */
+const activeRuns = new Set<string>();
+
 /**
  * Register the ipcMain handler for '2fa:submit' once.
  * The renderer sends: { portalId, code }
@@ -168,6 +171,11 @@ function runSubprocess(
   logChannel: string,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (activeRuns.has(config.portalId)) {
+      reject(new Error(`A pipeline operation is already running for portal: ${config.portalId}`));
+      return;
+    }
+    activeRuns.add(config.portalId);
     ensureTwoFaHandler();
 
     // Path to the runner script, resolved relative to this file
@@ -248,11 +256,10 @@ function runSubprocess(
       },
     };
 
-    // Send the command to the child immediately
-    child.send(runnerCommand);
-
+    // Attach all event listeners before sending the command to avoid
+    // missing events if the child process exits synchronously.
     child.on('close', (code: number | null) => {
-      // Clean up any pending 2FA resolver for this portal
+      activeRuns.delete(config.portalId);
       pendingOtpResolvers.delete(config.portalId);
 
       if (code === 0) {
@@ -263,9 +270,13 @@ function runSubprocess(
     });
 
     child.on('error', (err: Error) => {
+      activeRuns.delete(config.portalId);
       pendingOtpResolvers.delete(config.portalId);
       reject(err);
     });
+
+    // Send the command after all listeners are registered
+    child.send(runnerCommand);
   });
 }
 
