@@ -13,6 +13,8 @@ import { isAuthPage, getAuthModule } from "../auth.js";
 import { type ProviderConfig } from "../config.js";
 import { getOutputDir } from "../extract/helpers.js";
 import { discoverPortal } from "./index.js";
+import { loadNavMap, saveNavMap } from "./nav-map.js";
+import { detectLoginFormType } from "../auth/detect-login-form.js";
 
 /**
  * Run portal discovery for a single provider.
@@ -59,11 +61,31 @@ export async function discoverProviderById(provider: ProviderConfig): Promise<vo
   }
   console.log();
 
+  // Check whether a nav-map already exists for this provider.
+  // If it does, this is a re-run and we should skip login form detection
+  // (the user may have overridden the setting manually).
+  const existingNavMap = loadNavMap(provider.id);
+  const isFirstDiscovery = existingNavMap === null;
+
   try {
     console.log(`Step 2: Navigating to ${portalUrl}...`);
     await browser.navigate(portalUrl);
     console.log("Page loaded.");
     console.log();
+
+    // Detect login form type on the first discovery run only.
+    // The browser is on the login page at this point (portalUrl).
+    let detectedLoginForm: "two-step" | "single-page" | undefined;
+    if (isFirstDiscovery) {
+      console.log("Step 2a: Detecting login form type...");
+      await new Promise((r) => setTimeout(r, 2000));
+      detectedLoginForm = await detectLoginFormType(browser);
+      console.log(`   Login form type detected: ${detectedLoginForm}`);
+      console.log();
+    } else {
+      console.log("   Skipping login form detection (nav-map already exists).");
+      console.log();
+    }
 
     let homeUrl: string;
 
@@ -107,12 +129,22 @@ export async function discoverProviderById(provider: ProviderConfig): Promise<vo
     console.log();
     const navMap = await discoverPortal(browser, provider.id, homeUrl);
 
+    // Persist the detected login form type in the nav-map (first discovery only).
+    if (detectedLoginForm !== undefined) {
+      navMap.detectedLoginForm = detectedLoginForm;
+      saveNavMap(navMap, provider.id);
+      console.log(`   Detected login form type "${detectedLoginForm}" stored in nav-map.`);
+    }
+
     console.log();
     console.log("=".repeat(60));
     console.log("  DISCOVERY COMPLETE");
     console.log("=".repeat(60));
     console.log();
     console.log(`  Nav map saved to output/${provider.id}/nav-map.json`);
+    if (navMap.detectedLoginForm) {
+      console.log(`  Detected login form: ${navMap.detectedLoginForm}`);
+    }
     console.log(`  Found ${Object.keys(navMap.sections).length}/4 sections`);
     for (const [key, sec] of Object.entries(navMap.sections)) {
       console.log(`    ${key}: ${sec.steps.length} navigation step(s)`);
