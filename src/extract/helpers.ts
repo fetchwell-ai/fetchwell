@@ -158,7 +158,7 @@ export function buildIndex(outputDir?: string, providerId?: string): void {
     { name: "Messages", pdf: `messages${suffix}.pdf` },
   ];
 
-  let body = `<h1>MyChart Health Records</h1>\n`;
+  let body = `<h1>Health Records</h1>\n`;
   body += `<p class="meta">Generated: ${new Date().toISOString()}</p>\n`;
   body += `<p>Upload these PDF files to Claude.ai to analyze your records.</p>\n<ul>\n`;
 
@@ -183,7 +183,7 @@ export function buildIndex(outputDir?: string, providerId?: string): void {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>MyChart Health Records</title>
+<title>Health Records</title>
 <style>${css}</style>
 </head>
 <body>
