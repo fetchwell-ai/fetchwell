@@ -1,4 +1,4 @@
-# Health Record Fetcher — Claude Code Instructions
+# FetchWell — Claude Code Instructions
 
 ## Project overview
 

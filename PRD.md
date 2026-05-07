@@ -1,10 +1,10 @@
-# Health Record Fetcher — PRD + Technical Design
+# FetchWell — PRD + Technical Design
 
 ## 1. Product Overview
 
-Health Record Fetcher is a macOS desktop app that extracts medical records from patient portals as PDFs. It runs an AI-powered browser agent locally on the user's machine — no data leaves their device except LLM API calls to Anthropic (using the user's own API key). The extracted PDFs are saved to a local folder, ready to upload to Claude.ai or use however the user wants.
+FetchWell is a macOS desktop app that extracts medical records from patient portals as PDFs. It runs an AI-powered browser agent locally on the user's machine — no data leaves their device except LLM API calls to Anthropic (using the user's own API key). The extracted PDFs are saved to a local folder, ready to upload to Claude.ai or use however the user wants.
 
-The app wraps the existing `mychart-agent` extraction pipeline in an Electron shell. The core automation is already built and working against multiple portals (UCSF MyChart, Stanford MyChart, OneMedical). This project adds a GUI, credential management, and a user-friendly 2FA flow.
+The app wraps the existing extraction pipeline in an Electron shell. The core automation is already built and working against multiple portals (UCSF MyChart, Stanford MyChart, OneMedical). This project adds a GUI, credential management, and a user-friendly 2FA flow.
 
 ### Target user
 

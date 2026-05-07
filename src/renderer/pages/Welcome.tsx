@@ -13,7 +13,7 @@ export default function Welcome({ onComplete }: WelcomeProps) {
     <div className="page">
       <div className="wizard-container">
         <div className="wizard-header">
-          <h1>Health Record Fetcher</h1>
+          <h1>FetchWell</h1>
           <p>Set up your account in a few steps</p>
         </div>
         {step === 'overview' && (
@@ -42,7 +42,7 @@ function OverviewStep({ onNext }: OverviewStepProps) {
       <h2>Welcome</h2>
       <div className="privacy-disclosure">
         <p>
-          Health Record Fetcher downloads your medical records from patient
+          FetchWell downloads your medical records from patient
           portals. It runs a browser on your computer to log in and save records
           as PDFs. <strong>Your data never leaves your machine.</strong>
         </p>

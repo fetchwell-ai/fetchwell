@@ -44,7 +44,7 @@ export async function extractProvider(provider: ProviderConfig, incremental = fa
   const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
-  console.log("  Health Record Fetcher — Record Extraction");
+  console.log("  FetchWell — Record Extraction");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
   console.log(`  Mode: ${providerType}`);
   if (incremental) {
