@@ -768,3 +768,86 @@ body {
   animation: progress-spin 0.8s linear infinite;
   flex-shrink: 0;
 }
+
+/* ── TwoFactorModal (din.10) ─────────────────────────────────────────── */
+
+.twofa-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+
+.twofa-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 400px;
+  max-width: calc(100vw - 48px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.twofa-modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f0f0f2;
+}
+
+.twofa-modal-title {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+  color: #1d1d1f;
+}
+
+.twofa-modal-body {
+  padding: 20px 24px 24px;
+}
+
+.twofa-message {
+  font-size: 14px;
+  color: #3d3d3f;
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.twofa-timeout-message {
+  font-size: 14px;
+  color: #ff3b30;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.twofa-input-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: #1d1d1f;
+}
+
+.twofa-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 16px;
+  font-family: inherit;
+  border: 1px solid #d2d2d7;
+  border-radius: 8px;
+  background: #fff;
+  color: #1d1d1f;
+  outline: none;
+  letter-spacing: 0.1em;
+  transition: border-color 0.15s;
+}
+
+.twofa-input:focus {
+  border-color: #0071e3;
+}
+
+.twofa-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+}

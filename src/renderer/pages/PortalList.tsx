@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import AddPortal from './AddPortal';
 import ProgressPanel from '../components/ProgressPanel';
+import TwoFactorModal from '../components/TwoFactorModal';
 
 interface PortalListProps {
   onOpenSettings: () => void;
@@ -160,6 +161,7 @@ export default function PortalList({ onOpenSettings }: PortalListProps) {
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
+  const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
 
   const loadPortals = useCallback(() => {
     window.electronAPI
@@ -178,6 +180,20 @@ export default function PortalList({ onOpenSettings }: PortalListProps) {
   useEffect(() => {
     loadPortals();
   }, [loadPortals]);
+
+  useEffect(() => {
+    if (runningOperation === null) return;
+
+    const handle2FARequest = (payload: { portalId: string }) => {
+      setTwoFaPortalId(payload.portalId);
+    };
+
+    window.electronAPI.on2FARequest(handle2FARequest);
+
+    return () => {
+      window.electronAPI.removeAllListeners('2fa:request');
+    };
+  }, [runningOperation]);
 
   const handleSave = () => {
     setView({ type: 'list' });
@@ -293,6 +309,13 @@ export default function PortalList({ onOpenSettings }: PortalListProps) {
           portalId={runningOperation.portalId}
           operation={runningOperation.operation}
           onClose={handleProgressPanelClose}
+        />
+      )}
+
+      {twoFaPortalId !== null && (
+        <TwoFactorModal
+          portalId={twoFaPortalId}
+          onDismiss={() => setTwoFaPortalId(null)}
         />
       )}
     </div>
