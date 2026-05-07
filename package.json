@@ -8,7 +8,7 @@
     "discover": "tsx src/discover/cli.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
-    "electron:dev": "vite build && tsc -p electron/tsconfig.json && electron dist-electron/main.js",
+    "electron:dev": "vite build && tsc -p electron/tsconfig.json && echo '{\"type\":\"commonjs\"}' > dist-electron/package.json && electron dist-electron/main.js",
     "test:unit": "vitest run",
     "test:e2e": "playwright test --config playwright.config.ts"
   },

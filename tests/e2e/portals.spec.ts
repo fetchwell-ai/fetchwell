@@ -11,22 +11,18 @@ test('portal list is empty after completing wizard', async ({ page }) => {
 test('add a portal', async ({ page }) => {
   await completeWelcome(page);
 
-  // Click Add Portal
-  await page.click('text=+ Add Portal');
+  // Click Add Portal button in header
+  await page.click('.portal-list-header >> text=+ Add Portal');
 
   // Should now be on the Add Portal form
   await page.waitForSelector('h1:has-text("Add Portal")');
-  await expect(page.locator('h1')).toContainText('Add Portal');
 
-  // Fill in the portal URL (name auto-populates from URL)
+  // Fill in the portal URL and name
   await page.fill('#portal-url', 'https://mychart.example.com');
-
-  // Wait for name auto-population, then clear and set explicitly
-  await page.waitForTimeout(100);
   await page.fill('#portal-name', 'Example Health');
 
-  // Submit the form
-  await page.click('text=Add Portal');
+  // Submit via the submit button (not the h1)
+  await page.click('button[type="submit"]');
 
   // Should be back on the portal list with the new portal
   await page.waitForSelector('h1:has-text("Your Portals")');
@@ -37,23 +33,22 @@ test('edit an existing portal', async ({ page }) => {
   await completeWelcome(page);
 
   // Add a portal first
-  await page.click('text=+ Add Portal');
+  await page.click('.portal-list-header >> text=+ Add Portal');
   await page.waitForSelector('#portal-url');
   await page.fill('#portal-url', 'https://mychart.testclinic.org');
   await page.fill('#portal-name', 'Test Clinic');
-  await page.click('text=Add Portal');
+  await page.click('button[type="submit"]');
 
   // Back on portal list — click the edit (gear) button
   await page.waitForSelector('.portal-card-name:has-text("Test Clinic")');
-  await page.click('aria-label=Edit portal');
+  await page.click('[aria-label="Edit portal"]');
 
   // Should be on Edit Portal form
   await page.waitForSelector('h1:has-text("Edit Portal")');
-  await expect(page.locator('h1')).toContainText('Edit Portal');
 
   // Update the name
   await page.fill('#portal-name', 'Test Clinic Updated');
-  await page.click('text=Save Changes');
+  await page.click('button[type="submit"]');
 
   // Back on portal list — portal should have updated name
   await page.waitForSelector('h1:has-text("Your Portals")');
@@ -64,11 +59,11 @@ test('remove a portal', async ({ page }) => {
   await completeWelcome(page);
 
   // Add a portal
-  await page.click('text=+ Add Portal');
+  await page.click('.portal-list-header >> text=+ Add Portal');
   await page.waitForSelector('#portal-url');
   await page.fill('#portal-url', 'https://mychart.removetest.com');
   await page.fill('#portal-name', 'Remove Me Portal');
-  await page.click('text=Add Portal');
+  await page.click('button[type="submit"]');
 
   // Back on portal list — portal should appear
   await page.waitForSelector('.portal-card-name:has-text("Remove Me Portal")');
@@ -76,8 +71,8 @@ test('remove a portal', async ({ page }) => {
   // Set up dialog handler to accept the confirmation
   page.on('dialog', (dialog) => dialog.accept());
 
-  // Click remove
-  await page.click('text=Remove');
+  // Click remove button
+  await page.click('.btn-danger:has-text("Remove")');
 
   // Portal should be gone; empty state should appear
   await page.waitForSelector('.portal-empty-state');
@@ -87,7 +82,7 @@ test('remove a portal', async ({ page }) => {
 test('cancel adding a portal returns to list', async ({ page }) => {
   await completeWelcome(page);
 
-  await page.click('text=+ Add Portal');
+  await page.click('.portal-list-header >> text=+ Add Portal');
   await page.waitForSelector('h1:has-text("Add Portal")');
 
   // Cancel and go back
@@ -100,11 +95,11 @@ test('cancel adding a portal returns to list', async ({ page }) => {
 test('add portal requires URL', async ({ page }) => {
   await completeWelcome(page);
 
-  await page.click('text=+ Add Portal');
+  await page.click('.portal-list-header >> text=+ Add Portal');
   await page.waitForSelector('#portal-url');
 
-  // Submit without filling URL
-  await page.click('text=Add Portal');
+  // Submit without filling URL — click the submit button specifically
+  await page.click('button[type="submit"]');
 
   await page.waitForSelector('.form-error');
   await expect(page.locator('.form-error')).toContainText('URL is required');

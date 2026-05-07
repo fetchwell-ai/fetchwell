@@ -3,6 +3,16 @@ import type { ElectronApplication, Page } from '@playwright/test';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { createRequire } from 'module';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Resolve the local Electron binary path so Playwright doesn't try to download
+// its own Electron — the project already has electron installed as a devDependency.
+const require = createRequire(import.meta.url);
+const electronPath: string = require('electron') as string;
 
 type TestFixtures = {
   app: ElectronApplication;
@@ -13,6 +23,7 @@ export const test = base.extend<TestFixtures>({
   app: async ({}, use) => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hrf-test-'));
     const app = await electron.launch({
+      executablePath: electronPath,
       args: [path.join(__dirname, '../../dist-electron/main.js')],
       env: {
         ...process.env,
