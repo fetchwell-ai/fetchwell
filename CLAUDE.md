@@ -1,4 +1,4 @@
-# MyChart Agent — Claude Code Instructions
+# Health Record Fetcher — Claude Code Instructions
 
 ## Project overview
 

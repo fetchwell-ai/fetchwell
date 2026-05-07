@@ -1,7 +1,7 @@
 /**
- * MyChart Agent — Extraction Pipeline
+ * Health Record Fetcher — Extraction Pipeline
  *
- * Logs into Epic MyChart, extracts health records as PDFs, and
+ * Logs into health portals (e.g. Epic MyChart), extracts health records as PDFs, and
  * builds a browsable local index.
  *
  * Usage:
@@ -164,7 +164,7 @@ async function probeProvider(provider: ProviderConfig) {
   const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
-  console.log("  MyChart Agent — Probe Mode");
+  console.log("  Health Record Fetcher — Probe Mode");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
   console.log(`  Mode: ${providerType}`);
   console.log("  (navigation smoke test — no PDFs will be written)");
@@ -310,7 +310,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
   const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
-  console.log("  MyChart Agent — Record Extraction");
+  console.log("  Health Record Fetcher — Record Extraction");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
   console.log(`  Mode: ${providerType}`);
   if (incremental) {
