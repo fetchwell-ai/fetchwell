@@ -398,7 +398,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
       }
     } else {
       console.log("Step 3: Login");
-      console.log("   Your credentials are entered locally and sent directly to MyChart.");
+      console.log("   Your credentials are entered locally and sent directly to the health portal.");
       console.log("   They are NOT stored or logged anywhere.");
       console.log();
       await authModule.login(browser, authConfig, debugUrl);
