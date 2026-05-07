@@ -11,6 +11,8 @@ export interface NavMapSection {
 export interface NavMap {
   discoveredAt: string;      // ISO timestamp
   portalName: string;        // e.g. "Stanford MyHealth"
+  /** Login form strategy detected during first discovery run. */
+  detectedLoginForm?: "two-step" | "single-page";
   sections: {
     labs?: NavMapSection;
     visits?: NavMapSection;
