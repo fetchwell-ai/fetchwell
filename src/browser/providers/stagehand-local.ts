@@ -13,16 +13,22 @@ import { getPageText, getPageHtml, stripFixedElements } from "../page-eval.js";
 export class StagehandLocalProvider implements BrowserProvider {
   private stagehand!: Stagehand;
   private headless: boolean;
+  private apiKey?: string;
 
-  constructor(opts: { headless?: boolean } = {}) {
+  constructor(opts: { headless?: boolean; apiKey?: string } = {}) {
     this.headless = opts.headless ?? false;
+    this.apiKey = opts.apiKey;
   }
 
   async init(): Promise<void> {
+    const resolvedApiKey = this.apiKey;
+    if (!resolvedApiKey) {
+      throw new Error("StagehandLocalProvider requires an apiKey");
+    }
     // Use AISdkClient with @ai-sdk/anthropic to bypass Stagehand's model whitelist,
     // allowing us to use current Claude models (claude-sonnet-4-6, etc.)
     const anthropic = createAnthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY!,
+      apiKey: resolvedApiKey,
     });
     // Wrap the model to inject maxTokens — Stagehand's AISdkClient does not
     // pass maxTokens to generateObject, causing a 4096-token truncation.

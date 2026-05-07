@@ -94,7 +94,7 @@ async function run() {
   }
 
   console.log("Step 1: Creating browser session...");
-  const browser = await createBrowserProvider();
+  const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
   console.log("Browser session created!");
 
   const debugUrl = await browser.getDebugUrl();
