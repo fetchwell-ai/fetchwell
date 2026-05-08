@@ -11,6 +11,10 @@ import * as path from "node:path";
 import { type BrowserProvider, type ObserveResult } from "../browser/interface.js";
 import { type NavMap, saveNavMap } from "./nav-map.js";
 import { OUTPUT_BASE } from "../extract/helpers.js";
+import { type StructuredProgressEvent } from "../progress-events.js";
+
+/** Optional callback for emitting structured progress events. */
+type ProgressEmitter = (event: StructuredProgressEvent) => void;
 
 // ---------------------------------------------------------------------------
 // Keyword mapping: extraction target -> words the AI might use to describe it
@@ -137,16 +141,21 @@ function buildItemInstruction(section: SectionKey): string {
  *
  * Assumes the browser is already logged in and on the post-login dashboard.
  *
- * @param browser  - A logged-in BrowserProvider instance
- * @param providerId - The provider ID (e.g. "ucsf") for output paths
- * @param homeUrl  - The post-login dashboard URL
+ * @param browser       - A logged-in BrowserProvider instance
+ * @param providerId    - The provider ID (e.g. "ucsf") for output paths
+ * @param homeUrl       - The post-login dashboard URL
+ * @param emitProgress  - Optional callback for structured progress events
  * @returns The discovered NavMap
  */
 export async function discoverPortal(
   browser: BrowserProvider,
   providerId: string,
   homeUrl: string,
+  emitProgress?: ProgressEmitter,
 ): Promise<NavMap> {
+  const emit = (event: StructuredProgressEvent) => {
+    if (emitProgress) emitProgress(event);
+  };
   const discoverDir = path.join(OUTPUT_BASE, providerId, "discover");
   fs.mkdirSync(discoverDir, { recursive: true });
 
@@ -202,6 +211,7 @@ export async function discoverPortal(
     // All 4 sections found — stop exploring
     if (visited.size === 4) break;
 
+    emit({ type: 'status-message', phase: 'navigate', message: `Looking for ${navEl.description.toLowerCase()}...` });
     console.log(`Discovery: exploring "${navEl.description}"...`);
 
     // Navigate back to home first to have a clean starting point
@@ -253,6 +263,7 @@ export async function discoverPortal(
     const matched = matchSection(pageDescription);
 
     if (matched && !visited.has(matched)) {
+      emit({ type: 'status-message', phase: 'navigate', message: `Mapping ${matched}...` });
       console.log(`   Matched extraction target: ${matched}`);
       visited.add(matched);
 

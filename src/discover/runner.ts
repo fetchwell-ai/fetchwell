@@ -63,6 +63,7 @@ export async function discoverProviderById(
     console.log();
   }
 
+  emit({ type: 'status-message', phase: 'login', message: 'Opening your portal...' });
   console.log("Step 1: Creating browser session...");
   const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
   console.log("Browser session created!");
@@ -88,6 +89,7 @@ export async function discoverProviderById(
   try {
     // ── Phase: login ──────────────────────────────────────────────────────
     emit({ type: 'phase-change', phase: 'login', status: 'running', message: 'Logging in...' });
+    emit({ type: 'status-message', phase: 'login', message: 'Navigating to sign-in page...' });
 
     console.log(`Step 2: Navigating to ${portalUrl}...`);
     await browser.navigate(portalUrl);
@@ -111,6 +113,7 @@ export async function discoverProviderById(
     let homeUrl: string;
 
     if (savedSession && browser.loadSession) {
+      emit({ type: 'status-message', phase: 'login', message: 'Restoring saved session...' });
       console.log("Step 3: Restoring saved session...");
       await browser.loadSession(savedSession);
       const verifyUrl = savedSession.homeUrl ?? portalUrl;
@@ -122,6 +125,7 @@ export async function discoverProviderById(
         homeUrl = await browser.url();
       } else {
         console.log("   Session expired or invalid. Logging in fresh...");
+        emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
         await browser.navigate(portalUrl);
         await new Promise((r) => setTimeout(r, 2000));
         await authModule.login(browser, authConfig, debugUrl);
@@ -134,6 +138,7 @@ export async function discoverProviderById(
         }
       }
     } else {
+      emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
       console.log("Step 3: Login");
       await authModule.login(browser, authConfig, debugUrl);
       homeUrl = await browser.url();
@@ -150,10 +155,11 @@ export async function discoverProviderById(
 
     // ── Phase: navigate ───────────────────────────────────────────────────
     emit({ type: 'phase-change', phase: 'navigate', status: 'running', message: 'Discovering portal structure...' });
+    emit({ type: 'status-message', phase: 'navigate', message: 'Mapping your portal...' });
 
     console.log("Step 4: Discovering portal structure...");
     console.log();
-    const navMap = await discoverPortal(browser, provider.id, homeUrl);
+    const navMap = await discoverPortal(browser, provider.id, homeUrl, emitProgress);
 
     // Persist the detected login form type in the nav-map (first discovery only).
     if (detectedLoginForm !== undefined) {
@@ -162,7 +168,9 @@ export async function discoverProviderById(
       console.log(`   Detected login form type "${detectedLoginForm}" stored in nav-map.`);
     }
 
+    emit({ type: 'status-message', phase: 'navigate', message: 'Building navigation map...' });
     emit({ type: 'phase-change', phase: 'navigate', status: 'complete', message: `Discovered ${Object.keys(navMap.sections).length}/4 sections` });
+    emit({ type: 'status-message', phase: 'navigate', message: 'Portal mapped successfully' });
 
     console.log();
     console.log("=".repeat(60));
