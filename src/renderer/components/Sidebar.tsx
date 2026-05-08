@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '../lib/utils';
+import fetchWellMark from '../assets/fetchwell-mark.svg';
 
 interface SidebarProps {
   portals: PortalEntry[];
@@ -36,11 +37,9 @@ export default function Sidebar({
         } as React.CSSProperties}
       />
 
-      {/* App name */}
+      {/* App logo */}
       <div className="px-4 pb-3 flex-shrink-0">
-        <span className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight select-none">
-          FetchWell
-        </span>
+        <img src={fetchWellMark} alt="FetchWell" className="h-6 w-6 select-none" />
       </div>
 
       {/* Portals section label */}
