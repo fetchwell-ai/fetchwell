@@ -213,12 +213,12 @@ export async function discoverPortal(
   // not the public hospital website navigation (Doctors & Providers, etc.).
   console.log("Discovery: observing patient portal navigation elements...");
   const navElements = await browser.observe(
-    "This is a patient health portal (like MyChart or MyHealth). " +
-    "Look for the PATIENT PORTAL navigation bar or tabs — these are links " +
-    "that lead to health record sections like 'Messages', 'Visits', 'Appointments', " +
-    "'My Medical Record', 'Test Results', 'Medications', 'Procedures', 'Billing'. " +
-    "They are typically in a horizontal tab bar below the hospital logo, or in a " +
-    "sidebar/hamburger menu within the patient portal. " +
+    "This is a patient health portal (such as MyChart, MyHealth, FollowMyHealth, " +
+    "Cerner, or Athena). Find all navigation elements within the patient portal " +
+    "that lead to health record sections — for example: Messages, Visits, " +
+    "Appointments, Test Results, Medications, My Medical Record, Procedures, " +
+    "or Billing. These may appear anywhere on the page (tab bars, sidebars, " +
+    "dropdown menus, card links, etc.). " +
     "Do NOT include public hospital website navigation (like 'Doctors & Providers', " +
     "'Clinics & Locations', 'Conditions & Treatments', 'Patients & Visitors', " +
     "'About Us', 'Careers', 'Clinical Trials', etc.). " +
