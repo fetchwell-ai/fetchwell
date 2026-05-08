@@ -13,10 +13,13 @@ export interface PortalEntry {
   lastExtractedAt: string | null;
 }
 
+export type ThemePreference = 'system' | 'light' | 'dark';
+
 export interface AppConfig {
   downloadFolder: string;
   showBrowser: boolean;
   incrementalExtraction: boolean;
+  theme: ThemePreference;
   portals: PortalEntry[];
 }
 
@@ -24,6 +27,7 @@ const DEFAULT_CONFIG: AppConfig = {
   downloadFolder: path.join(os.homedir(), 'Documents', 'HealthRecords'),
   showBrowser: false,
   incrementalExtraction: true,
+  theme: 'system',
   portals: [],
 };
 
@@ -118,15 +122,16 @@ export class ConfigManager {
     this.save();
   }
 
-  getSettings(): Pick<AppConfig, 'downloadFolder' | 'showBrowser' | 'incrementalExtraction'> {
+  getSettings(): Pick<AppConfig, 'downloadFolder' | 'showBrowser' | 'incrementalExtraction' | 'theme'> {
     return {
       downloadFolder: this.config.downloadFolder,
       showBrowser: this.config.showBrowser,
       incrementalExtraction: this.config.incrementalExtraction,
+      theme: this.config.theme ?? 'system',
     };
   }
 
-  updateSettings(updates: Partial<Pick<AppConfig, 'downloadFolder' | 'showBrowser' | 'incrementalExtraction'>>): void {
+  updateSettings(updates: Partial<Pick<AppConfig, 'downloadFolder' | 'showBrowser' | 'incrementalExtraction' | 'theme'>>): void {
     if (updates.downloadFolder !== undefined) {
       this.config.downloadFolder = updates.downloadFolder;
     }
@@ -135,6 +140,9 @@ export class ConfigManager {
     }
     if (updates.incrementalExtraction !== undefined) {
       this.config.incrementalExtraction = updates.incrementalExtraction;
+    }
+    if (updates.theme !== undefined) {
+      this.config.theme = updates.theme;
     }
     this.save();
   }

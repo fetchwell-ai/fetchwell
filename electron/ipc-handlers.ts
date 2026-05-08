@@ -1,5 +1,5 @@
 import { ipcMain, safeStorage, app, BrowserWindow, dialog, shell } from 'electron';
-import { ConfigManager, PortalEntry } from './config';
+import { ConfigManager, PortalEntry, ThemePreference } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
 import { runExtraction, runDiscovery } from './pipeline-bridge';
 
@@ -99,6 +99,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     downloadFolder?: string;
     showBrowser?: boolean;
     incrementalExtraction?: boolean;
+    theme?: ThemePreference;
     apiKey?: string;
   }): void => {
     const { apiKey, ...configUpdates } = updates;

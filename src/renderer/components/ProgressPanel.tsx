@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import ErrorSummary, { resetFailureCount } from './ErrorSummary';
 import { Button } from './ui/button';
 
@@ -370,10 +371,26 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
 
   const hasAnyStructuredEvent = Object.values(structured.phases).some(p => p.status !== 'pending') ||
     Object.keys(structured.categories).length > 0;
+  const shouldReduce = useReducedMotion();
+
+  // ease-out cubic bezier
+  const easeOut: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45">
-      <div className="progress-panel flex w-[600px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-80px)] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_8px_rgba(0,0,0,0.08)]">
+    <motion.div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45"
+      initial={shouldReduce ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={shouldReduce ? undefined : { opacity: 0 }}
+      transition={shouldReduce ? undefined : { duration: 0.15 }}
+    >
+      <motion.div
+        className="progress-panel flex w-[600px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-80px)] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_8px_rgba(0,0,0,0.08)]"
+        initial={shouldReduce ? false : { opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={shouldReduce ? undefined : { opacity: 0, scale: 0.97, y: 4 }}
+        transition={shouldReduce ? undefined : { duration: 0.2, ease: easeOut }}
+      >
         {/* Header */}
         <div className="flex flex-shrink-0 items-center justify-between border-b border-[#f0f0f2] px-6 pb-4 pt-5">
           <h2 className="m-0 text-[17px] font-semibold text-[#1d1d1f]">
@@ -549,7 +566,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

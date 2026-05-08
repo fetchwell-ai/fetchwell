@@ -14,10 +14,10 @@ export default function Welcome({ onComplete }: WelcomeProps) {
   const [step, setStep] = useState<Step>('overview');
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center px-6 py-10">
+    <div className="flex flex-1 flex-col items-center justify-center px-6 py-10 bg-[#f5f5f7] dark:bg-[#1c1c1e]">
       <div className="w-full max-w-[520px]">
         <div className="mb-8 text-center">
-          <h1 className="m-0 mb-2 text-2xl font-semibold text-[#1d1d1f]">FetchWell</h1>
+          <h1 className="m-0 mb-2 text-2xl font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">FetchWell</h1>
           <p className="m-0 text-[13px] text-[#6e6e73]">Set up your account in a few steps</p>
         </div>
         {step === 'overview' && (
@@ -43,8 +43,8 @@ interface OverviewStepProps {
 function OverviewStep({ onNext }: OverviewStepProps) {
   return (
     <Card className="p-8">
-      <h2 className="m-0 mb-4 text-[18px] font-semibold">Welcome</h2>
-      <div className="mb-6 rounded-lg bg-[#f5f5f7] p-4 text-[13px] leading-relaxed text-[#3d3d3f]">
+      <h2 className="m-0 mb-4 text-[18px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Welcome</h2>
+      <div className="mb-6 rounded-lg bg-[#f5f5f7] dark:bg-[#1c1c1e] p-4 text-[13px] leading-relaxed text-[#3d3d3f] dark:text-[#aeaeb2]">
         <p className="m-0 mb-3">
           FetchWell downloads your medical records from patient
           portals. It runs a browser on your computer to log in and save records
@@ -100,7 +100,7 @@ function ApiKeyStep({ onNext }: ApiKeyStepProps) {
 
   return (
     <Card className="p-8">
-      <h2 className="m-0 mb-4 text-[18px] font-semibold">Anthropic API Key</h2>
+      <h2 className="m-0 mb-4 text-[18px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Anthropic API Key</h2>
       <form onSubmit={handleSubmit}>
         <div className="mb-5">
           <Label htmlFor="api-key" className="mb-1.5">API Key</Label>
@@ -170,14 +170,14 @@ function DownloadFolderStep({ onFinish }: DownloadFolderStepProps) {
 
   return (
     <Card className="p-8">
-      <h2 className="m-0 mb-4 text-[18px] font-semibold">Download Folder</h2>
-      <p className="mb-4 text-[14px] leading-relaxed text-[#3d3d3f]">
+      <h2 className="m-0 mb-4 text-[18px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Download Folder</h2>
+      <p className="mb-4 text-[14px] leading-relaxed text-[#3d3d3f] dark:text-[#aeaeb2]">
         Records will be saved as PDFs in the folder you choose below. You can
         change this later in Settings.
       </p>
       {!loading && (
-        <div className="mb-2 flex items-center gap-2 rounded-lg bg-[#f5f5f7] px-3 py-2.5">
-          <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-[#3d3d3f]">
+        <div className="mb-2 flex items-center gap-2 rounded-lg bg-[#f5f5f7] dark:bg-[#1c1c1e] px-3 py-2.5">
+          <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-[#3d3d3f] dark:text-[#aeaeb2]">
             {folder || 'No folder selected'}
           </span>
           <Button type="button" variant="secondary" onClick={handleChooseFolder}>

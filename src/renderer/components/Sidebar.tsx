@@ -12,7 +12,7 @@ interface SidebarProps {
 function getPortalStatusDot(portal: PortalEntry): string {
   if (portal.lastExtractedAt) return 'bg-[#34c759]';
   if (portal.discoveredAt) return 'bg-[#0071e3]';
-  return 'bg-[#d2d2d7]';
+  return 'bg-[#d2d2d7] dark:bg-[#48484a]';
 }
 
 export default function Sidebar({
@@ -24,7 +24,7 @@ export default function Sidebar({
 }: SidebarProps) {
   return (
     <div
-      className="flex flex-col h-full bg-[#f0f0f5] border-r border-[#d2d2d7]"
+      className="flex flex-col h-full bg-[#f0f0f5] dark:bg-[#28282a] border-r border-[#d2d2d7] dark:border-[#3a3a3c]"
       style={{ width: 240, minWidth: 240, maxWidth: 240 }}
     >
       {/* Title bar drag region — traffic lights appear here via hiddenInset */}
@@ -38,7 +38,7 @@ export default function Sidebar({
 
       {/* App name */}
       <div className="px-4 pb-3 flex-shrink-0">
-        <span className="text-[13px] font-semibold text-[#1d1d1f] tracking-tight select-none">
+        <span className="text-[13px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] tracking-tight select-none">
           FetchWell
         </span>
       </div>
@@ -70,7 +70,7 @@ export default function Sidebar({
                   'text-[13px] font-medium',
                   isSelected
                     ? 'bg-[#0071e3] text-white'
-                    : 'text-[#1d1d1f] hover:bg-[#e4e4ea]',
+                    : 'text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-[#e4e4ea] dark:hover:bg-[#3a3a3c]',
                 )}
               >
                 <span
@@ -87,7 +87,7 @@ export default function Sidebar({
       </div>
 
       {/* Bottom nav */}
-      <div className="flex-shrink-0 border-t border-[#d2d2d7] px-2 py-2">
+      <div className="flex-shrink-0 border-t border-[#d2d2d7] dark:border-[#3a3a3c] px-2 py-2">
         <button
           type="button"
           onClick={() => onNavigate('settings')}
@@ -96,7 +96,7 @@ export default function Sidebar({
             'text-[13px] font-medium',
             activePage === 'settings'
               ? 'bg-[#0071e3] text-white'
-              : 'text-[#1d1d1f] hover:bg-[#e4e4ea]',
+              : 'text-[#1d1d1f] dark:text-[#f5f5f7] hover:bg-[#e4e4ea] dark:hover:bg-[#3a3a3c]',
           )}
         >
           <span className="text-[15px] leading-none">&#9881;</span>
