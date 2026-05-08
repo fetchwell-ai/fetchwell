@@ -103,7 +103,7 @@ export default function AddPortal({
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           ← Back
         </Button>
-        <h1 className="m-0 text-[22px] font-semibold">{isEdit ? 'Edit Portal' : 'Add Portal'}</h1>
+        <h1 className="m-0 text-[22px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{isEdit ? 'Edit Portal' : 'Add Portal'}</h1>
       </div>
 
       <Card className="max-w-[560px] p-8">
@@ -119,7 +119,7 @@ export default function AddPortal({
               autoComplete="off"
               spellCheck={false}
             />
-            <p className="mt-1 text-xs text-[#6e6e73]">
+            <p className="mt-1 text-xs text-[#6e6e73] dark:text-[#aeaeb2]">
               The base URL of the patient portal login page.
             </p>
           </div>
@@ -196,7 +196,7 @@ export default function AddPortal({
           </div>
 
           <div className="mb-5 flex flex-col gap-1">
-            <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[#1d1d1f]">
+            <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7]">
               <Checkbox
                 checked={saveCredentials}
                 onChange={(e) => setSaveCredentials(e.target.checked)}
