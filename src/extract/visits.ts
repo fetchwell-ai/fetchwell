@@ -11,6 +11,10 @@ import {
   logDepth,
   shouldSkipIncremental,
 } from "./helpers.js";
+import { type StructuredProgressEvent } from "../progress-events.js";
+
+/** Optional callback for emitting structured progress events. */
+type ProgressEmitter = (event: StructuredProgressEvent) => void;
 
 /**
  * Probe mode: navigate to visits list, observe items, log count + titles,
@@ -53,7 +57,10 @@ export async function probeVisits(browser: BrowserProvider, portalUrl: string, p
  * Returns the number of PDFs written in this run (0 if none extracted).
  * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractVisits(browser: BrowserProvider, portalUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false, authenticatedSelectors?: string[]): Promise<number> {
+export async function extractVisits(browser: BrowserProvider, portalUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false, authenticatedSelectors?: string[], emitProgress?: ProgressEmitter): Promise<number> {
+  const emit = (event: StructuredProgressEvent) => {
+    if (emitProgress) emitProgress(event);
+  };
   const baseDir = outputDir ?? process.cwd();
   const visitsDir = path.join(baseDir, "visits");
   fs.mkdirSync(visitsDir, { recursive: true });
@@ -84,6 +91,9 @@ export async function extractVisits(browser: BrowserProvider, portalUrl: string,
     (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
   console.log(`   Found ${visitLinks.length} visit document link(s).`);
+  if (visitLinks.length > 0) {
+    emit({ type: 'status-message', phase: 'extract', message: `Found ${visitLinks.length} visits to fetch...` });
+  }
 
   if (visitLinks.length === 0) {
     console.log("   No visits found — saving screenshot.");
@@ -109,6 +119,7 @@ export async function extractVisits(browser: BrowserProvider, portalUrl: string,
       continue;
     }
 
+    emit({ type: 'status-message', phase: 'extract', message: `Fetching ${link.description.slice(0, 60)}...` });
     console.log(`   Visit ${i + 1}/${maxVisits}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
@@ -119,6 +130,7 @@ export async function extractVisits(browser: BrowserProvider, portalUrl: string,
       const filename = makeVisitFilename(i, link.description, pageTitle || link.description, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
+        emit({ type: 'status-message', phase: 'extract', message: `Saving ${filename}...` });
         fs.writeFileSync(path.join(visitsDir, filename), pdfBuf);
         extracted++;
       }

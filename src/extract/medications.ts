@@ -3,6 +3,10 @@ import * as path from "node:path";
 import { type BrowserProvider } from "../browser/interface.js";
 import { ensureLoggedIn } from "../auth.js";
 import { logDepth, navigateToSection } from "./helpers.js";
+import { type StructuredProgressEvent } from "../progress-events.js";
+
+/** Optional callback for emitting structured progress events. */
+type ProgressEmitter = (event: StructuredProgressEvent) => void;
 
 /**
  * Probe mode: navigate to medications page, log URL, take a screenshot.
@@ -30,7 +34,10 @@ export async function probeMedications(browser: BrowserProvider, portalUrl: stri
  * Returns 1 if the medications PDF was written, 0 otherwise.
  * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractMedications(browser: BrowserProvider, portalUrl: string, credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, incremental = false, authenticatedSelectors?: string[]): Promise<number> {
+export async function extractMedications(browser: BrowserProvider, portalUrl: string, credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, incremental = false, authenticatedSelectors?: string[], emitProgress?: ProgressEmitter): Promise<number> {
+  const emit = (event: StructuredProgressEvent) => {
+    if (emitProgress) emitProgress(event);
+  };
   const baseDir = outputDir ?? process.cwd();
   const medsDir = path.join(baseDir, "medications");
   fs.mkdirSync(medsDir, { recursive: true });
@@ -53,7 +60,9 @@ export async function extractMedications(browser: BrowserProvider, portalUrl: st
   try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
   if (browser.pdf) {
+    emit({ type: 'status-message', phase: 'extract', message: 'Fetching medication list...' });
     const pdfBuf = await browser.pdf();
+    emit({ type: 'status-message', phase: 'extract', message: `Saving ${medsFilename}...` });
     fs.writeFileSync(pdfPath, pdfBuf);
     console.log(`   ✓ ${medsFilename} (${(pdfBuf.length / 1024).toFixed(0)} KB)`);
     return 1;

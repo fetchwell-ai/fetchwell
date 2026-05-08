@@ -11,6 +11,10 @@ import {
   logDepth,
   shouldSkipIncremental,
 } from "./helpers.js";
+import { type StructuredProgressEvent } from "../progress-events.js";
+
+/** Optional callback for emitting structured progress events. */
+type ProgressEmitter = (event: StructuredProgressEvent) => void;
 
 /**
  * Probe mode: navigate to labs list, observe items, log count + titles,
@@ -57,7 +61,10 @@ export async function probeLabsDocs(browser: BrowserProvider, portalUrl: string,
  * Returns the number of PDFs written in this run (0 if none extracted).
  * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractLabsDocs(browser: BrowserProvider, portalUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false, authenticatedSelectors?: string[]): Promise<number> {
+export async function extractLabsDocs(browser: BrowserProvider, portalUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false, authenticatedSelectors?: string[], emitProgress?: ProgressEmitter): Promise<number> {
+  const emit = (event: StructuredProgressEvent) => {
+    if (emitProgress) emitProgress(event);
+  };
   const baseDir = outputDir ?? process.cwd();
   const labsDir = path.join(baseDir, "labs");
   fs.mkdirSync(labsDir, { recursive: true });
@@ -87,6 +94,9 @@ export async function extractLabsDocs(browser: BrowserProvider, portalUrl: strin
     (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
   console.log(`   Found ${panelLinks.length} panel link(s).`);
+  if (panelLinks.length > 0) {
+    emit({ type: 'status-message', phase: 'extract', message: `Found ${panelLinks.length} lab results to fetch...` });
+  }
 
   if (panelLinks.length === 0) {
     console.log("   No panels found — saving screenshot.");
@@ -112,6 +122,8 @@ export async function extractLabsDocs(browser: BrowserProvider, portalUrl: strin
       continue;
     }
 
+    const shortDesc = link.description.replace(/^Lab\/test result entry:\s*/i, "").slice(0, 60);
+    emit({ type: 'status-message', phase: 'extract', message: `Fetching ${shortDesc}...` });
     console.log(`   Doc ${i + 1}/${maxPanels}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
@@ -125,6 +137,7 @@ export async function extractLabsDocs(browser: BrowserProvider, portalUrl: strin
       const filename = makeItemFilename(i, cleanDesc || link.description, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
+        emit({ type: 'status-message', phase: 'extract', message: `Saving ${filename}...` });
         fs.writeFileSync(path.join(labsDir, filename), pdfBuf);
         extracted++;
       }
