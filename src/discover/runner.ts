@@ -74,7 +74,7 @@ export async function discoverProviderById(
     console.log("|  DEBUG URL — open this in your browser:                  |");
     console.log(`|  ${debugUrl}`);
     console.log("+---------------------------------------------------------+");
-  } else {
+  } else if (process.env.HEADLESS !== 'true') {
     console.log("   A browser window should have opened on your screen.");
   }
   console.log();
