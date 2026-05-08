@@ -274,6 +274,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
   const [errorData, setErrorData] = useState<ErrorData | null>(null);
   const [completedPortalId, setCompletedPortalId] = useState<string | null>(null);
   const [structured, setStructured] = useState<StructuredState>(INITIAL_STRUCTURED_STATE);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [showRawLog, setShowRawLog] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
 
@@ -298,6 +299,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
         resetFailureCount(data.portalId);
         setCompletedPortalId(data.portalId);
         setPanelState('complete');
+        setStatusMessage(null);
       }
     };
 
@@ -308,11 +310,17 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
       if (op === operation) {
         setErrorData(data);
         setPanelState('error');
+        setStatusMessage(null);
       }
     };
 
     const handleStructuredProgress = (op: string, event: StructuredProgressEvent) => {
       if (op !== operation) return;
+
+      if (event.type === 'status-message') {
+        setStatusMessage(event.message);
+        return;
+      }
 
       setStructured((prev) => {
         const next = {
@@ -420,6 +428,14 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
 
             {/* Progress bar */}
             <OverallProgressBar structured={structured} operation={operation} />
+
+            {/* Current activity status message */}
+            {panelState === 'running' && statusMessage && (
+              <div className="flex items-center gap-2 px-6 pt-2 text-[13px] text-[#6e6e73] dark:text-[#aeaeb2]">
+                <SpinnerIcon color="#0071e3" size={13} />
+                <span>{statusMessage}</span>
+              </div>
+            )}
 
             {/* Category rows (extraction only) */}
             {operation === 'extraction' && (

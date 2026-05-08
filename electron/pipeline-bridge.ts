@@ -90,7 +90,8 @@ interface RunnerCommand {
 type StructuredProgressEvent =
   | { type: 'phase-change'; phase: string; status: string; message?: string }
   | { type: 'item-progress'; phase: string; category: string; current: number; total?: number; message?: string }
-  | { type: 'category-complete'; phase: string; category: string; count: number; status: string };
+  | { type: 'category-complete'; phase: string; category: string; count: number; status: string }
+  | { type: 'status-message'; phase: string; message: string };
 
 // ---------------------------------------------------------------------------
 // 2FA IPC relay
@@ -218,7 +219,8 @@ function runSubprocess(
         message &&
         (message.type === 'phase-change' ||
           message.type === 'item-progress' ||
-          message.type === 'category-complete')
+          message.type === 'category-complete' ||
+          message.type === 'status-message')
       ) {
         const progressChannel = command === 'extract' ? 'extraction:progress' : 'discovery:progress';
         if (!win.isDestroyed()) {

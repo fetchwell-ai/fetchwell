@@ -58,7 +58,13 @@ interface CategoryCompleteEvent {
   status: ProgressStatus;
 }
 
-type StructuredProgressEvent = PhaseChangeEvent | ItemProgressEvent | CategoryCompleteEvent;
+interface StatusMessageEvent {
+  type: 'status-message';
+  phase: string;
+  message: string;
+}
+
+type StructuredProgressEvent = PhaseChangeEvent | ItemProgressEvent | CategoryCompleteEvent | StatusMessageEvent;
 
 // ────────────────────────────────────────────────────────────────────────────
 
