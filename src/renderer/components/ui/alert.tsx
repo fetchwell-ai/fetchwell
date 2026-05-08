@@ -3,15 +3,15 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/utils';
 
 const alertVariants = cva(
-  'rounded-lg border-l-4 p-[10px_12px] text-[13px] leading-relaxed',
+  'rounded-[var(--radius-sm)] border-l-4 p-[10px_12px] text-[13px] leading-relaxed',
   {
     variants: {
       variant: {
-        default: 'border-[#d2d2d7] bg-[#f5f5f7] text-[#3d3d3f] dark:border-[#3a3a3c] dark:bg-[#2c2c2e] dark:text-[#aeaeb2]',
-        warning: 'border-[#f59e0b] bg-[#fffbeb] text-[#92400e] dark:border-[#d97706] dark:bg-[#2c1f00] dark:text-[#ffd60a]',
-        destructive: 'border-[#ef4444] bg-[#fff1f0] text-[#c0392b] dark:border-[#dc2626] dark:bg-[#2c0a0a] dark:text-[#ff6b6b]',
-        info: 'border-[#3b82f6] bg-[#eff6ff] text-[#1d4ed8] dark:border-[#2563eb] dark:bg-[#0a1a2c] dark:text-[#64a5ff]',
-        success: 'border-[#34c759] bg-[#e3f0d8] text-[#2e6b0a] dark:border-[#30d158] dark:bg-[#0a2010] dark:text-[#4cd964]',
+        default: 'border-[var(--color-fw-border)] bg-[var(--color-fw-bg-deep)] text-[var(--color-fw-fg-muted)]',
+        warning: 'border-[var(--color-fw-ochre-400)] bg-[var(--color-fw-ochre-100)] text-[var(--color-fw-ochre-600)] dark:border-[#D4A043] dark:bg-[#2C2010] dark:text-[#D4A043]',
+        destructive: 'border-[var(--color-fw-crimson-500)] bg-[var(--color-fw-crimson-100)] text-[var(--color-fw-crimson-600)] dark:border-[#D44033] dark:bg-[#3A1410] dark:text-[#E8685E]',
+        info: 'border-[var(--color-fw-sage-500)] bg-[var(--color-fw-sage-50)] text-[var(--color-fw-sage-700)] dark:border-[#5F8A54] dark:bg-[#1A2E1A] dark:text-[#7BA170]',
+        success: 'border-[var(--color-fw-moss-600)] bg-[var(--color-fw-moss-100)] text-[var(--color-fw-moss-600)] dark:border-[#3A7D2C] dark:bg-[#1A3A14] dark:text-[#6BBF5E]',
       },
     },
     defaultVariants: {
