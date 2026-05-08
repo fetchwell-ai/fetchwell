@@ -14,7 +14,7 @@ Multi-provider support via `providers.json` (see `providers.example.json`). Each
 - `src/discover/` — portal navigation discovery engine, builds `nav-map.json` per provider
 - `src/auth/` — composable auth system with strategy registries for login form and 2FA
 - `src/browser/` — BrowserProvider abstraction (stagehand-local default, plain playwright fallback)
-- `src/renderer/` — React UI for the Electron app (Vite-built, separate tsconfig)
+- `src/renderer/` — React UI for the Electron app (Vite-built, Tailwind CSS v4, shadcn/ui, Framer Motion, dark mode)
 - `src/config.ts` — provider config schema (Zod)
 - `src/electron-runner.ts` — subprocess entry point spawned by the Electron pipeline bridge
 - `electron/` — Electron main process: window management, IPC handlers, config/credential storage, pipeline bridge
@@ -43,7 +43,7 @@ pnpm lint                             # ESLint (src/)
 ## Testing
 
 ```bash
-pnpm test:unit                        # Vitest — 58 unit tests, <1s
+pnpm test:unit                        # Vitest — 71 unit tests, <1s
 pnpm test:e2e                         # Playwright Electron — 16 tests, ~15s
 ```
 
@@ -59,6 +59,8 @@ E2E tests launch the Electron app via Playwright and cover Welcome wizard, porta
 - **Electron ↔ Pipeline bridge.** Electron forks `src/electron-runner.ts` as a subprocess (ESM via tsx). IPC for progress events, 2FA relay, and error reporting. One operation per portal at a time.
 - **Three TypeScript configs.** `tsconfig.json` (src/, ESM), `electron/tsconfig.json` (electron/, CJS), `src/renderer/tsconfig.json` (renderer/, Vite/bundler).
 - **CJS fix for Electron.** `dist-electron/package.json` with `{"type":"commonjs"}` is generated at build time (root package.json is `"type": "module"`).
+- **Dark mode.** System preference matching + manual Light/Dark/System toggle. Uses Tailwind `dark:` variant with class-based toggling via `nativeTheme`.
+- **Structured progress events.** Subprocess sends typed IPC events (`src/progress-events.ts`). ProgressPanel renders phased step indicator instead of raw terminal output.
 
 ## Environment variables
 
