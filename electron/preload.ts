@@ -37,6 +37,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('extraction:error', (_event, data: { type: string; category: string; message: string; suggestion: string }) => callback('extraction', data));
     ipcRenderer.on('discovery:error', (_event, data: { type: string; category: string; message: string; suggestion: string }) => callback('discovery', data));
   },
+  onStructuredProgress: (callback: (operation: string, event: unknown) => void) => {
+    ipcRenderer.on('extraction:progress', (_event, data: unknown) => callback('extraction', data));
+    ipcRenderer.on('discovery:progress', (_event, data: unknown) => callback('discovery', data));
+  },
 
   // --- 2FA ---
   on2FARequest: (callback: (payload: { portalId: string }) => void) => {

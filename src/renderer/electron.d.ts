@@ -25,6 +25,40 @@ interface Settings {
   apiKeyConfigured: boolean;
 }
 
+// ── Structured progress event types (mirrored from src/progress-events.ts) ─
+
+type ProgressPhase = 'login' | 'navigate' | 'extract';
+type ProgressCategory = 'labs' | 'visits' | 'medications' | 'messages';
+type ProgressStatus = 'pending' | 'running' | 'complete' | 'error';
+
+interface PhaseChangeEvent {
+  type: 'phase-change';
+  phase: ProgressPhase;
+  status: ProgressStatus;
+  message?: string;
+}
+
+interface ItemProgressEvent {
+  type: 'item-progress';
+  phase: ProgressPhase;
+  category: ProgressCategory;
+  current: number;
+  total?: number;
+  message?: string;
+}
+
+interface CategoryCompleteEvent {
+  type: 'category-complete';
+  phase: ProgressPhase;
+  category: ProgressCategory;
+  count: number;
+  status: ProgressStatus;
+}
+
+type StructuredProgressEvent = PhaseChangeEvent | ItemProgressEvent | CategoryCompleteEvent;
+
+// ────────────────────────────────────────────────────────────────────────────
+
 interface ElectronAPI {
   getPortals(): Promise<PortalEntry[]>;
   addPortal(input: PortalInput): Promise<PortalEntry>;
@@ -40,6 +74,7 @@ interface ElectronAPI {
   onProgress(callback: (message: string) => void): void;
   onComplete(callback: (operation: string, data: { portalId: string }) => void): void;
   onError(callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void): void;
+  onStructuredProgress(callback: (operation: string, event: StructuredProgressEvent) => void): void;
   on2FARequest(callback: (payload: { portalId: string }) => void): void;
   submit2FACode(payload: { portalId: string; code: string | null }): void;
   removeAllListeners(channel: string): void;
