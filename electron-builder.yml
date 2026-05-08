@@ -1,0 +1,54 @@
+# electron-builder configuration
+# Docs: https://www.electron.build/configuration
+
+appId: com.wellfetch.app
+productName: FetchWell
+
+# Override the main entry point to use the compiled CJS output
+extraMetadata:
+  main: dist-electron/main.js
+
+# Build resources (icons, etc.)
+directories:
+  output: release
+  buildResources: build
+
+# Files to include in the app bundle
+files:
+  - dist-electron/**/*
+  - dist-renderer/**/*
+  - "!node_modules/**/{test,tests,__tests__}/**"
+  - "!node_modules/**/*.{md,ts,map}"
+
+asar: true
+
+# ── macOS ──────────────────────────────────────────────────────────────────────
+mac:
+  target:
+    - dmg
+  category: public.app-category.medical
+  icon: build/icon.icns
+  # Set to null to allow unsigned builds during development.
+  # When CSC_LINK and CSC_KEY_PASSWORD env vars are set,
+  # electron-builder will sign automatically.
+  identity: null
+  # Notarization is disabled by default.
+  # To enable, set the following env vars:
+  #   APPLE_ID            — your Apple ID email
+  #   APPLE_APP_SPECIFIC_PASSWORD — app-specific password from appleid.apple.com
+  #   APPLE_TEAM_ID       — your 10-char Apple Developer Team ID
+  # Then set notarize to true here (or pass --mac.notarize at CLI).
+  notarize: false
+
+dmg:
+  title: "${productName} ${version}"
+
+# ── Auto-update via GitHub Releases ────────────────────────────────────────────
+publish:
+  provider: github
+  owner: chadallen
+  repo: fetchwell
+
+# ── Known limitations ──────────────────────────────────────────────────────────
+# Playwright Chromium (~200 MB) is NOT bundled yet. The packaged app will need
+# Chromium available at runtime. Bundling strategy is tracked as a follow-up task.

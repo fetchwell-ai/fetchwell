@@ -1,5 +1,6 @@
 import { app, BrowserWindow, nativeTheme, ipcMain } from 'electron';
 import * as path from 'path';
+import { autoUpdater } from 'electron-updater';
 import { registerIpcHandlers } from './ipc-handlers';
 
 function createWindow(): void {
@@ -34,6 +35,13 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+
+  // Check for updates via GitHub Releases (silent — no blocking dialogs).
+  // In development (non-packaged) this is a no-op; electron-updater skips
+  // when there is no app-update.yml present.
+  autoUpdater.checkForUpdatesAndNotify().catch(() => {
+    // Silently ignore update-check failures (offline, no releases, etc.)
+  });
 
   // When system appearance changes, push updated value to all windows
   nativeTheme.on('updated', () => {

@@ -32,3 +32,6 @@ mychart-*.zip
 *.db
 .beads-credential-key
 test-results/
+
+# electron-builder output
+release/
