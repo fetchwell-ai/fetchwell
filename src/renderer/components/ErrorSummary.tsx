@@ -14,47 +14,32 @@ export interface ErrorSummaryProps {
 // Only incremented for categories that suggest re-discovery (portal_structure, unknown).
 const failureCounts = new Map<string, number>();
 
-function getCategoryIcon(category: string): string {
-  switch (category) {
-    case 'credentials':
-      return '⚠️';
-    case '2fa_timeout':
-      return '⏱';
-    case 'network':
-      return '🌐';
-    case 'portal_structure':
-      return '🗺';
-    default:
-      return '❌';
-  }
-}
-
 function getCategoryLabel(category: string): string {
   switch (category) {
     case 'credentials':
-      return 'Credential Error';
+      return 'Credential error';
     case '2fa_timeout':
-      return 'Two-Factor Timeout';
+      return 'Two-factor timeout';
     case 'network':
-      return 'Network Error';
+      return 'Network error';
     case 'portal_structure':
-      return 'Portal Structure Changed';
+      return 'Portal structure changed';
     default:
-      return 'Unknown Error';
+      return 'Unknown error';
   }
 }
 
 function getCategoryColors(category: string): { border: string; bg: string } {
   switch (category) {
     case 'credentials':
-      return { border: 'border-l-[#f59e0b]', bg: 'bg-[#fffbeb]' };
+      return { border: 'border-l-[var(--color-fw-ochre-400)]', bg: 'bg-[var(--color-fw-ochre-100)]' };
     case '2fa_timeout':
-      return { border: 'border-l-[#3b82f6]', bg: 'bg-[#eff6ff]' };
+      return { border: 'border-l-[var(--color-fw-sage-500)]', bg: 'bg-[var(--color-fw-sage-50)]' };
     case 'portal_structure':
-      return { border: 'border-l-[#f97316]', bg: 'bg-[#fff7ed]' };
+      return { border: 'border-l-[var(--color-fw-ochre-600)]', bg: 'bg-[var(--color-fw-ochre-100)]' };
     case 'network':
     default:
-      return { border: 'border-l-[#ef4444]', bg: 'bg-[#fff1f0]' };
+      return { border: 'border-l-[var(--color-fw-crimson-500)]', bg: 'bg-[var(--color-fw-crimson-100)]' };
   }
 }
 
@@ -95,21 +80,20 @@ export default function ErrorSummary({
   const { border, bg } = getCategoryColors(category);
 
   return (
-    <div className={cn('error-summary mb-1 rounded-[10px] border-l-4 p-[14px_16px]', border, bg, `error-summary--${category}`)}>
+    <div className={cn('error-summary mb-1 rounded-[var(--radius-sm)] border-l-4 p-[14px_16px]', border, bg, `error-summary--${category}`)}>
       <div className="mb-1.5 flex items-center gap-2">
-        <span className="flex-shrink-0 text-[15px] leading-none">{getCategoryIcon(category)}</span>
-        <span className="text-[13px] font-semibold text-[#1d1d1f]">{getCategoryLabel(category)}</span>
+        <span className="text-[13px] font-semibold text-[var(--color-fw-fg)]">{getCategoryLabel(category)}</span>
       </div>
 
-      <p className="m-0 mb-1.5 text-[14px] leading-[1.5] text-[#1d1d1f]">{message}</p>
+      <p className="m-0 mb-1.5 text-[14px] leading-[1.5] text-[var(--color-fw-fg)]">{message}</p>
 
       {suggestion && (
-        <p className="m-0 mb-1.5 text-[13px] leading-[1.5] text-[#3d3d3f]">{suggestion}</p>
+        <p className="m-0 mb-1.5 text-[13px] leading-[1.5] text-[var(--color-fw-fg-muted)]">{suggestion}</p>
       )}
 
       {showReDiscoverSuggestion && (
         <div className="mt-2.5 flex flex-col gap-2 border-t border-black/[0.08] pt-2.5">
-          <p className="m-0 text-[13px] leading-[1.5] text-[#3d3d3f]">
+          <p className="m-0 text-[13px] leading-[1.5] text-[var(--color-fw-fg-muted)]">
             This portal has failed multiple times. Try re-running Map to update the portal structure.
           </p>
           <Button
@@ -131,7 +115,7 @@ export default function ErrorSummary({
             size="sm"
             onClick={handleCopyLog}
           >
-            Copy Log
+            Copy log
           </Button>
         </div>
       )}

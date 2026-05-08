@@ -19,7 +19,7 @@ interface ErrorData {
   suggestion: string;
 }
 
-// ── Structured progress state ───────────────────────────────────────────────
+// -- Structured progress state --
 
 type PhaseStatus = 'pending' | 'running' | 'complete' | 'error';
 type ProgressPhase = 'login' | 'navigate' | 'extract';
@@ -68,7 +68,7 @@ const CATEGORY_LABELS: Record<ProgressCategory, string> = {
   messages: 'Messages',
 };
 
-// ── Sub-components ──────────────────────────────────────────────────────────
+// -- Sub-components --
 
 function StepIndicator({
   phases,
@@ -83,7 +83,7 @@ function StepIndicator({
       alignItems: 'center',
       gap: 0,
       padding: '16px 24px 12px',
-      borderBottom: '1px solid #f0f0f2',
+      borderBottom: '1px solid var(--color-fw-border)',
     }}>
       {activePhases.map((phase, idx) => {
         const state = phases[phase];
@@ -95,10 +95,10 @@ function StepIndicator({
               <span style={{
                 fontSize: 13,
                 fontWeight: state.status === 'running' ? 600 : 500,
-                color: state.status === 'pending' ? '#aaa' :
-                       state.status === 'running' ? '#0071e3' :
-                       state.status === 'complete' ? '#2e6b0a' :
-                       '#c0392b',
+                color: state.status === 'pending' ? 'var(--color-fw-fg-subtle)' :
+                       state.status === 'running' ? 'var(--color-fw-sage-700)' :
+                       state.status === 'complete' ? 'var(--color-fw-moss-600)' :
+                       'var(--color-fw-crimson-600)',
               }}>
                 {PHASE_LABELS[phase]}
               </span>
@@ -107,7 +107,7 @@ function StepIndicator({
               <div style={{
                 flex: 1,
                 height: 1,
-                background: state.status === 'complete' ? '#2e6b0a' : '#d2d2d7',
+                background: state.status === 'complete' ? 'var(--color-fw-moss-600)' : 'var(--color-fw-border)',
                 margin: '0 8px',
                 minWidth: 20,
               }} />
@@ -125,19 +125,19 @@ function StepIcon({ status }: { status: PhaseStatus }) {
       <span style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         width: 18, height: 18, borderRadius: '50%',
-        background: '#2e6b0a', color: '#fff', fontSize: 11, flexShrink: 0,
+        background: 'var(--color-fw-moss-600)', color: '#fff', fontSize: 11, flexShrink: 0,
       }}>&#10003;</span>
     );
   }
   if (status === 'running') {
-    return <SpinnerIcon color="#0071e3" size={18} />;
+    return <SpinnerIcon color="var(--color-fw-sage-700)" size={18} />;
   }
   if (status === 'error') {
     return (
       <span style={{
         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         width: 18, height: 18, borderRadius: '50%',
-        background: '#c0392b', color: '#fff', fontSize: 11, flexShrink: 0,
+        background: 'var(--color-fw-crimson-600)', color: '#fff', fontSize: 11, flexShrink: 0,
       }}>&#10005;</span>
     );
   }
@@ -146,12 +146,12 @@ function StepIcon({ status }: { status: PhaseStatus }) {
     <span style={{
       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
       width: 18, height: 18, borderRadius: '50%',
-      border: '2px solid #d2d2d7', flexShrink: 0,
+      border: '2px solid var(--color-fw-border)', flexShrink: 0,
     }} />
   );
 }
 
-function SpinnerIcon({ color = '#0071e3', size = 14 }: { color?: string; size?: number }) {
+function SpinnerIcon({ color = 'var(--color-fw-sage-700)', size = 14 }: { color?: string; size?: number }) {
   return (
     <span style={{
       display: 'inline-block',
@@ -180,27 +180,27 @@ function CategoryRow({ category, state }: { category: ProgressCategory; state: C
         <span style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           width: 16, height: 16, borderRadius: '50%',
-          background: '#2e6b0a', color: '#fff', fontSize: 10, flexShrink: 0,
+          background: 'var(--color-fw-moss-600)', color: '#fff', fontSize: 10, flexShrink: 0,
         }}>&#10003;</span>
       ) : status === 'running' ? (
-        <SpinnerIcon color="#0071e3" size={16} />
+        <SpinnerIcon color="var(--color-fw-sage-700)" size={16} />
       ) : status === 'error' ? (
         <span style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           width: 16, height: 16, borderRadius: '50%',
-          background: '#c0392b', color: '#fff', fontSize: 10, flexShrink: 0,
+          background: 'var(--color-fw-crimson-600)', color: '#fff', fontSize: 10, flexShrink: 0,
         }}>&#10005;</span>
       ) : (
         <span style={{
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           width: 16, height: 16, borderRadius: '50%',
-          border: '1.5px solid #d2d2d7', flexShrink: 0,
+          border: '1.5px solid var(--color-fw-border)', flexShrink: 0,
         }} />
       )}
       <span style={{
         flex: 1,
         fontSize: 13,
-        color: status === 'pending' ? '#aaa' : '#1d1d1f',
+        color: status === 'pending' ? 'var(--color-fw-fg-subtle)' : 'var(--color-fw-fg)',
         fontWeight: status === 'running' ? 600 : 400,
       }}>
         {CATEGORY_LABELS[category]}
@@ -208,8 +208,8 @@ function CategoryRow({ category, state }: { category: ProgressCategory; state: C
       {status === 'complete' && count !== undefined && (
         <span style={{
           fontSize: 12,
-          color: '#6e6e73',
-          background: '#f5f5f7',
+          color: 'var(--color-fw-fg-muted)',
+          background: 'var(--color-fw-bg)',
           borderRadius: 99,
           padding: '2px 8px',
         }}>
@@ -217,7 +217,7 @@ function CategoryRow({ category, state }: { category: ProgressCategory; state: C
         </span>
       )}
       {status === 'running' && (
-        <span style={{ fontSize: 12, color: '#0071e3' }}>Extracting…</span>
+        <span style={{ fontSize: 12, color: 'var(--color-fw-sage-700)' }}>Extracting...</span>
       )}
     </div>
   );
@@ -251,13 +251,13 @@ function OverallProgressBar({ structured, operation }: { structured: StructuredS
       <div style={{
         height: 4,
         borderRadius: 2,
-        background: '#e8e8ed',
+        background: 'var(--color-fw-border)',
         overflow: 'hidden',
       }}>
         <div style={{
           height: '100%',
           borderRadius: 2,
-          background: '#0071e3',
+          background: 'var(--color-fw-sage-700)',
           width: `${pct}%`,
           transition: 'width 0.4s ease',
         }} />
@@ -266,7 +266,7 @@ function OverallProgressBar({ structured, operation }: { structured: StructuredS
   );
 }
 
-// ── Main component ──────────────────────────────────────────────────────────
+// -- Main component --
 
 export default function ProgressPanel({ portalId, operation, onClose, onReDiscover }: ProgressPanelProps) {
   const [logs, setLogs] = useState<string[]>([]);
@@ -277,8 +277,8 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
   const [showRawLog, setShowRawLog] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
 
-  const title = operation === 'discovery' ? 'Running Discovery…' : 'Extracting Records…';
-  const completedTitle = operation === 'discovery' ? 'Discovery Complete' : 'Extraction Complete';
+  const title = operation === 'discovery' ? 'Mapping your portal...' : 'Fetching your records...';
+  const completedTitle = operation === 'discovery' ? 'Portal mapped' : 'Records fetched';
   const activePhases = operation === 'discovery' ? DISCOVERY_PHASES : EXTRACTION_PHASES;
 
   // Auto-scroll raw log to bottom on new messages
@@ -365,7 +365,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
       const folder = `${settings.downloadFolder}/${completedPortalId ?? portalId}`;
       await window.electronAPI.openInFinder(folder);
     } catch {
-      // Silently ignore — the folder may not exist yet
+      // Silently ignore -- the folder may not exist yet
     }
   };
 
@@ -373,37 +373,39 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
     Object.keys(structured.categories).length > 0;
   const shouldReduce = useReducedMotion();
 
-  // ease-out cubic bezier
-  const easeOut: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
+  // --fw-ease-out: cubic-bezier(0.16, 1, 0.3, 1)
+  const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
   return (
     <motion.div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45"
+      className="fixed inset-0 z-[100] flex items-center justify-center"
+      style={{ background: 'var(--fw-scrim)' }}
       initial={shouldReduce ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={shouldReduce ? undefined : { opacity: 0 }}
-      transition={shouldReduce ? undefined : { duration: 0.15 }}
+      transition={shouldReduce ? undefined : { duration: 0.18 }}
     >
       <motion.div
-        className="progress-panel flex w-[600px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-80px)] flex-col overflow-hidden rounded-2xl bg-white dark:bg-[#2c2c2e] shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_8px_rgba(0,0,0,0.08)]"
-        initial={shouldReduce ? false : { opacity: 0, scale: 0.96, y: 8 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={shouldReduce ? undefined : { opacity: 0, scale: 0.97, y: 4 }}
-        transition={shouldReduce ? undefined : { duration: 0.2, ease: easeOut }}
+        className="progress-panel flex w-[600px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-80px)] flex-col overflow-hidden rounded-[var(--radius-lg)] shadow-[var(--shadow-fw-3)]"
+        style={{ background: 'var(--fw-modal-bg)' }}
+        initial={shouldReduce ? false : { opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={shouldReduce ? undefined : { opacity: 0, scale: 0.97 }}
+        transition={shouldReduce ? undefined : { duration: 0.18, ease: easeOut }}
       >
         {/* Header */}
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-[#f0f0f2] dark:border-[#3a3a3c] px-6 pb-4 pt-5">
-          <h2 className="m-0 text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-[var(--color-fw-border)] px-6 pb-4 pt-5">
+          <h2 className="m-0 text-[17px] font-semibold text-[var(--color-fw-fg)]">
             {panelState === 'complete'
               ? completedTitle
               : panelState === 'error'
-                ? 'Operation Failed'
+                ? 'Something went wrong'
                 : title}
           </h2>
           {panelState !== 'running' && (
             <button
               type="button"
-              className="cursor-pointer rounded-md border-none bg-transparent p-1 text-[14px] text-[#6e6e73] leading-none hover:bg-[#f5f5f7] dark:text-[#aeaeb2] dark:hover:bg-[#3a3a3c]"
+              className="cursor-pointer rounded-[var(--radius-sm)] border-none bg-transparent p-1 text-[14px] text-[var(--color-fw-fg-muted)] leading-none hover:bg-[var(--color-fw-bg-deep)]"
               aria-label="Close"
               onClick={onClose}
             >
@@ -443,9 +445,9 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
                     return (
                       <div key={phase} style={{
                         display: 'flex', alignItems: 'center', gap: 8,
-                        fontSize: 13, color: '#6e6e73',
+                        fontSize: 13, color: 'var(--color-fw-fg-muted)',
                       }}>
-                        <SpinnerIcon color="#0071e3" size={13} />
+                        <SpinnerIcon color="var(--color-fw-sage-700)" size={13} />
                         {state.message}
                       </div>
                     );
@@ -465,7 +467,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: 12,
-                  color: '#6e6e73',
+                  color: 'var(--color-fw-fg-muted)',
                   padding: '4px 0',
                   display: 'flex',
                   alignItems: 'center',
@@ -482,14 +484,21 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
               </button>
 
               {showRawLog && (
-                <div className="progress-panel-log mt-1.5 max-h-40 min-h-20 overflow-y-auto rounded-md bg-[#1c1c1e] px-5 py-3.5 font-mono text-xs leading-[1.7]">
+                <div
+                  className="progress-panel-log mt-1.5 max-h-40 min-h-20 overflow-y-auto rounded-[var(--radius-sm)] px-5 py-3.5 text-[13px] leading-[1.7]"
+                  style={{
+                    background: 'var(--color-fw-ink-900)',
+                    fontFamily: 'var(--font-mono)',
+                    fontFeatureSettings: '"MONO" 1, "CASL" 1',
+                  }}
+                >
                   {logs.map((line, i) => (
-                    <div key={i} className="progress-log-line whitespace-pre-wrap break-words text-[#d0d0d8]">
+                    <div key={i} className="progress-log-line whitespace-pre-wrap break-words" style={{ color: 'var(--color-fw-ink-300)' }}>
                       {line}
                     </div>
                   ))}
                   {logs.length === 0 && (
-                    <div className="progress-log-line progress-log-waiting italic text-[#6e6e73]">No output yet…</div>
+                    <div className="progress-log-line progress-log-waiting italic" style={{ color: 'var(--color-fw-fg-muted)' }}>No output yet...</div>
                   )}
                   <div ref={logEndRef} />
                 </div>
@@ -498,14 +507,21 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
           </div>
         ) : (
           /* Fallback: raw log (shown while waiting for first structured event) */
-          <div className="progress-panel-log flex-1 overflow-y-auto bg-[#1c1c1e] px-5 py-3.5 font-mono text-xs leading-[1.7] min-h-[220px] max-h-[400px]">
+          <div
+            className="progress-panel-log flex-1 overflow-y-auto px-5 py-3.5 text-[13px] leading-[1.7] min-h-[220px] max-h-[400px]"
+            style={{
+              background: 'var(--color-fw-ink-900)',
+              fontFamily: 'var(--font-mono)',
+              fontFeatureSettings: '"MONO" 1, "CASL" 1',
+            }}
+          >
             {logs.map((line, i) => (
-              <div key={i} className="progress-log-line whitespace-pre-wrap break-words text-[#d0d0d8]">
+              <div key={i} className="progress-log-line whitespace-pre-wrap break-words" style={{ color: 'var(--color-fw-ink-300)' }}>
                 {line}
               </div>
             ))}
             {panelState === 'running' && logs.length === 0 && (
-              <div className="progress-log-line progress-log-waiting italic text-[#6e6e73]">Starting…</div>
+              <div className="progress-log-line progress-log-waiting italic" style={{ color: 'var(--color-fw-fg-muted)' }}>Starting...</div>
             )}
             <div ref={logEndRef} />
           </div>
@@ -513,11 +529,11 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
 
         {/* Footer */}
         {panelState === 'complete' && (
-          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] dark:border-[#3a3a3c] px-6 pb-5 pt-4">
-            <div className="progress-complete-message rounded-lg bg-[#e3f0d8] px-3.5 py-2.5 text-[14px] text-[#2e6b0a]">
+          <div className="progress-panel-footer flex-shrink-0 border-t border-[var(--color-fw-border)] px-6 pb-5 pt-4">
+            <div className="progress-complete-message rounded-[var(--radius-sm)] bg-[var(--color-fw-moss-100)] px-3.5 py-2.5 text-[14px] text-[var(--color-fw-moss-600)]">
               {operation === 'discovery'
-                ? 'Portal navigation mapped successfully.'
-                : 'Health records extracted successfully.'}
+                ? 'Mapped. Ready to fetch records.'
+                : 'Done. Your records are in your download folder.'}
             </div>
             <div className="mt-3 flex justify-end gap-2">
               <Button
@@ -529,7 +545,6 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
               </Button>
               <Button
                 type="button"
-                className="btn-primary"
                 onClick={onClose}
               >
                 Close
@@ -539,7 +554,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
         )}
 
         {panelState === 'error' && errorData && (
-          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] dark:border-[#3a3a3c] px-6 pb-5 pt-4">
+          <div className="progress-panel-footer flex-shrink-0 border-t border-[var(--color-fw-border)] px-6 pb-5 pt-4">
             <ErrorSummary
               portalId={portalId}
               error={errorData}
@@ -549,7 +564,6 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
             <div className="mt-3 flex justify-end gap-2">
               <Button
                 type="button"
-                className="btn-primary"
                 onClick={onClose}
               >
                 Close
@@ -559,10 +573,17 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
         )}
 
         {panelState === 'running' && !hasAnyStructuredEvent && (
-          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] dark:border-[#3a3a3c] px-6 pb-5 pt-4">
-            <div className="flex items-center gap-2.5 text-[13px] text-[#6e6e73] dark:text-[#aeaeb2]">
-              <span className="progress-spinner inline-block h-3.5 w-3.5 flex-shrink-0 animate-[progress-spin_0.8s_linear_infinite] rounded-full border-2 border-[#d2d2d7] border-t-[#0071e3]" />
-              <span>In progress…</span>
+          <div className="progress-panel-footer flex-shrink-0 border-t border-[var(--color-fw-border)] px-6 pb-5 pt-4">
+            <div className="flex items-center gap-2.5 text-[13px] text-[var(--color-fw-fg-muted)]">
+              <span
+                className="progress-spinner inline-block h-3.5 w-3.5 flex-shrink-0 rounded-full"
+                style={{
+                  border: '2px solid var(--color-fw-border)',
+                  borderTopColor: 'var(--color-fw-sage-700)',
+                  animation: 'progress-spin 0.8s linear infinite',
+                }}
+              />
+              <span>In progress...</span>
             </div>
           </div>
         )}
