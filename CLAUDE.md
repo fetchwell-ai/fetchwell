@@ -47,7 +47,13 @@ pnpm test:unit                        # Vitest — 71 unit tests, <1s
 pnpm test:e2e                         # Playwright Electron — 16 tests, ~15s
 ```
 
-E2E tests launch the Electron app via Playwright and cover Welcome wizard, portal CRUD, settings, and the pipeline integration chain. The `ucsf-discovery.spec.ts` test runs a real discovery with email 2FA (requires credentials in `.env` and `providers.json`).
+E2E tests launch the Electron app via Playwright and cover Welcome wizard, portal CRUD, settings, and the pipeline integration chain.
+
+- **NEVER run `ucsf-discovery.spec.ts` or `integration.spec.ts`** unless the user explicitly asks. UCSF requires email 2FA that will fail and risk locking out the account.
+- **Use Stanford portal** (no 2FA) for all portal testing.
+- Electron app steals window focus during E2E tests — avoid launching during automated builds.
+- **Default to `pnpm test:unit` and `pnpm typecheck` only.** No E2E tests that launch the Electron app unless explicitly requested.
+- **Stanford E2E test:** `E2E_STANFORD=1 npx playwright test tests/e2e/stanford-e2e.spec.ts` — full pipeline test: wizard → add Stanford portal → discover → extract. Requires `ANTHROPIC_API_KEY` in `.env` and Stanford creds in `providers.json`. Takes ~2-4 min, steals focus. Skipped unless `E2E_STANFORD=1`.
 
 ## Key constraints
 

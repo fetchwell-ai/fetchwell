@@ -135,18 +135,23 @@ export function registerIpcHandlers(userDataPath?: string): void {
     const creds = credentialsManager!.getPortalCredentials(portalId);
     if (!creds) throw new Error(`No credentials stored for portal: ${portalId}`);
 
-    await runExtraction(portalId, win, {
-      apiKey,
-      credentials: creds,
-      portalUrl: portal.url,
-      portalId: portal.id,
-      portalName: portal.name,
-      downloadFolder: settings.downloadFolder,
-      showBrowser: settings.showBrowser,
-      incremental: settings.incrementalExtraction,
-      loginForm: portal.loginForm,
-      twoFactor: portal.twoFactor,
-    });
+    try {
+      await runExtraction(portalId, win, {
+        apiKey,
+        credentials: creds,
+        portalUrl: portal.url,
+        portalId: portal.id,
+        portalName: portal.name,
+        downloadFolder: settings.downloadFolder,
+        showBrowser: settings.showBrowser,
+        incremental: settings.incrementalExtraction,
+        loginForm: portal.loginForm,
+        twoFactor: portal.twoFactor,
+      });
+      configManager!.updatePortal(portalId, { lastExtractedAt: new Date().toISOString() });
+    } catch {
+      // Error already sent to renderer via IPC event
+    }
   });
 
   // --- Folder picker ---
@@ -177,17 +182,22 @@ export function registerIpcHandlers(userDataPath?: string): void {
     const creds = credentialsManager!.getPortalCredentials(portalId);
     if (!creds) throw new Error(`No credentials stored for portal: ${portalId}`);
 
-    await runDiscovery(portalId, win, {
-      apiKey,
-      credentials: creds,
-      portalUrl: portal.url,
-      portalId: portal.id,
-      portalName: portal.name,
-      downloadFolder: settings.downloadFolder,
-      showBrowser: settings.showBrowser,
-      incremental: settings.incrementalExtraction,
-      loginForm: portal.loginForm,
-      twoFactor: portal.twoFactor,
-    });
+    try {
+      await runDiscovery(portalId, win, {
+        apiKey,
+        credentials: creds,
+        portalUrl: portal.url,
+        portalId: portal.id,
+        portalName: portal.name,
+        downloadFolder: settings.downloadFolder,
+        showBrowser: settings.showBrowser,
+        incremental: settings.incrementalExtraction,
+        loginForm: portal.loginForm,
+        twoFactor: portal.twoFactor,
+      });
+      configManager!.updatePortal(portalId, { discoveredAt: new Date().toISOString() });
+    } catch {
+      // Error already sent to renderer via IPC event
+    }
   });
 }

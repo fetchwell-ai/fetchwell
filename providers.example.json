@@ -26,8 +26,8 @@
       "type": "mychart",
       "url": "https://mystanfordchart.stanfordhealthcare.org/MyChart/Authentication/Login",
       "auth": {
-        "loginForm": "two-step",
-        "twoFactor": "manual"
+        "loginForm": "single-page",
+        "twoFactor": "none"
       }
     }
   ]
