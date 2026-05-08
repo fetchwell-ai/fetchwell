@@ -97,7 +97,9 @@ export async function extractProvider(
   try {
     // ── Phase: login ──────────────────────────────────────────────────────
     emit({ type: 'phase-change', phase: 'login', status: 'running', message: 'Logging in...' });
+    emit({ type: 'status-message', phase: 'login', message: 'Getting ready to fetch records...' });
 
+    emit({ type: 'status-message', phase: 'login', message: 'Navigating to sign-in page...' });
     console.log(`Step 2: Navigating to ${portalUrl}...`);
     await browser.navigate(portalUrl);
     console.log("Page loaded.");
@@ -105,6 +107,7 @@ export async function extractProvider(
 
     // Step 3: Login or restore session
     if (savedSession && browser.loadSession) {
+      emit({ type: 'status-message', phase: 'login', message: 'Restoring saved session...' });
       console.log("Step 3: Restoring saved session...");
       await browser.loadSession(savedSession);
       const verifyUrl = savedSession.homeUrl ?? portalUrl;
@@ -126,6 +129,7 @@ export async function extractProvider(
           console.log(`   Session validation failed — no authenticated elements found at ${currentUrl}`);
         }
         console.log("   Logging in fresh...");
+        emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
         clearSession(provider.id, basePath);
         console.log();
         console.log("Step 3: Login");
@@ -140,6 +144,7 @@ export async function extractProvider(
         }
       }
     } else {
+      emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
       console.log("Step 3: Login");
       await authModule.login(browser, authConfig, debugUrl);
       if (browser.saveSession) {
@@ -180,38 +185,47 @@ export async function extractProvider(
     emit({ type: 'phase-change', phase: 'extract', status: 'running', message: 'Extracting records...' });
 
     // Labs
+    emit({ type: 'status-message', phase: 'extract', message: 'Opening lab results...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'labs', current: 0, message: 'Extracting labs...' });
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    const labsCount = await extractLabsDocs(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental, provider.authenticatedSelectors);
+    const labsCount = await extractLabsDocs(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
     if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
+    emit({ type: 'status-message', phase: 'extract', message: `Labs complete — ${labsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'labs', count: labsCount, status: 'complete' });
     console.log();
 
     // Visits
+    emit({ type: 'status-message', phase: 'extract', message: 'Opening visits...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'visits', current: 0, message: 'Extracting visits...' });
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    const visitsCount = await extractVisits(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental, provider.authenticatedSelectors);
+    const visitsCount = await extractVisits(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
     if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
+    emit({ type: 'status-message', phase: 'extract', message: `Visits complete — ${visitsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'visits', count: visitsCount, status: 'complete' });
     console.log();
 
     // Medications
+    emit({ type: 'status-message', phase: 'extract', message: 'Opening medications...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'medications', current: 0, message: 'Extracting medications...' });
-    const medsCount = await extractMedications(browser, portalUrl, providerCredentials, outputDir, provider.id, incremental, provider.authenticatedSelectors);
+    const medsCount = await extractMedications(browser, portalUrl, providerCredentials, outputDir, provider.id, incremental, provider.authenticatedSelectors, emitProgress);
     if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
+    emit({ type: 'status-message', phase: 'extract', message: `Medications complete — ${medsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'medications', count: medsCount, status: 'complete' });
     console.log();
 
     // Messages
+    emit({ type: 'status-message', phase: 'extract', message: 'Opening messages...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'messages', current: 0, message: 'Extracting messages...' });
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    const msgsCount = await extractMessages(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental, provider.authenticatedSelectors);
+    const msgsCount = await extractMessages(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
     if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
+    emit({ type: 'status-message', phase: 'extract', message: `Messages complete — ${msgsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'messages', count: msgsCount, status: 'complete' });
     console.log();
 
     buildIndex(outputDir, provider.id);
 
+    emit({ type: 'status-message', phase: 'extract', message: 'All records fetched' });
     emit({ type: 'phase-change', phase: 'extract', status: 'complete', message: 'All records extracted' });
 
     console.log("=".repeat(60));
