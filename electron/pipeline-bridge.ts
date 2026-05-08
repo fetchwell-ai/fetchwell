@@ -275,6 +275,7 @@ function runSubprocess(
 /**
  * Run the extraction pipeline for a portal.
  * Emits extraction:log, extraction:complete, or extraction:error to the window.
+ * Rejects on error so callers can distinguish success from failure.
  */
 export async function runExtraction(portalId: string, win: BrowserWindow, config: RunConfig): Promise<void> {
   try {
@@ -289,12 +290,14 @@ export async function runExtraction(portalId: string, win: BrowserWindow, config
     if (!win.isDestroyed()) {
       win.webContents.send('extraction:error', errorEvent);
     }
+    throw err;
   }
 }
 
 /**
  * Run the discovery pipeline for a portal.
  * Emits discovery:log, discovery:complete, or discovery:error to the window.
+ * Rejects on error so callers can distinguish success from failure.
  */
 export async function runDiscovery(portalId: string, win: BrowserWindow, config: RunConfig): Promise<void> {
   try {
@@ -309,5 +312,6 @@ export async function runDiscovery(portalId: string, win: BrowserWindow, config:
     if (!win.isDestroyed()) {
       win.webContents.send('discovery:error', errorEvent);
     }
+    throw err;
   }
 }
