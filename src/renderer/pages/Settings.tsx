@@ -51,7 +51,7 @@ export default function Settings({ onBack }: SettingsProps) {
         setTheme(settings.theme ?? 'system');
       })
       .catch(() => {
-        // ignore — defaults remain
+        // ignore -- defaults remain
       })
       .finally(() => {
         setLoading(false);
@@ -92,7 +92,7 @@ export default function Settings({ onBack }: SettingsProps) {
       setApiKeyInput('');
       showSaved('api-key');
     } catch {
-      setApiKeyError('An error occurred while saving. Please try again.');
+      setApiKeyError('An error occurred while saving. Try again.');
     } finally {
       setApiKeyValidating(false);
     }
@@ -147,16 +147,16 @@ export default function Settings({ onBack }: SettingsProps) {
           size="sm"
           onClick={onBack}
         >
-          ← Back
+          Back
         </Button>
-        <h1 className="m-0 text-[22px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Settings</h1>
+        <h1 className="m-0 text-[22px] font-semibold text-[var(--color-fw-fg)]">Settings</h1>
       </div>
 
       <div className="flex flex-col gap-4">
 
         {/* Appearance section */}
         <Card className="px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
             Appearance
           </div>
           <div className="flex items-center gap-2">
@@ -166,10 +166,10 @@ export default function Settings({ onBack }: SettingsProps) {
                 type="button"
                 onClick={() => handleThemeChange(opt.value)}
                 className={cn(
-                  'flex-1 rounded-lg border px-3 py-2 text-[13px] font-medium transition-colors cursor-pointer',
+                  'flex-1 rounded-[var(--radius-md)] border px-3 py-2 text-[13px] font-medium transition-colors duration-[var(--fw-dur-fast)] cursor-pointer',
                   theme === opt.value
-                    ? 'border-[#0071e3] bg-[#e8f0fb] text-[#0071e3] dark:bg-[#0a2040] dark:border-[#0a84ff] dark:text-[#0a84ff]'
-                    : 'border-[#d2d2d7] bg-transparent text-[#3d3d3f] hover:bg-[#f5f5f7] dark:border-[#3a3a3c] dark:text-[#aeaeb2] dark:hover:bg-[#3a3a3c]',
+                    ? 'border-[var(--color-fw-primary)] bg-[var(--color-fw-primary-tint)] text-[var(--color-fw-primary)]'
+                    : 'border-[var(--color-fw-border)] bg-transparent text-[var(--color-fw-fg-muted)] hover:bg-[var(--color-fw-bg-deep)]',
                 )}
               >
                 {opt.label}
@@ -177,28 +177,28 @@ export default function Settings({ onBack }: SettingsProps) {
             ))}
           </div>
           {savedLabel === 'theme' && (
-            <p className="mt-2 text-xs font-medium text-[#34c759]">Saved</p>
+            <p className="mt-2 text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</p>
           )}
-          <p className="mt-2 text-xs text-[#6e6e73]">
+          <p className="mt-2 text-xs text-[var(--color-fw-fg-muted)]">
             System follows your macOS appearance setting.
           </p>
         </Card>
 
         {/* API Key section */}
         <Card className="px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
-            API Key
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
+            API key
           </div>
 
           {!editingApiKey && apiKeyConfigured && (
             <div className="flex items-center gap-3">
               <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7]">API key configured</span>
-                <span className="text-[13px] tracking-[0.06em] text-[#6e6e73]">●●●●●●●●●●●●●●●●</span>
+                <span className="text-[14px] text-[var(--color-fw-fg)]">API key configured</span>
+                <span className="text-[13px] tracking-[0.06em] text-[var(--color-fw-fg-muted)]">*****************</span>
               </div>
               <div className="flex flex-shrink-0 items-center gap-2">
                 {savedLabel === 'api-key' && (
-                  <span className="settings-saved text-xs font-medium text-[#34c759]">Saved</span>
+                  <span className="settings-saved text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
                 )}
                 <Button
                   type="button"
@@ -216,7 +216,7 @@ export default function Settings({ onBack }: SettingsProps) {
             <div className="mt-1">
               <div className="mb-5">
                 <Label htmlFor="settings-api-key" className="mb-1.5">
-                  {apiKeyConfigured ? 'New API Key' : 'API Key'}
+                  {apiKeyConfigured ? 'New API key' : 'API key'}
                 </Label>
                 <Input
                   id="settings-api-key"
@@ -230,11 +230,11 @@ export default function Settings({ onBack }: SettingsProps) {
                   autoComplete="off"
                   spellCheck={false}
                 />
-                <p className="mt-1 text-xs text-[#6e6e73]">
+                <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
                   Starts with sk-ant-. Get one at{' '}
                   <strong>console.anthropic.com</strong>
                 </p>
-                {apiKeyError && <p className="mt-1 text-xs text-[#ff3b30]">{apiKeyError}</p>}
+                {apiKeyError && <p className="mt-1 text-xs text-[var(--color-fw-crimson-600)]">{apiKeyError}</p>}
               </div>
               <div className="flex justify-end gap-2">
                 {apiKeyConfigured && (
@@ -254,7 +254,7 @@ export default function Settings({ onBack }: SettingsProps) {
                   onClick={handleSaveApiKey}
                   disabled={apiKeyValidating}
                 >
-                  {apiKeyValidating ? 'Validating…' : 'Save'}
+                  {apiKeyValidating ? 'Validating...' : 'Save'}
                 </Button>
               </div>
             </div>
@@ -263,18 +263,18 @@ export default function Settings({ onBack }: SettingsProps) {
 
         {/* Download Folder section */}
         <Card className="px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
-            Download Folder
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
+            Download folder
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-[#f5f5f7] dark:bg-[#1c1c1e] px-3 py-2.5">
-              <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-[#3d3d3f] dark:text-[#aeaeb2]">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--color-fw-bg)] px-3 py-2.5">
+              <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-[var(--color-fw-fg-muted)]">
                 {downloadFolder || 'No folder selected'}
               </span>
             </div>
             <div className="flex flex-shrink-0 items-center gap-2">
               {savedLabel === 'folder' && (
-                <span className="settings-saved text-xs font-medium text-[#34c759]">Saved</span>
+                <span className="settings-saved text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
               )}
               <Button
                 type="button"
@@ -286,31 +286,31 @@ export default function Settings({ onBack }: SettingsProps) {
               </Button>
             </div>
           </div>
-          <p className="mt-2 text-xs text-[#6e6e73]">
+          <p className="mt-2 text-xs text-[var(--color-fw-fg-muted)]">
             Extracted PDFs will be saved to this folder.
           </p>
         </Card>
 
         {/* Browser Visibility section */}
         <Card className="px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
-            Browser Visibility
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
+            Browser visibility
           </div>
           <div className="mb-2 flex items-center gap-3">
-            <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7]" htmlFor="show-browser">
+            <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-[14px] text-[var(--color-fw-fg)]" htmlFor="show-browser">
               <Checkbox
                 id="show-browser"
                 checked={showBrowser}
                 onChange={handleShowBrowserToggle}
               />
-              <span>Show browser window during operations</span>
+              <span>Show the browser while it works</span>
             </label>
             {savedLabel === 'show-browser' && (
-              <span className="settings-saved text-xs font-medium text-[#34c759]">Saved</span>
+              <span className="settings-saved text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
             )}
           </div>
           {showBrowser && (
-            <p className="settings-warning m-1 rounded-lg bg-[#fff8ec] dark:bg-[#2c1f00] px-3 py-2.5 text-[13px] leading-relaxed text-[#ff9f0a]">
+            <p className="settings-warning m-1 rounded-[var(--radius-sm)] bg-[var(--color-fw-ochre-100)] px-3 py-2.5 text-[13px] leading-relaxed text-[var(--color-fw-ochre-600)]">
               When enabled, a browser window will be visible during portal
               operations. This is useful for debugging but may be distracting
               during normal use.
@@ -320,11 +320,11 @@ export default function Settings({ onBack }: SettingsProps) {
 
         {/* Incremental Extraction section */}
         <Card className="px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
-            Extraction Mode
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
+            Extraction mode
           </div>
           <div className="flex items-center gap-3">
-            <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7]" htmlFor="incremental-extraction">
+            <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-[14px] text-[var(--color-fw-fg)]" htmlFor="incremental-extraction">
               <Checkbox
                 id="incremental-extraction"
                 checked={incrementalExtraction}
@@ -333,21 +333,21 @@ export default function Settings({ onBack }: SettingsProps) {
               <span>Incremental extraction</span>
             </label>
             {savedLabel === 'incremental' && (
-              <span className="settings-saved text-xs font-medium text-[#34c759]">Saved</span>
+              <span className="settings-saved text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
             )}
           </div>
-          <p className="mt-2 text-xs text-[#6e6e73]">
+          <p className="mt-2 text-xs text-[var(--color-fw-fg-muted)]">
             When enabled, only fetch records newer than the last extraction.
             Disable to re-fetch all records.
           </p>
         </Card>
 
         {/* API costs note */}
-        <Card className="bg-[#f5f5f7] dark:bg-[#1c1c1e] px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
-            API Usage &amp; Costs
+        <Card className="bg-[var(--color-fw-bg)] px-6 py-5">
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
+            API usage and costs
           </div>
-          <p className="m-0 text-[13px] leading-relaxed text-[#3d3d3f] dark:text-[#aeaeb2]">
+          <p className="m-0 text-[13px] leading-relaxed text-[var(--color-fw-fg-muted)]">
             API usage is billed directly by Anthropic. Typical cost: a few
             dollars per extraction run. Manage your API key at{' '}
             <strong>console.anthropic.com</strong>.
