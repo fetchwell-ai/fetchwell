@@ -63,14 +63,14 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
       transition={shouldReduce ? undefined : { duration: 0.15 }}
     >
       <motion.div
-        className="w-[400px] max-w-[calc(100vw-48px)] overflow-hidden rounded-2xl bg-white shadow-[0_8px_32px_rgba(0,0,0,0.22),0_2px_8px_rgba(0,0,0,0.1)]"
+        className="w-[400px] max-w-[calc(100vw-48px)] overflow-hidden rounded-2xl bg-white dark:bg-[#2c2c2e] shadow-[0_8px_32px_rgba(0,0,0,0.22),0_2px_8px_rgba(0,0,0,0.1)]"
         initial={shouldReduce ? false : { opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={shouldReduce ? undefined : { opacity: 0, scale: 0.97, y: 6 }}
         transition={shouldReduce ? undefined : { duration: 0.2, ease: easeOut }}
       >
-        <div className="border-b border-[#f0f0f2] px-6 pb-4 pt-5">
-          <h2 className="m-0 text-[17px] font-semibold text-[#1d1d1f]">Verification Required</h2>
+        <div className="border-b border-[#f0f0f2] dark:border-[#3a3a3c] px-6 pb-4 pt-5">
+          <h2 className="m-0 text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Verification Required</h2>
         </div>
 
         <div className="px-6 pb-6 pt-5">
@@ -80,7 +80,7 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
             </p>
           ) : (
             <>
-              <p className="m-0 mb-5 text-[14px] leading-relaxed text-[#3d3d3f]">
+              <p className="m-0 mb-5 text-[14px] leading-relaxed text-[#3d3d3f] dark:text-[#d1d1d6]">
                 Enter the verification code sent to your email.
               </p>
               <form onSubmit={handleSubmit}>

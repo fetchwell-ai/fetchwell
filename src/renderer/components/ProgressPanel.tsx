@@ -385,15 +385,15 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
       transition={shouldReduce ? undefined : { duration: 0.15 }}
     >
       <motion.div
-        className="progress-panel flex w-[600px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-80px)] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_8px_rgba(0,0,0,0.08)]"
+        className="progress-panel flex w-[600px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-80px)] flex-col overflow-hidden rounded-2xl bg-white dark:bg-[#2c2c2e] shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_8px_rgba(0,0,0,0.08)]"
         initial={shouldReduce ? false : { opacity: 0, scale: 0.96, y: 8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={shouldReduce ? undefined : { opacity: 0, scale: 0.97, y: 4 }}
         transition={shouldReduce ? undefined : { duration: 0.2, ease: easeOut }}
       >
         {/* Header */}
-        <div className="flex flex-shrink-0 items-center justify-between border-b border-[#f0f0f2] px-6 pb-4 pt-5">
-          <h2 className="m-0 text-[17px] font-semibold text-[#1d1d1f]">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-[#f0f0f2] dark:border-[#3a3a3c] px-6 pb-4 pt-5">
+          <h2 className="m-0 text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">
             {panelState === 'complete'
               ? completedTitle
               : panelState === 'error'
@@ -403,7 +403,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
           {panelState !== 'running' && (
             <button
               type="button"
-              className="cursor-pointer rounded-md border-none bg-transparent p-1 text-[14px] text-[#6e6e73] leading-none hover:bg-[#f5f5f7]"
+              className="cursor-pointer rounded-md border-none bg-transparent p-1 text-[14px] text-[#6e6e73] leading-none hover:bg-[#f5f5f7] dark:text-[#aeaeb2] dark:hover:bg-[#3a3a3c]"
               aria-label="Close"
               onClick={onClose}
             >
@@ -513,7 +513,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
 
         {/* Footer */}
         {panelState === 'complete' && (
-          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] px-6 pb-5 pt-4">
+          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] dark:border-[#3a3a3c] px-6 pb-5 pt-4">
             <div className="progress-complete-message rounded-lg bg-[#e3f0d8] px-3.5 py-2.5 text-[14px] text-[#2e6b0a]">
               {operation === 'discovery'
                 ? 'Portal navigation mapped successfully.'
@@ -539,7 +539,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
         )}
 
         {panelState === 'error' && errorData && (
-          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] px-6 pb-5 pt-4">
+          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] dark:border-[#3a3a3c] px-6 pb-5 pt-4">
             <ErrorSummary
               portalId={portalId}
               error={errorData}
@@ -559,8 +559,8 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
         )}
 
         {panelState === 'running' && !hasAnyStructuredEvent && (
-          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] px-6 pb-5 pt-4">
-            <div className="flex items-center gap-2.5 text-[13px] text-[#6e6e73]">
+          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] dark:border-[#3a3a3c] px-6 pb-5 pt-4">
+            <div className="flex items-center gap-2.5 text-[13px] text-[#6e6e73] dark:text-[#aeaeb2]">
               <span className="progress-spinner inline-block h-3.5 w-3.5 flex-shrink-0 animate-[progress-spin_0.8s_linear_infinite] rounded-full border-2 border-[#d2d2d7] border-t-[#0071e3]" />
               <span>In progress…</span>
             </div>
