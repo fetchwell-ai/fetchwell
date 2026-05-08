@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../components/ui/button';
 
 type Step = 'overview' | 'apiKey' | 'downloadFolder';
 
@@ -54,9 +55,7 @@ function OverviewStep({ onNext }: OverviewStepProps) {
         </p>
       </div>
       <div className="wizard-actions">
-        <button className="btn btn-primary" onClick={onNext}>
-          Get Started
-        </button>
+        <Button onClick={onNext}>Get Started</Button>
       </div>
     </div>
   );
