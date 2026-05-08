@@ -20,8 +20,9 @@ const SECTION_KEYWORDS: Record<string, string[]> = {
   labs: ["test results", "labs", "lab results", "results", "laboratory", "imaging", "radiology", "diagnostics", "pathology"],
   visits: [
     "visits", "appointments", "past visits", "after visit summary", "after-visit summary",
-    "office visits", "encounter", "avs", "notes", "visit summaries", "visit summary",
+    "office visits", "encounter", "avs", "visit summaries", "visit summary",
     "care plan", "care summary", "clinical notes", "clinical summary",
+    "upcoming appointments", "past appointments",
   ],
   medications: ["medications", "medicines", "prescriptions", "medication list", "pharmacy", "drugs", "rx", "current medications", "active medications"],
   messages: ["messages", "inbox", "message center", "messaging", "secure messages", "compose", "conversations"],
@@ -45,6 +46,19 @@ function matchSection(description: string): SectionKey | null {
     "welcome back", "welcome,", "dashboard",
   ];
   if (dashboardIndicators.some((d) => lower.includes(d))) {
+    return null;
+  }
+
+  // Pages that are clearly NOT health record sections (informational/marketing pages)
+  const rejectIndicators = [
+    "scheduling a video visit", "how to connect to a video visit",
+    "video visit instructions", "learn more about video",
+    "page not found", "error 404",
+    "find a doctor", "find a clinic",
+    "second opinion", "clinical trial",
+    "price transparency", "financial assistance",
+  ];
+  if (rejectIndicators.some((r) => lower.includes(r))) {
     return null;
   }
 
@@ -157,12 +171,23 @@ export async function discoverPortal(
   await browser.navigate(homeUrl);
   await new Promise((r) => setTimeout(r, 3000));
 
-  // Step 2: Observe all navigation elements on the dashboard
-  console.log("Discovery: observing dashboard navigation elements...");
+  // Step 2: Observe patient portal navigation elements on the dashboard.
+  // IMPORTANT: We specifically ask for the PATIENT PORTAL / MyChart navigation,
+  // not the public hospital website navigation (Doctors & Providers, etc.).
+  console.log("Discovery: observing patient portal navigation elements...");
   const navElements = await browser.observe(
-    "List all navigation elements visible on this page — top navigation bar items, " +
-    "sidebar links, hamburger menu items, tab labels. For each, return its visible text " +
-    "label and what kind of navigation element it is.",
+    "This is a patient health portal (like MyChart or MyHealth). " +
+    "Look for the PATIENT PORTAL navigation bar or tabs — these are links " +
+    "that lead to health record sections like 'Messages', 'Visits', 'Appointments', " +
+    "'My Medical Record', 'Test Results', 'Medications', 'Procedures', 'Billing'. " +
+    "They are typically in a horizontal tab bar below the hospital logo, or in a " +
+    "sidebar/hamburger menu within the patient portal. " +
+    "Do NOT include public hospital website navigation (like 'Doctors & Providers', " +
+    "'Clinics & Locations', 'Conditions & Treatments', 'Patients & Visitors', " +
+    "'About Us', 'Careers', 'Clinical Trials', etc.). " +
+    "Also include any hamburger/menu icon within the patient portal that might " +
+    "expand to show more health record navigation options. " +
+    "For each item, return its visible text label.",
   );
 
   console.log(`Discovery: found ${navElements.length} navigation element(s)`);
@@ -186,6 +211,7 @@ export async function discoverPortal(
     // Skip nav elements that are clearly not health-record sections
     const lowerDesc = navEl.description.toLowerCase();
     const skipPatterns = [
+      // Account / session
       "log out", "logout", "sign out", "signout",
       "home", "dashboard",
       "profile", "account", "settings", "preferences",
@@ -193,6 +219,22 @@ export async function discoverPortal(
       "billing", "payment", "insurance",
       "proxy", "family", "dependents",
       "share access", "personalize", "security", "verification",
+      // Public hospital website navigation (NOT the patient portal)
+      "doctors", "providers", "clinics", "locations",
+      "conditions", "treatments", "patients & visitors",
+      "about us", "careers", "newsroom", "nursing",
+      "clinical trials", "sustainability", "quality",
+      "allied health", "healthcare professionals",
+      "referring physician", "get a second opinion",
+      "covid", "resource center", "donation",
+      "price transparency", "financial assistance",
+      "surprise medical bill", "stanford health care now",
+      "medical records", "hospital check-in",
+      "facilities", "services planning",
+      "search", "footer",
+      // Portal non-record sections
+      "procedures",
+      "notifications", "alerts",
     ];
     if (skipPatterns.some((p) => lowerDesc.includes(p))) {
       console.log(`Discovery: skipping "${navEl.description}" (not a health record section)`);
@@ -218,13 +260,19 @@ export async function discoverPortal(
     }
     await new Promise((r) => setTimeout(r, 3000));
 
-    // Observe what kind of page this is — focus on main content, not nav elements
+    // Observe what kind of page this is — focus on main content, not nav elements.
+    // Be explicit about what constitutes each section to avoid misclassification.
     const pageObs = await browser.observe(
       "Look at the MAIN CONTENT AREA of this page (not the navigation bar or sidebar). " +
-      "What is the page heading or title? What kind of content is displayed — " +
-      "test results/labs, visit records/appointments, medication list/prescriptions, " +
-      "message inbox/threads, or something else (settings, profile, billing, etc.)? " +
-      "Describe only what the main content shows, not what navigation links are visible.",
+      "What is the page heading or title? What kind of health record content is displayed? " +
+      "Classify it as ONE of the following:\n" +
+      "- TEST RESULTS / LABS: a list of lab test results, blood work, imaging results, pathology reports\n" +
+      "- VISITS / APPOINTMENTS: a list of past doctor visits, office visits, appointments, after-visit summaries\n" +
+      "- MEDICATIONS: a list of current prescriptions, medicines, medication refills\n" +
+      "- MESSAGES / INBOX: a list of secure message threads or conversations with healthcare providers\n" +
+      "- OTHER: anything else (settings, profile, billing, scheduling a video visit, informational pages, etc.)\n" +
+      "Describe only what the main content area shows. " +
+      "A page about 'scheduling a video visit' or 'how video visits work' is NOT a visits list — that is OTHER.",
     );
 
     const pageDescription = pageObs.map((o) => o.description).join(" ");
@@ -293,6 +341,19 @@ export async function discoverPortal(
     for (const subItem of subNavObs) {
       if (visited.size === 4) break;
 
+      // Skip sub-nav items that are misleading sub-sections (not the main section)
+      const subLowerDesc = subItem.description.toLowerCase();
+      const skipSubNavPatterns = [
+        "video visit", "schedule a visit", "book a visit",
+        "e-visit", "evisit",
+        "covid", "resource center",
+        "find a doctor", "find a clinic",
+      ];
+      if (skipSubNavPatterns.some((p) => subLowerDesc.includes(p))) {
+        console.log(`   Skipping misleading sub-nav item: "${subItem.description}"`);
+        continue;
+      }
+
       const subMatch = matchSection(subItem.description);
       if (!subMatch || visited.has(subMatch)) continue;
 
@@ -350,6 +411,116 @@ export async function discoverPortal(
         itemInstruction: buildItemInstruction(subMatch),
       };
       console.log(`   Recorded ${subMatch} section with ${subSteps.length} step(s)`);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Targeted fallback: If the generic exploration missed sections, try direct
+  // navigation using known MyChart/patient portal link labels.
+  // ---------------------------------------------------------------------------
+  const missingSections = (["labs", "visits", "medications", "messages"] as const).filter(
+    (k) => !visited.has(k),
+  );
+  if (missingSections.length > 0) {
+    console.log();
+    console.log(`Discovery: ${missingSections.length} section(s) still missing after initial exploration.`);
+    console.log(`   Missing: ${missingSections.join(", ")}`);
+    console.log("   Running targeted fallback with direct navigation...");
+
+    // Map each missing section to specific link labels to try
+    const directNavLabels: Record<SectionKey, string[]> = {
+      visits: ["Visits", "Appointments", "Past Visits", "My Visits"],
+      labs: ["Test Results", "Lab Results", "Results", "My Medical Record"],
+      medications: ["Medications", "Medicines", "Prescriptions", "Current Medications"],
+      messages: ["Messages", "Inbox", "Message Center", "Secure Messages"],
+    };
+
+    for (const section of missingSections) {
+      const labels = directNavLabels[section];
+      let found = false;
+
+      for (const label of labels) {
+        console.log(`   Trying direct nav for ${section}: clicking "${label}"...`);
+        await browser.navigate(homeUrl);
+        await new Promise((r) => setTimeout(r, 2000));
+
+        const actInstruction =
+          `Click the patient portal navigation link or tab labeled "${label}". ` +
+          `Look in the main navigation bar, tab bar, or sidebar of the patient portal — ` +
+          `NOT in the public hospital website navigation.`;
+        try {
+          await browser.act(actInstruction);
+          await new Promise((r) => setTimeout(r, 3000));
+
+          // Verify we landed on a relevant page
+          const pageObs = await browser.observe(
+            "Look at the MAIN CONTENT AREA of this page. " +
+            "Does it show health record content like lab results, visits/appointments, " +
+            "medications, or message threads? " +
+            "Describe what the main content area shows.",
+          );
+          const pageDescription = pageObs.map((o) => o.description).join(" ");
+          console.log(`      Page: ${pageDescription.slice(0, 120)}`);
+
+          const matched = matchSection(pageDescription);
+          if (matched === section) {
+            console.log(`      Matched ${section} via direct nav to "${label}"`);
+            visited.add(section);
+
+            const steps = [actInstruction];
+
+            // Check for relevant sub-tabs
+            const subNavObs = await browser.observe(
+              "List any sub-navigation tabs or secondary navigation items on this page.",
+            );
+            const relevantSubTab = findRelevantSubTab(subNavObs, section);
+            if (relevantSubTab) {
+              console.log(`      Clicking sub-tab: "${relevantSubTab.description}"`);
+              const subAct = `Click the sub-tab or secondary navigation item labeled "${relevantSubTab.description}"`;
+              try {
+                await browser.act(subAct);
+                await new Promise((r) => setTimeout(r, 2000));
+                steps.push(subAct);
+              } catch (err: any) {
+                console.log(`      Failed sub-tab click: ${err?.message?.slice(0, 80)}`);
+              }
+            }
+
+            // Take a screenshot
+            const ss = await browser.screenshot();
+            fs.writeFileSync(path.join(discoverDir, section + "-direct.png"), Buffer.from(ss, "base64"));
+
+            sections[section] = {
+              steps,
+              listInstruction: buildListInstruction(section),
+              itemInstruction: buildItemInstruction(section),
+            };
+            console.log(`      Recorded ${section} section with ${steps.length} step(s)`);
+            found = true;
+            break;
+          } else if (matched && !visited.has(matched)) {
+            // We found a different section — record it too
+            console.log(`      Found ${matched} instead of ${section} — recording it`);
+            visited.add(matched);
+            sections[matched] = {
+              steps: [actInstruction],
+              listInstruction: buildListInstruction(matched),
+              itemInstruction: buildItemInstruction(matched),
+            };
+
+            const ss = await browser.screenshot();
+            fs.writeFileSync(path.join(discoverDir, matched + "-direct.png"), Buffer.from(ss, "base64"));
+          } else {
+            console.log(`      No match for ${section} — page matched: ${matched ?? "none"}`);
+          }
+        } catch (err: any) {
+          console.log(`      Failed to click "${label}": ${err?.message?.slice(0, 80)}`);
+        }
+      }
+
+      if (!found) {
+        console.log(`   Could not find ${section} via direct navigation.`);
+      }
     }
   }
 
