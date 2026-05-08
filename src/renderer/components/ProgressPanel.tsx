@@ -512,6 +512,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
               </Button>
               <Button
                 type="button"
+                className="btn-primary"
                 onClick={onClose}
               >
                 Close
@@ -531,6 +532,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
             <div className="mt-3 flex justify-end gap-2">
               <Button
                 type="button"
+                className="btn-primary"
                 onClick={onClose}
               >
                 Close
