@@ -3,8 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 
 /**
  * Wraps a page in a motion.div with enter/exit transitions.
- * Respects prefers-reduced-motion — disables animation when the user
- * has requested reduced motion in their OS settings.
+ * Respects prefers-reduced-motion -- opacity only, no translateY.
  */
 export default function MotionPage({
   children,
@@ -17,9 +16,9 @@ export default function MotionPage({
 
   const variants = shouldReduce
     ? {
-        initial: {},
-        animate: {},
-        exit: {},
+        initial: { opacity: 0 },
+        animate: { opacity: 1 },
+        exit: { opacity: 0 },
       }
     : {
         initial: { opacity: 0, y: 6 },
@@ -27,8 +26,8 @@ export default function MotionPage({
         exit: { opacity: 0, y: -4 },
       };
 
-  // ease-out cubic bezier (must be a 4-tuple for TypeScript)
-  const easeOut: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
+  // --fw-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1)
+  const easeInOut: [number, number, number, number] = [0.4, 0, 0.2, 1];
 
   return (
     <motion.div
@@ -39,10 +38,10 @@ export default function MotionPage({
       exit="exit"
       transition={
         shouldReduce
-          ? undefined
+          ? { duration: 0.28 }
           : {
-              duration: 0.18,
-              ease: easeOut,
+              duration: 0.28,
+              ease: easeInOut,
             }
       }
     >
