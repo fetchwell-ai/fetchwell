@@ -48,45 +48,47 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
   };
 
   const shouldReduce = useReducedMotion();
-  // ease-out cubic bezier
-  const easeOut: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
+  // --fw-ease-out: cubic-bezier(0.16, 1, 0.3, 1)
+  const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
   return (
     <motion.div
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/65"
+      className="fixed inset-0 z-[200] flex items-center justify-center"
+      style={{ background: 'var(--fw-scrim)' }}
       role="dialog"
       aria-modal="true"
       aria-label="Two-factor authentication"
       initial={shouldReduce ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={shouldReduce ? undefined : { opacity: 0 }}
-      transition={shouldReduce ? undefined : { duration: 0.15 }}
+      transition={shouldReduce ? undefined : { duration: 0.18 }}
     >
       <motion.div
-        className="w-[400px] max-w-[calc(100vw-48px)] overflow-hidden rounded-2xl bg-white dark:bg-[#2c2c2e] shadow-[0_8px_32px_rgba(0,0,0,0.22),0_2px_8px_rgba(0,0,0,0.1)]"
-        initial={shouldReduce ? false : { opacity: 0, scale: 0.95, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={shouldReduce ? undefined : { opacity: 0, scale: 0.97, y: 6 }}
-        transition={shouldReduce ? undefined : { duration: 0.2, ease: easeOut }}
+        className="w-[400px] max-w-[calc(100vw-48px)] overflow-hidden rounded-[var(--radius-lg)] shadow-[var(--shadow-fw-3)]"
+        style={{ background: 'var(--fw-modal-bg)' }}
+        initial={shouldReduce ? false : { opacity: 0, scale: 0.97 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={shouldReduce ? undefined : { opacity: 0, scale: 0.97 }}
+        transition={shouldReduce ? undefined : { duration: 0.18, ease: easeOut }}
       >
-        <div className="border-b border-[#f0f0f2] dark:border-[#3a3a3c] px-6 pb-4 pt-5">
-          <h2 className="m-0 text-[17px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Verification Required</h2>
+        <div className="border-b border-[var(--color-fw-border)] px-6 pb-4 pt-5">
+          <h2 className="m-0 text-[17px] font-semibold text-[var(--color-fw-fg)]">Verification required</h2>
         </div>
 
         <div className="px-6 pb-6 pt-5">
           {timedOut ? (
-            <p className="m-0 text-[14px] leading-relaxed text-[#ff3b30]">
-              Verification timed out. Please try again.
+            <p className="m-0 text-[14px] leading-relaxed text-[var(--color-fw-crimson-600)]">
+              Verification timed out. Try again.
             </p>
           ) : (
             <>
-              <p className="m-0 mb-5 text-[14px] leading-relaxed text-[#3d3d3f] dark:text-[#d1d1d6]">
-                Enter the verification code sent to your email.
+              <p className="m-0 mb-5 text-[14px] leading-relaxed text-[var(--color-fw-fg-muted)]">
+                Enter the code your portal just sent.
               </p>
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
                   <Label htmlFor="twofa-code-input" className="mb-1.5">
-                    Verification Code
+                    Verification code
                   </Label>
                   <Input
                     id="twofa-code-input"
@@ -95,7 +97,7 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="Enter code…"
+                    placeholder="Enter code..."
                     autoComplete="one-time-code"
                     autoFocus
                     className="text-base tracking-[0.1em]"
