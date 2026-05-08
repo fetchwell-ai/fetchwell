@@ -1,13 +1,15 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import AddPortal from './AddPortal';
 import ProgressPanel from '../components/ProgressPanel';
 import TwoFactorModal from '../components/TwoFactorModal';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card } from '../components/ui/card';
+import { cn } from '../lib/utils';
 
 interface PortalListProps {
   onOpenSettings: () => void;
+  selectedPortalId?: string | null;
 }
 
 type View =
@@ -40,9 +42,17 @@ interface PortalCardProps {
   onMap: (portalId: string) => void;
   onExtract: (portalId: string) => void;
   runningOperation: RunningOperation | null;
+  isSelected?: boolean;
 }
 
-function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperation }: PortalCardProps) {
+function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperation, isSelected }: PortalCardProps) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isSelected && cardRef.current) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [isSelected]);
   const isThisRunning =
     runningOperation !== null && runningOperation.portalId === portal.id;
   const isAnotherRunning =
@@ -86,7 +96,7 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
         : undefined;
 
   return (
-    <Card className="portal-card px-6 py-5">
+    <Card ref={cardRef} className={cn("portal-card px-6 py-5", isSelected && "ring-2 ring-[#0071e3]")}>
       <div className="mb-3 flex items-start justify-between">
         <div className="min-w-0 flex-1">
           <h2 className="portal-card-name m-0 mb-0.5 text-base font-semibold text-[#1d1d1f]">{portal.name}</h2>
@@ -166,7 +176,7 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
   );
 }
 
-export default function PortalList({ onOpenSettings }: PortalListProps) {
+export default function PortalList({ onOpenSettings, selectedPortalId }: PortalListProps) {
   const [view, setView] = useState<View>({ type: 'list' });
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -307,6 +317,7 @@ export default function PortalList({ onOpenSettings }: PortalListProps) {
               onMap={handleMap}
               onExtract={handleExtract}
               runningOperation={runningOperation}
+              isSelected={portal.id === selectedPortalId}
             />
           ))}
         </div>

@@ -57,14 +57,6 @@ export default function App() {
     prevActivePage.current = activePage;
   }, [rootPage, activePage, loadPortals]);
 
-  // Initial portal load when entering main layout
-  useEffect(() => {
-    if (rootPage === 'main') {
-      loadPortals();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rootPage]);
-
   if (rootPage === 'loading') {
     return null;
   }
@@ -102,6 +94,7 @@ export default function App() {
           <PortalList
             key={portalListKey}
             onOpenSettings={() => setActivePage('settings')}
+            selectedPortalId={selectedPortalId}
           />
         )}
       </div>
