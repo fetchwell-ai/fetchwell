@@ -140,7 +140,7 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
           {isThisRunning && runningOperation?.operation === 'discovery' ? 'Running…' : 'Map'}
         </Button>
 
-        <div className="relative inline-flex flex-col">
+        <div className="group relative inline-flex flex-col">
           <Button
             type="button"
             size="sm"
