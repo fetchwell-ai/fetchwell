@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import ErrorSummary, { resetFailureCount } from './ErrorSummary';
 import { Button } from './ui/button';
 
