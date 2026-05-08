@@ -1,4 +1,6 @@
 import React from 'react';
+import { Button } from './ui/button';
+import { cn } from '../lib/utils';
 
 export interface ErrorSummaryProps {
   portalId: string;
@@ -42,6 +44,20 @@ function getCategoryLabel(category: string): string {
   }
 }
 
+function getCategoryColors(category: string): { border: string; bg: string } {
+  switch (category) {
+    case 'credentials':
+      return { border: 'border-l-[#f59e0b]', bg: 'bg-[#fffbeb]' };
+    case '2fa_timeout':
+      return { border: 'border-l-[#3b82f6]', bg: 'bg-[#eff6ff]' };
+    case 'portal_structure':
+      return { border: 'border-l-[#f97316]', bg: 'bg-[#fff7ed]' };
+    case 'network':
+    default:
+      return { border: 'border-l-[#ef4444]', bg: 'bg-[#fff1f0]' };
+  }
+}
+
 export function resetFailureCount(portalId: string): void {
   failureCounts.delete(portalId);
 }
@@ -76,43 +92,47 @@ export default function ErrorSummary({
     }
   };
 
+  const { border, bg } = getCategoryColors(category);
+
   return (
-    <div className={`error-summary error-summary--${category}`}>
-      <div className="error-summary-header">
-        <span className="error-summary-icon">{getCategoryIcon(category)}</span>
-        <span className="error-summary-label">{getCategoryLabel(category)}</span>
+    <div className={cn('error-summary mb-1 rounded-[10px] border-l-4 p-[14px_16px]', border, bg, `error-summary--${category}`)}>
+      <div className="mb-1.5 flex items-center gap-2">
+        <span className="flex-shrink-0 text-[15px] leading-none">{getCategoryIcon(category)}</span>
+        <span className="text-[13px] font-semibold text-[#1d1d1f]">{getCategoryLabel(category)}</span>
       </div>
 
-      <p className="error-summary-message">{message}</p>
+      <p className="m-0 mb-1.5 text-[14px] leading-[1.5] text-[#1d1d1f]">{message}</p>
 
       {suggestion && (
-        <p className="error-summary-suggestion">{suggestion}</p>
+        <p className="m-0 mb-1.5 text-[13px] leading-[1.5] text-[#3d3d3f]">{suggestion}</p>
       )}
 
       {showReDiscoverSuggestion && (
-        <div className="error-summary-rediscover">
-          <p className="error-summary-rediscover-text">
+        <div className="mt-2.5 flex flex-col gap-2 border-t border-black/[0.08] pt-2.5">
+          <p className="m-0 text-[13px] leading-[1.5] text-[#3d3d3f]">
             This portal has failed multiple times. Try re-running Map to update the portal structure.
           </p>
-          <button
+          <Button
             type="button"
-            className="btn btn-secondary btn-sm"
+            variant="secondary"
+            size="sm"
             onClick={onReDiscover}
           >
             Re-discover
-          </button>
+          </Button>
         </div>
       )}
 
       {category === 'unknown' && (
-        <div className="error-summary-copy-log">
-          <button
+        <div className="mt-2.5 border-t border-black/[0.08] pt-2.5">
+          <Button
             type="button"
-            className="btn btn-secondary btn-sm"
+            variant="secondary"
+            size="sm"
             onClick={handleCopyLog}
           >
             Copy Log
-          </button>
+          </Button>
         </div>
       )}
     </div>

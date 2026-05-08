@@ -1,4 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Card } from '../components/ui/card';
+import { Checkbox } from '../components/ui/checkbox';
 
 interface SettingsProps {
   onBack: () => void;
@@ -112,52 +117,56 @@ export default function Settings({ onBack }: SettingsProps) {
   if (loading) return null;
 
   return (
-    <div className="settings-page">
-      <div className="settings-header">
-        <button
+    <div className="mx-auto w-full max-w-[640px] flex-1 px-10 py-8">
+      <div className="mb-7 flex items-center gap-4">
+        <Button
           type="button"
-          className="btn btn-secondary settings-back-btn"
+          variant="secondary"
+          size="sm"
           onClick={onBack}
         >
           ← Back
-        </button>
-        <h1>Settings</h1>
+        </Button>
+        <h1 className="m-0 text-[22px] font-semibold">Settings</h1>
       </div>
 
-      <div className="settings-container">
+      <div className="flex flex-col gap-4">
 
         {/* API Key section */}
-        <div className="settings-card">
-          <div className="settings-section-title">API Key</div>
+        <Card className="px-6 py-5">
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
+            API Key
+          </div>
 
           {!editingApiKey && apiKeyConfigured && (
-            <div className="settings-row">
-              <div className="settings-row-info">
-                <span className="settings-value">API key configured</span>
-                <span className="settings-masked">●●●●●●●●●●●●●●●●</span>
+            <div className="flex items-center gap-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="text-[14px] text-[#1d1d1f]">API key configured</span>
+                <span className="text-[13px] tracking-[0.06em] text-[#6e6e73]">●●●●●●●●●●●●●●●●</span>
               </div>
-              <div className="settings-row-actions">
+              <div className="flex flex-shrink-0 items-center gap-2">
                 {savedLabel === 'api-key' && (
-                  <span className="settings-saved">Saved</span>
+                  <span className="settings-saved text-xs font-medium text-[#34c759]">Saved</span>
                 )}
-                <button
+                <Button
                   type="button"
-                  className="btn btn-secondary"
+                  variant="secondary"
+                  size="sm"
                   onClick={handleStartEditApiKey}
                 >
                   Change
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
           {(editingApiKey || !apiKeyConfigured) && (
-            <div className="settings-api-key-edit">
-              <div className="form-group">
-                <label htmlFor="settings-api-key">
+            <div className="mt-1">
+              <div className="mb-5">
+                <Label htmlFor="settings-api-key" className="mb-1.5">
                   {apiKeyConfigured ? 'New API Key' : 'API Key'}
-                </label>
-                <input
+                </Label>
+                <Input
                   id="settings-api-key"
                   type="password"
                   value={apiKeyInput}
@@ -169,121 +178,129 @@ export default function Settings({ onBack }: SettingsProps) {
                   autoComplete="off"
                   spellCheck={false}
                 />
-                <p className="form-hint">
+                <p className="mt-1 text-xs text-[#6e6e73]">
                   Starts with sk-ant-. Get one at{' '}
                   <strong>console.anthropic.com</strong>
                 </p>
-                {apiKeyError && <p className="form-error">{apiKeyError}</p>}
+                {apiKeyError && <p className="mt-1 text-xs text-[#ff3b30]">{apiKeyError}</p>}
               </div>
-              <div className="settings-edit-actions">
+              <div className="flex justify-end gap-2">
                 {apiKeyConfigured && (
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-secondary"
+                    variant="secondary"
+                    size="sm"
                     onClick={handleCancelEditApiKey}
                     disabled={apiKeyValidating}
                   >
                     Cancel
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
                   type="button"
-                  className="btn btn-primary"
+                  size="sm"
                   onClick={handleSaveApiKey}
                   disabled={apiKeyValidating}
                 >
                   {apiKeyValidating ? 'Validating…' : 'Save'}
-                </button>
+                </Button>
               </div>
             </div>
           )}
-        </div>
+        </Card>
 
         {/* Download Folder section */}
-        <div className="settings-card">
-          <div className="settings-section-title">Download Folder</div>
-          <div className="settings-row">
-            <div className="folder-row settings-folder-row">
-              <span className="folder-path">{downloadFolder || 'No folder selected'}</span>
+        <Card className="px-6 py-5">
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
+            Download Folder
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-[#f5f5f7] px-3 py-2.5">
+              <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-[#3d3d3f]">
+                {downloadFolder || 'No folder selected'}
+              </span>
             </div>
-            <div className="settings-row-actions">
+            <div className="flex flex-shrink-0 items-center gap-2">
               {savedLabel === 'folder' && (
-                <span className="settings-saved">Saved</span>
+                <span className="settings-saved text-xs font-medium text-[#34c759]">Saved</span>
               )}
-              <button
+              <Button
                 type="button"
-                className="btn btn-secondary"
+                variant="secondary"
+                size="sm"
                 onClick={handleChooseFolder}
               >
                 Change
-              </button>
+              </Button>
             </div>
           </div>
-          <p className="form-hint">
+          <p className="mt-2 text-xs text-[#6e6e73]">
             Extracted PDFs will be saved to this folder.
           </p>
-        </div>
+        </Card>
 
         {/* Browser Visibility section */}
-        <div className="settings-card">
-          <div className="settings-section-title">Browser Visibility</div>
-          <div className="settings-toggle-row">
-            <label className="settings-toggle-label" htmlFor="show-browser">
-              <input
+        <Card className="px-6 py-5">
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
+            Browser Visibility
+          </div>
+          <div className="mb-2 flex items-center gap-3">
+            <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-[14px] text-[#1d1d1f]" htmlFor="show-browser">
+              <Checkbox
                 id="show-browser"
-                type="checkbox"
-                className="settings-checkbox"
                 checked={showBrowser}
                 onChange={handleShowBrowserToggle}
               />
               <span>Show browser window during operations</span>
             </label>
             {savedLabel === 'show-browser' && (
-              <span className="settings-saved">Saved</span>
+              <span className="settings-saved text-xs font-medium text-[#34c759]">Saved</span>
             )}
           </div>
           {showBrowser && (
-            <p className="settings-warning">
+            <p className="settings-warning m-1 rounded-lg bg-[#fff8ec] px-3 py-2.5 text-[13px] leading-relaxed text-[#ff9f0a]">
               When enabled, a browser window will be visible during portal
               operations. This is useful for debugging but may be distracting
               during normal use.
             </p>
           )}
-        </div>
+        </Card>
 
         {/* Incremental Extraction section */}
-        <div className="settings-card">
-          <div className="settings-section-title">Extraction Mode</div>
-          <div className="settings-toggle-row">
-            <label className="settings-toggle-label" htmlFor="incremental-extraction">
-              <input
+        <Card className="px-6 py-5">
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
+            Extraction Mode
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-[14px] text-[#1d1d1f]" htmlFor="incremental-extraction">
+              <Checkbox
                 id="incremental-extraction"
-                type="checkbox"
-                className="settings-checkbox"
                 checked={incrementalExtraction}
                 onChange={handleIncrementalToggle}
               />
               <span>Incremental extraction</span>
             </label>
             {savedLabel === 'incremental' && (
-              <span className="settings-saved">Saved</span>
+              <span className="settings-saved text-xs font-medium text-[#34c759]">Saved</span>
             )}
           </div>
-          <p className="form-hint">
+          <p className="mt-2 text-xs text-[#6e6e73]">
             When enabled, only fetch records newer than the last extraction.
             Disable to re-fetch all records.
           </p>
-        </div>
+        </Card>
 
         {/* API costs note */}
-        <div className="settings-card settings-info-card">
-          <div className="settings-section-title">API Usage &amp; Costs</div>
-          <p className="settings-info-text">
+        <Card className="bg-[#f5f5f7] px-6 py-5">
+          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.04em] text-[#6e6e73]">
+            API Usage &amp; Costs
+          </div>
+          <p className="m-0 text-[13px] leading-relaxed text-[#3d3d3f]">
             API usage is billed directly by Anthropic. Typical cost: a few
             dollars per extraction run. Manage your API key at{' '}
             <strong>console.anthropic.com</strong>.
           </p>
-        </div>
+        </Card>
 
       </div>
     </div>
