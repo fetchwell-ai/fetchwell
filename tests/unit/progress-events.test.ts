@@ -4,6 +4,7 @@ import type {
   PhaseChangeEvent,
   ItemProgressEvent,
   CategoryCompleteEvent,
+  StatusMessageEvent,
 } from '../../src/progress-events';
 
 // ---------------------------------------------------------------------------
@@ -20,6 +21,10 @@ function isItemProgress(e: StructuredProgressEvent): e is ItemProgressEvent {
 
 function isCategoryComplete(e: StructuredProgressEvent): e is CategoryCompleteEvent {
   return e.type === 'category-complete';
+}
+
+function isStatusMessage(e: StructuredProgressEvent): e is StatusMessageEvent {
+  return e.type === 'status-message';
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +140,17 @@ describe('StructuredProgressEvent types', () => {
     expect(event.count).toBe(5);
     expect(event.status).toBe('complete');
   });
+
+  it('status-message event has the correct shape', () => {
+    const event: StatusMessageEvent = {
+      type: 'status-message',
+      phase: 'navigate',
+      message: 'Looking for lab results...',
+    };
+    expect(isStatusMessage(event)).toBe(true);
+    expect(event.phase).toBe('navigate');
+    expect(event.message).toBe('Looking for lab results...');
+  });
 });
 
 describe('progress event state reducer', () => {
@@ -182,6 +198,14 @@ describe('progress event state reducer', () => {
     state = applyEvent(state, { type: 'item-progress', phase: 'extract', category: 'labs', current: 0 });
     state = applyEvent(state, { type: 'category-complete', phase: 'extract', category: 'labs', count: 12, status: 'complete' });
     expect(state.categories['labs']).toEqual({ status: 'complete', count: 12 });
+  });
+
+  it('status-message events do not alter structured state', () => {
+    const state = makeInitialState();
+    const next = applyEvent(state, { type: 'status-message', phase: 'navigate', message: 'Looking for lab results...' });
+    // State should be unchanged — status-message is purely informational
+    expect(next.phases).toEqual(state.phases);
+    expect(next.categories).toEqual(state.categories);
   });
 
   it('does not mutate previous state object', () => {

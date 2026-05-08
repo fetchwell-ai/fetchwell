@@ -45,7 +45,18 @@ export interface CategoryCompleteEvent {
   status: ProgressStatus;
 }
 
+/**
+ * A free-form narrative status message displayed to the user.
+ * Purely informational — does not affect pipeline logic or phase tracking.
+ */
+export interface StatusMessageEvent {
+  type: 'status-message';
+  phase: string;
+  message: string;
+}
+
 export type StructuredProgressEvent =
   | PhaseChangeEvent
   | ItemProgressEvent
-  | CategoryCompleteEvent;
+  | CategoryCompleteEvent
+  | StatusMessageEvent;
