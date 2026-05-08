@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from '../lib/utils';
-import fetchWellMark from '../assets/fetchwell-mark.svg';
+import fetchWellMarkSvg from '../assets/fetchwell-mark.svg?raw';
 
 interface SidebarProps {
   portals: PortalEntry[];
@@ -39,7 +39,12 @@ export default function Sidebar({
 
       {/* App logo */}
       <div className="px-4 pb-3 flex-shrink-0">
-        <img src={fetchWellMark} alt="FetchWell" className="h-6 w-6 select-none" />
+        <div
+          role="img"
+          aria-label="FetchWell"
+          className="h-6 w-6 select-none [&>svg]:h-full [&>svg]:w-full"
+          dangerouslySetInnerHTML={{ __html: fetchWellMarkSvg }}
+        />
       </div>
 
       {/* Portals section label */}
