@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import Welcome from './pages/Welcome';
 import PortalList from './pages/PortalList';
 import Settings from './pages/Settings';
 import Sidebar from './components/Sidebar';
+import AppSkeleton from './components/AppSkeleton';
+import MotionPage from './components/MotionPage';
 
 type ActivePage = 'portals' | 'settings';
 
@@ -58,7 +61,7 @@ export default function App() {
   }, [rootPage, activePage, loadPortals]);
 
   if (rootPage === 'loading') {
-    return null;
+    return <AppSkeleton />;
   }
 
   if (rootPage === 'welcome') {
@@ -87,16 +90,22 @@ export default function App() {
       />
 
       {/* Content area */}
-      <div className="flex-1 overflow-y-auto">
-        {activePage === 'settings' ? (
-          <Settings onBack={() => setActivePage('portals')} />
-        ) : (
-          <PortalList
-            key={portalListKey}
-            onOpenSettings={() => setActivePage('settings')}
-            selectedPortalId={selectedPortalId}
-          />
-        )}
+      <div className="flex-1 overflow-y-auto relative">
+        <AnimatePresence mode="wait" initial={false}>
+          {activePage === 'settings' ? (
+            <MotionPage key="settings" className="h-full">
+              <Settings onBack={() => setActivePage('portals')} />
+            </MotionPage>
+          ) : (
+            <MotionPage key={`portals-${portalListKey}`} className="h-full">
+              <PortalList
+                key={portalListKey}
+                onOpenSettings={() => setActivePage('settings')}
+                selectedPortalId={selectedPortalId}
+              />
+            </MotionPage>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import AddPortal from './AddPortal';
 import ProgressPanel from '../components/ProgressPanel';
 import TwoFactorModal from '../components/TwoFactorModal';
@@ -35,6 +36,58 @@ function formatDate(iso: string | null): string {
   }
 }
 
+// ── Skeleton for the portal list loading state ───────────────────────────────
+
+function SkeletonBar({
+  width,
+  height,
+  rounded = 'rounded-md',
+}: {
+  width: number | string;
+  height: number;
+  rounded?: string;
+}) {
+  return (
+    <div
+      className={`bg-[#d2d2d7]/60 dark:bg-[#48484a]/60 animate-pulse ${rounded}`}
+      style={{ width: typeof width === 'number' ? `${width}px` : width, height }}
+    />
+  );
+}
+
+function PortalCardSkeleton() {
+  return (
+    <div className="bg-white dark:bg-[#2c2c2e] rounded-xl border border-[#e4e4e8] dark:border-[#3a3a3c] px-6 py-5 shadow-sm">
+      <div className="mb-3 flex items-start justify-between">
+        <div className="flex flex-col gap-1.5">
+          <SkeletonBar width={160} height={14} />
+          <SkeletonBar width={240} height={11} />
+        </div>
+        <SkeletonBar width={26} height={26} rounded="rounded-md" />
+      </div>
+      <div className="mb-4 flex gap-2">
+        <SkeletonBar width={100} height={20} rounded="rounded-full" />
+      </div>
+      <div className="flex gap-2">
+        <SkeletonBar width={60} height={30} rounded="rounded-lg" />
+        <SkeletonBar width={72} height={30} rounded="rounded-lg" />
+        <SkeletonBar width={68} height={30} rounded="rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+function PortalListSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      <PortalCardSkeleton />
+      <PortalCardSkeleton />
+    </div>
+  );
+}
+
+// ── PortalCard ────────────────────────────────────────────────────────────────
+
 interface PortalCardProps {
   portal: PortalEntry;
   onEdit: (portal: PortalEntry) => void;
@@ -47,6 +100,7 @@ interface PortalCardProps {
 
 function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperation, isSelected }: PortalCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const shouldReduce = useReducedMotion();
 
   useEffect(() => {
     if (isSelected && cardRef.current) {
@@ -96,15 +150,19 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
         : undefined;
 
   return (
+    <motion.div
+      whileHover={shouldReduce ? undefined : { y: -2, boxShadow: '0 4px 16px rgba(0,0,0,0.10),0 1px 4px rgba(0,0,0,0.06)' }}
+      transition={shouldReduce ? undefined : { type: 'spring', stiffness: 400, damping: 30 }}
+    >
     <Card ref={cardRef} className={cn("portal-card px-6 py-5", isSelected && "ring-2 ring-[#0071e3]")}>
       <div className="mb-3 flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <h2 className="portal-card-name m-0 mb-0.5 text-base font-semibold text-[#1d1d1f]">{portal.name}</h2>
+          <h2 className="portal-card-name m-0 mb-0.5 text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{portal.name}</h2>
           <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-[#6e6e73]">{portal.url}</p>
         </div>
         <button
           type="button"
-          className="ml-2 flex-shrink-0 cursor-pointer rounded-md border-none bg-transparent p-1 text-[18px] text-[#6e6e73] leading-none transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
+          className="ml-2 flex-shrink-0 cursor-pointer rounded-md border-none bg-transparent p-1 text-[18px] text-[#6e6e73] leading-none transition-colors hover:bg-[#f5f5f7] dark:hover:bg-[#3a3a3c] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
           aria-label="Edit portal"
           onClick={() => onEdit(portal)}
           title="Edit portal"
@@ -173,6 +231,7 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
         </Button>
       </div>
     </Card>
+    </motion.div>
   );
 }
 
@@ -275,7 +334,7 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
   return (
     <div className="portal-list-page flex-1 p-10">
       <div className="portal-list-header mb-6 flex items-center justify-between">
-        <h1 className="m-0 text-[22px] font-semibold">Your Portals</h1>
+        <h1 className="m-0 text-[22px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Your Portals</h1>
         <div className="flex gap-2">
           <Button
             type="button"
@@ -295,7 +354,7 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
       </div>
 
       {loading ? (
-        <p className="text-[14px] text-[#6e6e73]">Loading portals…</p>
+        <PortalListSkeleton />
       ) : portals.length === 0 ? (
         <div className="portal-empty-state flex flex-1 flex-col items-center justify-center gap-4 text-[14px] text-[#6e6e73]">
           <p>No portals yet. Add your first health portal to get started.</p>
@@ -323,20 +382,26 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
         </div>
       )}
 
-      {runningOperation !== null && (
-        <ProgressPanel
-          portalId={runningOperation.portalId}
-          operation={runningOperation.operation}
-          onClose={handleProgressPanelClose}
-        />
-      )}
+      <AnimatePresence>
+        {runningOperation !== null && (
+          <ProgressPanel
+            key="progress-panel"
+            portalId={runningOperation.portalId}
+            operation={runningOperation.operation}
+            onClose={handleProgressPanelClose}
+          />
+        )}
+      </AnimatePresence>
 
-      {twoFaPortalId !== null && (
-        <TwoFactorModal
-          portalId={twoFaPortalId}
-          onDismiss={() => setTwoFaPortalId(null)}
-        />
-      )}
+      <AnimatePresence>
+        {twoFaPortalId !== null && (
+          <TwoFactorModal
+            key="2fa-modal"
+            portalId={twoFaPortalId}
+            onDismiss={() => setTwoFaPortalId(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
