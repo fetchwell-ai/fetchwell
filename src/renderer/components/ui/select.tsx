@@ -8,9 +8,8 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <select
         className={cn(
-          'flex h-9 w-full appearance-none rounded-md border border-[#d2d2d7] bg-white px-3 py-1 pr-8 text-sm text-[#1d1d1f] shadow-sm outline-none transition-colors cursor-pointer focus:border-[#0071e3] disabled:cursor-not-allowed disabled:opacity-50',
-          "bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236e6e73' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")] bg-no-repeat bg-[right_12px_center]",
-          'dark:border-[#3a3a3c] dark:bg-[#1c1c1e] dark:text-[#f5f5f7] dark:focus:border-[#0a84ff]',
+          'flex h-9 w-full appearance-none rounded-[var(--radius-md)] border border-[var(--color-fw-border-strong)] bg-[var(--color-fw-card-bg)] px-3 py-1 pr-8 text-sm text-[var(--color-fw-fg)] shadow-sm outline-none transition-colors duration-[var(--fw-dur-fast)] cursor-pointer focus:border-[var(--color-fw-primary)] focus:ring-2 focus:ring-[var(--color-fw-primary)]/20 disabled:cursor-not-allowed disabled:opacity-50',
+          "bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237A756C' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")] bg-no-repeat bg-[right_12px_center]",
           className,
         )}
         ref={ref}
