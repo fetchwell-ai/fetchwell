@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import AddPortal from './AddPortal';
 import ProgressPanel from '../components/ProgressPanel';
 import TwoFactorModal from '../components/TwoFactorModal';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Card } from '../components/ui/card';
 
 interface PortalListProps {
   onOpenSettings: () => void;
@@ -83,15 +86,15 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
         : undefined;
 
   return (
-    <div className="portal-card">
-      <div className="portal-card-header">
-        <div className="portal-card-identity">
-          <h2 className="portal-card-name">{portal.name}</h2>
-          <p className="portal-card-url">{portal.url}</p>
+    <Card className="portal-card px-6 py-5">
+      <div className="mb-3 flex items-start justify-between">
+        <div className="min-w-0 flex-1">
+          <h2 className="portal-card-name m-0 mb-0.5 text-base font-semibold text-[#1d1d1f]">{portal.name}</h2>
+          <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-[#6e6e73]">{portal.url}</p>
         </div>
         <button
           type="button"
-          className="btn-icon"
+          className="ml-2 flex-shrink-0 cursor-pointer rounded-md border-none bg-transparent p-1 text-[18px] text-[#6e6e73] leading-none transition-colors hover:bg-[#f5f5f7] hover:text-[#1d1d1f]"
           aria-label="Edit portal"
           onClick={() => onEdit(portal)}
           title="Edit portal"
@@ -100,59 +103,66 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
         </button>
       </div>
 
-      <div className="portal-card-status">
+      <div className="mb-4 flex flex-wrap gap-2">
         {portal.discoveredAt === null ? (
-          <span className="status-badge status-unmapped">Not mapped yet</span>
+          <Badge variant="default">Not mapped yet</Badge>
         ) : (
-          <span className="status-badge status-mapped">
+          <Badge variant="success">
             Mapped {formatDate(portal.discoveredAt)}
-          </span>
+          </Badge>
         )}
         {portal.lastExtractedAt && (
-          <span className="status-badge status-extracted">
+          <Badge variant="info">
             Last extracted {formatDate(portal.lastExtractedAt)}
-          </span>
+          </Badge>
         )}
       </div>
 
-      <div className="portal-card-actions">
-        <button
+      <div className="flex items-center gap-2">
+        <Button
           type="button"
-          className="btn btn-secondary"
+          variant="secondary"
+          size="sm"
           onClick={handleMap}
           disabled={mapDisabled}
           title={mapTitle}
         >
           {isThisRunning && runningOperation?.operation === 'discovery' ? 'Running…' : 'Map'}
-        </button>
+        </Button>
 
-        <div className="extract-btn-wrapper">
-          <button
+        <div className="relative inline-flex flex-col">
+          <Button
             type="button"
-            className="btn btn-primary"
+            size="sm"
             onClick={handleExtract}
             disabled={extractBtnDisabled}
             title={extractTitle}
           >
             {isThisRunning && runningOperation?.operation === 'extraction' ? 'Running…' : 'Extract'}
-          </button>
+          </Button>
           {extractDisabled && !anyOperationRunning && (
-            <p className="extract-tooltip">Run Map first to enable extraction.</p>
+            <p className="extract-tooltip absolute left-1/2 top-[calc(100%+6px)] -translate-x-1/2 z-10 whitespace-nowrap rounded-md bg-[#1d1d1f] px-2.5 py-1.5 text-[11px] text-white opacity-0 pointer-events-none transition-opacity group-hover:opacity-100">
+              Run Map first to enable extraction.
+            </p>
           )}
           {isAnotherRunning && (
-            <p className="extract-tooltip">Another operation is in progress</p>
+            <p className="extract-tooltip absolute left-1/2 top-[calc(100%+6px)] -translate-x-1/2 z-10 whitespace-nowrap rounded-md bg-[#1d1d1f] px-2.5 py-1.5 text-[11px] text-white opacity-0 pointer-events-none transition-opacity group-hover:opacity-100">
+              Another operation is in progress
+            </p>
           )}
         </div>
 
-        <button
+        <Button
           type="button"
-          className="btn btn-danger"
+          variant="destructive"
+          size="sm"
+          className="btn-danger"
           onClick={handleRemove}
         >
           Remove
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -253,43 +263,41 @@ export default function PortalList({ onOpenSettings }: PortalListProps) {
   }
 
   return (
-    <div className="portal-list-page">
-      <div className="portal-list-header">
-        <h1>Your Portals</h1>
-        <div className="portal-list-header-actions">
-          <button
+    <div className="portal-list-page flex-1 p-10">
+      <div className="portal-list-header mb-6 flex items-center justify-between">
+        <h1 className="m-0 text-[22px] font-semibold">Your Portals</h1>
+        <div className="flex gap-2">
+          <Button
             type="button"
-            className="btn btn-primary"
             onClick={() => setView({ type: 'add' })}
           >
             + Add Portal
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn btn-secondary"
+            variant="secondary"
             onClick={onOpenSettings}
             title="Settings"
           >
             Settings
-          </button>
+          </Button>
         </div>
       </div>
 
       {loading ? (
-        <p className="placeholder-text">Loading portals…</p>
+        <p className="text-[14px] text-[#6e6e73]">Loading portals…</p>
       ) : portals.length === 0 ? (
-        <div className="portal-empty-state">
+        <div className="portal-empty-state flex flex-1 flex-col items-center justify-center gap-4 text-[14px] text-[#6e6e73]">
           <p>No portals yet. Add your first health portal to get started.</p>
-          <button
+          <Button
             type="button"
-            className="btn btn-primary"
             onClick={() => setView({ type: 'add' })}
           >
             + Add Portal
-          </button>
+          </Button>
         </div>
       ) : (
-        <div className="portal-card-grid">
+        <div className="flex flex-col gap-3">
           {portals.map((portal) => (
             <PortalCard
               key={portal.id}

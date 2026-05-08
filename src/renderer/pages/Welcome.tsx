@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Card } from '../components/ui/card';
 
 type Step = 'overview' | 'apiKey' | 'downloadFolder';
 
@@ -11,11 +14,11 @@ export default function Welcome({ onComplete }: WelcomeProps) {
   const [step, setStep] = useState<Step>('overview');
 
   return (
-    <div className="page">
-      <div className="wizard-container">
-        <div className="wizard-header">
-          <h1>FetchWell</h1>
-          <p>Set up your account in a few steps</p>
+    <div className="flex flex-1 flex-col items-center justify-center px-6 py-10">
+      <div className="w-full max-w-[520px]">
+        <div className="mb-8 text-center">
+          <h1 className="m-0 mb-2 text-2xl font-semibold text-[#1d1d1f]">FetchWell</h1>
+          <p className="m-0 text-[13px] text-[#6e6e73]">Set up your account in a few steps</p>
         </div>
         {step === 'overview' && (
           <OverviewStep onNext={() => setStep('apiKey')} />
@@ -39,25 +42,25 @@ interface OverviewStepProps {
 
 function OverviewStep({ onNext }: OverviewStepProps) {
   return (
-    <div className="wizard-card">
-      <h2>Welcome</h2>
-      <div className="privacy-disclosure">
-        <p>
+    <Card className="p-8">
+      <h2 className="m-0 mb-4 text-[18px] font-semibold">Welcome</h2>
+      <div className="mb-6 rounded-lg bg-[#f5f5f7] p-4 text-[13px] leading-relaxed text-[#3d3d3f]">
+        <p className="m-0 mb-3">
           FetchWell downloads your medical records from patient
           portals. It runs a browser on your computer to log in and save records
           as PDFs. <strong>Your data never leaves your machine.</strong>
         </p>
-        <p>
+        <p className="m-0">
           The app uses an AI model (Claude) to navigate portal pages — this
           requires an Anthropic API key, which you provide. You&apos;ll be
           billed directly by Anthropic for API usage (typically a few dollars
           per extraction).
         </p>
       </div>
-      <div className="wizard-actions">
+      <div className="mt-6 flex justify-end gap-2">
         <Button onClick={onNext}>Get Started</Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -96,12 +99,12 @@ function ApiKeyStep({ onNext }: ApiKeyStepProps) {
   };
 
   return (
-    <div className="wizard-card">
-      <h2>Anthropic API Key</h2>
+    <Card className="p-8">
+      <h2 className="m-0 mb-4 text-[18px] font-semibold">Anthropic API Key</h2>
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label htmlFor="api-key">API Key</label>
-          <input
+        <div className="mb-5">
+          <Label htmlFor="api-key" className="mb-1.5">API Key</Label>
+          <Input
             id="api-key"
             type="password"
             value={key}
@@ -113,23 +116,19 @@ function ApiKeyStep({ onNext }: ApiKeyStepProps) {
             autoComplete="off"
             spellCheck={false}
           />
-          <p className="form-hint">
+          <p className="mt-1 text-xs text-[#6e6e73]">
             Starts with sk-ant-. Get one at{' '}
             <strong>console.anthropic.com</strong>
           </p>
-          {error && <p className="form-error">{error}</p>}
+          {error && <p className="form-error mt-1 text-xs text-[#ff3b30]">{error}</p>}
         </div>
-        <div className="wizard-actions">
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={validating}
-          >
+        <div className="mt-6 flex justify-end gap-2">
+          <Button type="submit" disabled={validating}>
             {validating ? 'Validating…' : 'Continue'}
-          </button>
+          </Button>
         </div>
       </form>
-    </div>
+    </Card>
   );
 }
 
@@ -170,33 +169,27 @@ function DownloadFolderStep({ onFinish }: DownloadFolderStepProps) {
   };
 
   return (
-    <div className="wizard-card">
-      <h2>Download Folder</h2>
-      <p>
+    <Card className="p-8">
+      <h2 className="m-0 mb-4 text-[18px] font-semibold">Download Folder</h2>
+      <p className="mb-4 text-[14px] leading-relaxed text-[#3d3d3f]">
         Records will be saved as PDFs in the folder you choose below. You can
         change this later in Settings.
       </p>
       {!loading && (
-        <div className="folder-row">
-          <span className="folder-path">{folder || 'No folder selected'}</span>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleChooseFolder}
-          >
+        <div className="mb-2 flex items-center gap-2 rounded-lg bg-[#f5f5f7] px-3 py-2.5">
+          <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-[#3d3d3f]">
+            {folder || 'No folder selected'}
+          </span>
+          <Button type="button" variant="secondary" onClick={handleChooseFolder}>
             Choose Folder
-          </button>
+          </Button>
         </div>
       )}
-      <div className="wizard-actions">
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={handleFinish}
-        >
+      <div className="mt-6 flex justify-end gap-2">
+        <Button type="button" onClick={handleFinish}>
           Finish Setup
-        </button>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }

@@ -1,4 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 export interface TwoFactorModalProps {
   portalId: string;
@@ -44,49 +47,53 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
   };
 
   return (
-    <div className="twofa-overlay" role="dialog" aria-modal="true" aria-label="Two-factor authentication">
-      <div className="twofa-modal">
-        <div className="twofa-modal-header">
-          <h2 className="twofa-modal-title">Verification Required</h2>
+    <div
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-black/65"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Two-factor authentication"
+    >
+      <div className="w-[400px] max-w-[calc(100vw-48px)] overflow-hidden rounded-2xl bg-white shadow-[0_8px_32px_rgba(0,0,0,0.22),0_2px_8px_rgba(0,0,0,0.1)]">
+        <div className="border-b border-[#f0f0f2] px-6 pb-4 pt-5">
+          <h2 className="m-0 text-[17px] font-semibold text-[#1d1d1f]">Verification Required</h2>
         </div>
 
-        <div className="twofa-modal-body">
+        <div className="px-6 pb-6 pt-5">
           {timedOut ? (
-            <p className="twofa-timeout-message">
+            <p className="m-0 text-[14px] leading-relaxed text-[#ff3b30]">
               Verification timed out. Please try again.
             </p>
           ) : (
             <>
-              <p className="twofa-message">
+              <p className="m-0 mb-5 text-[14px] leading-relaxed text-[#3d3d3f]">
                 Enter the verification code sent to your email.
               </p>
               <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                  <label htmlFor="twofa-code-input" className="twofa-input-label">
+                <div className="mb-4">
+                  <Label htmlFor="twofa-code-input" className="mb-1.5">
                     Verification Code
-                  </label>
-                  <input
+                  </Label>
+                  <Input
                     id="twofa-code-input"
                     ref={inputRef}
                     type="text"
-                    className="twofa-input"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Enter code…"
                     autoComplete="one-time-code"
                     autoFocus
+                    className="text-base tracking-[0.1em]"
                   />
                 </div>
 
-                <div className="twofa-modal-actions">
-                  <button
+                <div className="mt-4 flex justify-end">
+                  <Button
                     type="submit"
-                    className="btn btn-primary"
                     disabled={!code.trim()}
                   >
                     Submit
-                  </button>
+                  </Button>
                 </div>
               </form>
             </>

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import ErrorSummary, { resetFailureCount } from './ErrorSummary';
+import { Button } from './ui/button';
 
 export interface ProgressPanelProps {
   portalId: string;
@@ -371,11 +372,11 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
     Object.keys(structured.categories).length > 0;
 
   return (
-    <div className="progress-panel-overlay">
-      <div className="progress-panel">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/45">
+      <div className="progress-panel flex w-[600px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-80px)] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_8px_32px_rgba(0,0,0,0.18),0_2px_8px_rgba(0,0,0,0.08)]">
         {/* Header */}
-        <div className="progress-panel-header">
-          <h2 className="progress-panel-title">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-[#f0f0f2] px-6 pb-4 pt-5">
+          <h2 className="m-0 text-[17px] font-semibold text-[#1d1d1f]">
             {panelState === 'complete'
               ? completedTitle
               : panelState === 'error'
@@ -385,7 +386,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
           {panelState !== 'running' && (
             <button
               type="button"
-              className="btn-icon progress-panel-close-icon"
+              className="cursor-pointer rounded-md border-none bg-transparent p-1 text-[14px] text-[#6e6e73] leading-none hover:bg-[#f5f5f7]"
               aria-label="Close"
               onClick={onClose}
             >
@@ -464,14 +465,14 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
               </button>
 
               {showRawLog && (
-                <div className="progress-panel-log" style={{ marginTop: 6, maxHeight: 160, minHeight: 80 }}>
+                <div className="progress-panel-log mt-1.5 max-h-40 min-h-20 overflow-y-auto rounded-md bg-[#1c1c1e] px-5 py-3.5 font-mono text-xs leading-[1.7]">
                   {logs.map((line, i) => (
-                    <div key={i} className="progress-log-line">
+                    <div key={i} className="progress-log-line whitespace-pre-wrap break-words text-[#d0d0d8]">
                       {line}
                     </div>
                   ))}
                   {logs.length === 0 && (
-                    <div className="progress-log-line progress-log-waiting">No output yet…</div>
+                    <div className="progress-log-line progress-log-waiting italic text-[#6e6e73]">No output yet…</div>
                   )}
                   <div ref={logEndRef} />
                 </div>
@@ -480,14 +481,14 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
           </div>
         ) : (
           /* Fallback: raw log (shown while waiting for first structured event) */
-          <div className="progress-panel-log">
+          <div className="progress-panel-log flex-1 overflow-y-auto bg-[#1c1c1e] px-5 py-3.5 font-mono text-xs leading-[1.7] min-h-[220px] max-h-[400px]">
             {logs.map((line, i) => (
-              <div key={i} className="progress-log-line">
+              <div key={i} className="progress-log-line whitespace-pre-wrap break-words text-[#d0d0d8]">
                 {line}
               </div>
             ))}
             {panelState === 'running' && logs.length === 0 && (
-              <div className="progress-log-line progress-log-waiting">Starting…</div>
+              <div className="progress-log-line progress-log-waiting italic text-[#6e6e73]">Starting…</div>
             )}
             <div ref={logEndRef} />
           </div>
@@ -495,56 +496,54 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
 
         {/* Footer */}
         {panelState === 'complete' && (
-          <div className="progress-panel-footer">
-            <div className="progress-complete-message">
+          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] px-6 pb-5 pt-4">
+            <div className="progress-complete-message rounded-lg bg-[#e3f0d8] px-3.5 py-2.5 text-[14px] text-[#2e6b0a]">
               {operation === 'discovery'
                 ? 'Portal navigation mapped successfully.'
                 : 'Health records extracted successfully.'}
             </div>
-            <div className="progress-panel-actions">
-              <button
+            <div className="mt-3 flex justify-end gap-2">
+              <Button
                 type="button"
-                className="btn btn-secondary"
+                variant="secondary"
                 onClick={handleOpenInFinder}
               >
                 Open in Finder
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-primary"
                 onClick={onClose}
               >
                 Close
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
         {panelState === 'error' && errorData && (
-          <div className="progress-panel-footer">
+          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] px-6 pb-5 pt-4">
             <ErrorSummary
               portalId={portalId}
               error={errorData}
               logs={logs}
               onReDiscover={operation === 'extraction' ? onReDiscover : undefined}
             />
-            <div className="progress-panel-actions">
-              <button
+            <div className="mt-3 flex justify-end gap-2">
+              <Button
                 type="button"
-                className="btn btn-primary"
                 onClick={onClose}
               >
                 Close
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
         {panelState === 'running' && !hasAnyStructuredEvent && (
-          <div className="progress-panel-footer">
-            <div className="progress-running-indicator">
-              <span className="progress-spinner" />
-              <span className="progress-running-text">In progress…</span>
+          <div className="progress-panel-footer flex-shrink-0 border-t border-[#f0f0f2] px-6 pb-5 pt-4">
+            <div className="flex items-center gap-2.5 text-[13px] text-[#6e6e73]">
+              <span className="progress-spinner inline-block h-3.5 w-3.5 flex-shrink-0 animate-[progress-spin_0.8s_linear_infinite] rounded-full border-2 border-[#d2d2d7] border-t-[#0071e3]" />
+              <span>In progress…</span>
             </div>
           </div>
         )}

@@ -1,4 +1,10 @@
 import React, { useRef, useState } from 'react';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Select } from '../components/ui/select';
+import { Checkbox } from '../components/ui/checkbox';
+import { Card } from '../components/ui/card';
 
 interface AddPortalProps {
   onSave: () => void;
@@ -92,23 +98,19 @@ export default function AddPortal({
   };
 
   return (
-    <div className="add-portal-page">
-      <div className="add-portal-header">
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={onCancel}
-        >
+    <div className="flex flex-1 flex-col px-10 py-8">
+      <div className="mb-6 flex items-center gap-4">
+        <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
           ← Back
-        </button>
-        <h1>{isEdit ? 'Edit Portal' : 'Add Portal'}</h1>
+        </Button>
+        <h1 className="m-0 text-[22px] font-semibold">{isEdit ? 'Edit Portal' : 'Add Portal'}</h1>
       </div>
 
-      <div className="add-portal-card">
+      <Card className="max-w-[560px] p-8">
         <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="portal-url">Portal URL</label>
-            <input
+          <div className="mb-5">
+            <Label htmlFor="portal-url" className="mb-1.5">Portal URL</Label>
+            <Input
               id="portal-url"
               type="text"
               value={url}
@@ -117,14 +119,14 @@ export default function AddPortal({
               autoComplete="off"
               spellCheck={false}
             />
-            <p className="form-hint">
+            <p className="mt-1 text-xs text-[#6e6e73]">
               The base URL of the patient portal login page.
             </p>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="portal-name">Portal Name</label>
-            <input
+          <div className="mb-5">
+            <Label htmlFor="portal-name" className="mb-1.5">Portal Name</Label>
+            <Input
               id="portal-name"
               type="text"
               value={name}
@@ -134,9 +136,9 @@ export default function AddPortal({
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="portal-username">Username (optional)</label>
-            <input
+          <div className="mb-5">
+            <Label htmlFor="portal-username" className="mb-1.5">Username (optional)</Label>
+            <Input
               id="portal-username"
               type="text"
               value={username}
@@ -147,9 +149,9 @@ export default function AddPortal({
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="portal-password">Password (optional)</label>
-            <input
+          <div className="mb-5">
+            <Label htmlFor="portal-password" className="mb-1.5">Password (optional)</Label>
+            <Input
               id="portal-password"
               type="password"
               value={password}
@@ -159,12 +161,11 @@ export default function AddPortal({
             />
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="portal-login-type">Login Type</label>
-              <select
+          <div className="mb-5 flex gap-4">
+            <div className="flex-1">
+              <Label htmlFor="portal-login-type" className="mb-1.5">Login Type</Label>
+              <Select
                 id="portal-login-type"
-                className="form-select"
                 value={loginForm}
                 onChange={(e) =>
                   setLoginForm(e.target.value as 'two-step' | 'single-page')
@@ -172,14 +173,13 @@ export default function AddPortal({
               >
                 <option value="two-step">Two-step (default)</option>
                 <option value="single-page">Single page</option>
-              </select>
+              </Select>
             </div>
 
-            <div className="form-group">
-              <label htmlFor="portal-2fa">2FA Method</label>
-              <select
+            <div className="flex-1">
+              <Label htmlFor="portal-2fa" className="mb-1.5">2FA Method</Label>
+              <Select
                 id="portal-2fa"
-                className="form-select"
                 value={twoFactor}
                 onChange={(e) =>
                   setTwoFactor(
@@ -191,40 +191,38 @@ export default function AddPortal({
                 <option value="email">Email</option>
                 <option value="ui">UI</option>
                 <option value="none">None</option>
-              </select>
+              </Select>
             </div>
           </div>
 
-          <div className="form-group form-checkbox-group">
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
+          <div className="mb-5 flex flex-col gap-1">
+            <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[#1d1d1f]">
+              <Checkbox
                 checked={saveCredentials}
                 onChange={(e) => setSaveCredentials(e.target.checked)}
               />
               <span>Save credentials (stored securely on this device)</span>
             </label>
             {!saveCredentials && (
-              <p className="form-hint">
+              <p className="mt-1 text-xs text-[#6e6e73]">
                 Credentials will be prompted each time extraction runs.
               </p>
             )}
           </div>
 
-          {error && <p className="form-error">{error}</p>}
+          {error && <p className="form-error mb-2 text-xs text-[#ff3b30]">{error}</p>}
 
-          <div className="form-actions">
-            <button
+          <div className="mt-2 flex justify-end gap-2">
+            <Button
               type="button"
-              className="btn btn-secondary"
+              variant="secondary"
               onClick={onCancel}
               disabled={submitting}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="btn btn-primary"
               disabled={submitting}
             >
               {submitting
@@ -234,10 +232,10 @@ export default function AddPortal({
                 : isEdit
                   ? 'Save Changes'
                   : 'Add Portal'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
+      </Card>
     </div>
   );
 }
