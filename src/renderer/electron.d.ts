@@ -18,11 +18,14 @@ interface PortalInput {
   password?: string;
 }
 
+type ThemePreference = 'system' | 'light' | 'dark';
+
 interface Settings {
   downloadFolder: string;
   showBrowser: boolean;
   incrementalExtraction: boolean;
   apiKeyConfigured: boolean;
+  theme: ThemePreference;
 }
 
 // ── Structured progress event types (mirrored from src/progress-events.ts) ─
@@ -65,7 +68,7 @@ interface ElectronAPI {
   updatePortal(id: string, updates: Partial<PortalInput>): Promise<PortalEntry>;
   removePortal(id: string): Promise<void>;
   getSettings(): Promise<Settings>;
-  updateSettings(updates: Partial<Settings & { apiKey?: string }>): Promise<void>;
+  updateSettings(updates: Partial<Settings & { apiKey?: string; theme?: ThemePreference }>): Promise<void>;
   validateApiKey(key: string): Promise<boolean>;
   runDiscovery(portalId: string): Promise<void>;
   runExtraction(portalId: string): Promise<void>;
@@ -78,6 +81,11 @@ interface ElectronAPI {
   on2FARequest(callback: (payload: { portalId: string }) => void): void;
   submit2FACode(payload: { portalId: string; code: string | null }): void;
   removeAllListeners(channel: string): void;
+
+  // --- Dark mode ---
+  darkModeShouldUseDark(): Promise<boolean>;
+  darkModeSetTheme(theme: ThemePreference): Promise<boolean>;
+  onDarkModeUpdated(callback: (isDark: boolean) => void): void;
 }
 
 interface Window {

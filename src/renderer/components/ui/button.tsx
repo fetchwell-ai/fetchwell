@@ -11,13 +11,13 @@ const buttonVariants = cva(
         default:
           'bg-[#0071e3] text-white shadow hover:bg-[#0077ed]',
         destructive:
-          'bg-[#fff1f0] text-[#c0392b] border border-[#f5c6c2] shadow-sm hover:bg-[#ffe4e1]',
+          'bg-[#fff1f0] text-[#c0392b] border border-[#f5c6c2] shadow-sm hover:bg-[#ffe4e1] dark:bg-[#3a1a1a] dark:text-[#ff6b6b] dark:border-[#5a2a2a] dark:hover:bg-[#4a1f1f]',
         outline:
-          'border border-[#d2d2d7] bg-white shadow-sm hover:bg-[#f5f5f7] hover:text-[#1d1d1f]',
+          'border border-[#d2d2d7] bg-white shadow-sm hover:bg-[#f5f5f7] hover:text-[#1d1d1f] dark:border-[#3a3a3c] dark:bg-[#2c2c2e] dark:text-[#f5f5f7] dark:hover:bg-[#3a3a3c]',
         secondary:
-          'bg-[#e8e8ed] text-[#1d1d1f] shadow-sm hover:bg-[#dcdce0]',
+          'bg-[#e8e8ed] text-[#1d1d1f] shadow-sm hover:bg-[#dcdce0] dark:bg-[#3a3a3c] dark:text-[#f5f5f7] dark:hover:bg-[#48484a]',
         ghost:
-          'hover:bg-[#f5f5f7] hover:text-[#1d1d1f]',
+          'hover:bg-[#f5f5f7] hover:text-[#1d1d1f] dark:hover:bg-[#3a3a3c] dark:hover:text-[#f5f5f7]',
         link:
           'text-[#0071e3] underline-offset-4 hover:underline',
       },

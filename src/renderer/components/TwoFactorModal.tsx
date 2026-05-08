@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
@@ -46,14 +47,28 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
     }
   };
 
+  const shouldReduce = useReducedMotion();
+  // ease-out cubic bezier
+  const easeOut: [number, number, number, number] = [0.25, 0.46, 0.45, 0.94];
+
   return (
-    <div
+    <motion.div
       className="fixed inset-0 z-[200] flex items-center justify-center bg-black/65"
       role="dialog"
       aria-modal="true"
       aria-label="Two-factor authentication"
+      initial={shouldReduce ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={shouldReduce ? undefined : { opacity: 0 }}
+      transition={shouldReduce ? undefined : { duration: 0.15 }}
     >
-      <div className="w-[400px] max-w-[calc(100vw-48px)] overflow-hidden rounded-2xl bg-white shadow-[0_8px_32px_rgba(0,0,0,0.22),0_2px_8px_rgba(0,0,0,0.1)]">
+      <motion.div
+        className="w-[400px] max-w-[calc(100vw-48px)] overflow-hidden rounded-2xl bg-white shadow-[0_8px_32px_rgba(0,0,0,0.22),0_2px_8px_rgba(0,0,0,0.1)]"
+        initial={shouldReduce ? false : { opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={shouldReduce ? undefined : { opacity: 0, scale: 0.97, y: 6 }}
+        transition={shouldReduce ? undefined : { duration: 0.2, ease: easeOut }}
+      >
         <div className="border-b border-[#f0f0f2] px-6 pb-4 pt-5">
           <h2 className="m-0 text-[17px] font-semibold text-[#1d1d1f]">Verification Required</h2>
         </div>
@@ -99,7 +114,7 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
             </>
           )}
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

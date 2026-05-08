@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, nativeTheme, ipcMain } from 'electron';
 import * as path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
 
@@ -19,7 +19,29 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   registerIpcHandlers();
+
+  // --- Dark mode IPC ---
+
+  // Renderer asks: "should we use dark colors right now?"
+  ipcMain.handle('darkMode:shouldUseDark', () => {
+    return nativeTheme.shouldUseDarkColors;
+  });
+
+  // Renderer tells us the user's theme preference so we can update nativeTheme.themeSource
+  ipcMain.handle('darkMode:setTheme', (_event, theme: 'system' | 'light' | 'dark') => {
+    nativeTheme.themeSource = theme;
+    return nativeTheme.shouldUseDarkColors;
+  });
+
   createWindow();
+
+  // When system appearance changes, push updated value to all windows
+  nativeTheme.on('updated', () => {
+    const isDark = nativeTheme.shouldUseDarkColors;
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send('darkMode:updated', isDark);
+    }
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

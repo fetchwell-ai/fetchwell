@@ -54,4 +54,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   removeAllListeners: (channel: string) => {
     ipcRenderer.removeAllListeners(channel);
   },
+
+  // --- Dark mode ---
+  darkModeShouldUseDark: () => ipcRenderer.invoke('darkMode:shouldUseDark'),
+  darkModeSetTheme: (theme: 'system' | 'light' | 'dark') => ipcRenderer.invoke('darkMode:setTheme', theme),
+  onDarkModeUpdated: (callback: (isDark: boolean) => void) => {
+    ipcRenderer.on('darkMode:updated', (_event, isDark: boolean) => callback(isDark));
+  },
 });
