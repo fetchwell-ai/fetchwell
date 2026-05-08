@@ -101,9 +101,9 @@ export default function AddPortal({
     <div className="flex flex-1 flex-col px-10 py-8">
       <div className="mb-6 flex items-center gap-4">
         <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
-          ← Back
+          Back
         </Button>
-        <h1 className="m-0 text-[22px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{isEdit ? 'Edit Portal' : 'Add Portal'}</h1>
+        <h1 className="m-0 text-[22px] font-semibold text-[var(--color-fw-fg)]">{isEdit ? 'Edit portal' : 'Add a portal'}</h1>
       </div>
 
       <Card className="max-w-[560px] p-8">
@@ -119,13 +119,13 @@ export default function AddPortal({
               autoComplete="off"
               spellCheck={false}
             />
-            <p className="mt-1 text-xs text-[#6e6e73] dark:text-[#aeaeb2]">
+            <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
               The base URL of the patient portal login page.
             </p>
           </div>
 
           <div className="mb-5">
-            <Label htmlFor="portal-name" className="mb-1.5">Portal Name</Label>
+            <Label htmlFor="portal-name" className="mb-1.5">Portal name</Label>
             <Input
               id="portal-name"
               type="text"
@@ -163,7 +163,7 @@ export default function AddPortal({
 
           <div className="mb-5 flex gap-4">
             <div className="flex-1">
-              <Label htmlFor="portal-login-type" className="mb-1.5">Login Type</Label>
+              <Label htmlFor="portal-login-type" className="mb-1.5">Login type</Label>
               <Select
                 id="portal-login-type"
                 value={loginForm}
@@ -177,7 +177,7 @@ export default function AddPortal({
             </div>
 
             <div className="flex-1">
-              <Label htmlFor="portal-2fa" className="mb-1.5">2FA Method</Label>
+              <Label htmlFor="portal-2fa" className="mb-1.5">2FA method</Label>
               <Select
                 id="portal-2fa"
                 value={twoFactor}
@@ -196,7 +196,7 @@ export default function AddPortal({
           </div>
 
           <div className="mb-5 flex flex-col gap-1">
-            <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7]">
+            <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[var(--color-fw-fg)]">
               <Checkbox
                 checked={saveCredentials}
                 onChange={(e) => setSaveCredentials(e.target.checked)}
@@ -204,13 +204,13 @@ export default function AddPortal({
               <span>Save credentials (stored securely on this device)</span>
             </label>
             {!saveCredentials && (
-              <p className="mt-1 text-xs text-[#6e6e73]">
+              <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
                 Credentials will be prompted each time extraction runs.
               </p>
             )}
           </div>
 
-          {error && <p className="form-error mb-2 text-xs text-[#ff3b30]">{error}</p>}
+          {error && <p className="form-error mb-2 text-xs text-[var(--color-fw-crimson-600)]">{error}</p>}
 
           <div className="mt-2 flex justify-end gap-2">
             <Button
@@ -227,11 +227,11 @@ export default function AddPortal({
             >
               {submitting
                 ? isEdit
-                  ? 'Saving…'
-                  : 'Adding…'
+                  ? 'Saving...'
+                  : 'Adding...'
                 : isEdit
-                  ? 'Save Changes'
-                  : 'Add Portal'}
+                  ? 'Save changes'
+                  : 'Add portal'}
             </Button>
           </div>
         </form>

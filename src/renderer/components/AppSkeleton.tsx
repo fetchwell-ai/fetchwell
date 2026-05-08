@@ -6,10 +6,10 @@ import React from 'react';
  */
 export default function AppSkeleton() {
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f5f5f7]">
+    <div className="flex h-screen overflow-hidden bg-[var(--color-fw-bg)]">
       {/* Sidebar skeleton */}
       <div
-        className="flex flex-col h-full bg-[#f0f0f5] border-r border-[#d2d2d7]"
+        className="flex flex-col h-full bg-[var(--color-fw-bg-deep)] border-r border-[var(--color-fw-border)]"
         style={{ width: 240, minWidth: 240, maxWidth: 240 }}
       >
         {/* Traffic-light drag region */}
@@ -17,7 +17,7 @@ export default function AppSkeleton() {
 
         {/* App name placeholder */}
         <div className="px-4 pb-3 flex-shrink-0">
-          <SkeletonBar width={80} height={13} />
+          <SkeletonBar width={24} height={24} rounded="rounded-md" />
         </div>
 
         {/* Section label placeholder */}
@@ -33,7 +33,7 @@ export default function AppSkeleton() {
         </div>
 
         {/* Bottom nav placeholder */}
-        <div className="flex-shrink-0 border-t border-[#d2d2d7] px-2 py-2">
+        <div className="flex-shrink-0 border-t border-[var(--color-fw-border)] px-2 py-2">
           <SkeletonRow />
         </div>
       </div>
@@ -44,8 +44,8 @@ export default function AppSkeleton() {
         <div className="mb-6 flex items-center justify-between">
           <SkeletonBar width={140} height={22} />
           <div className="flex gap-2">
-            <SkeletonBar width={90} height={32} rounded="rounded-lg" />
-            <SkeletonBar width={80} height={32} rounded="rounded-lg" />
+            <SkeletonBar width={90} height={32} rounded="rounded-[var(--radius-md)]" />
+            <SkeletonBar width={80} height={32} rounded="rounded-[var(--radius-md)]" />
           </div>
         </div>
 
@@ -59,7 +59,7 @@ export default function AppSkeleton() {
   );
 }
 
-// ── Skeleton primitives ──────────────────────────────────────────────────────
+// -- Skeleton primitives --
 
 function SkeletonBar({
   width,
@@ -72,10 +72,12 @@ function SkeletonBar({
 }) {
   return (
     <div
-      className={`bg-[#d2d2d7]/60 animate-pulse ${rounded}`}
+      className={`bg-[var(--color-fw-bg-deep)] animate-pulse ${rounded}`}
       style={{
         width: typeof width === 'number' ? width : width,
         height,
+        animationDuration: '1.4s',
+        animationTimingFunction: 'ease-in-out',
       }}
     />
   );
@@ -84,10 +86,13 @@ function SkeletonBar({
 function SkeletonRow({ width = '90%' }: { width?: string }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2">
-      <div className="w-2 h-2 rounded-full bg-[#d2d2d7]/60 animate-pulse flex-shrink-0" />
       <div
-        className="h-3 rounded bg-[#d2d2d7]/60 animate-pulse"
-        style={{ width }}
+        className="w-2 h-2 rounded-full bg-[var(--color-fw-bg-deep)] animate-pulse flex-shrink-0"
+        style={{ animationDuration: '1.4s', animationTimingFunction: 'ease-in-out' }}
+      />
+      <div
+        className="h-3 rounded bg-[var(--color-fw-bg-deep)] animate-pulse"
+        style={{ width, animationDuration: '1.4s', animationTimingFunction: 'ease-in-out' }}
       />
     </div>
   );
@@ -95,7 +100,7 @@ function SkeletonRow({ width = '90%' }: { width?: string }) {
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-xl border border-[#e4e4e8] px-6 py-5 shadow-sm">
+    <div className="bg-[var(--color-fw-card-bg)] rounded-[var(--radius-md)] border border-[var(--color-fw-border)] px-6 py-5 shadow-[var(--shadow-fw-1)]">
       {/* Card header row */}
       <div className="mb-3 flex items-start justify-between">
         <div className="flex flex-col gap-1.5">
@@ -110,9 +115,9 @@ function SkeletonCard() {
       </div>
       {/* Buttons row */}
       <div className="flex gap-2">
-        <SkeletonBar width={60} height={30} rounded="rounded-lg" />
-        <SkeletonBar width={72} height={30} rounded="rounded-lg" />
-        <SkeletonBar width={68} height={30} rounded="rounded-lg" />
+        <SkeletonBar width={60} height={30} rounded="rounded-[var(--radius-md)]" />
+        <SkeletonBar width={72} height={30} rounded="rounded-[var(--radius-md)]" />
+        <SkeletonBar width={68} height={30} rounded="rounded-[var(--radius-md)]" />
       </div>
     </div>
   );

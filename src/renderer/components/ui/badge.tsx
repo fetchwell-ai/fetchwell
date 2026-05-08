@@ -7,11 +7,11 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-[#f5f5f7] text-[#6e6e73] dark:bg-[#3a3a3c] dark:text-[#aeaeb2]',
-        success: 'bg-[#e3f0d8] text-[#2e6b0a] dark:bg-[#1a3a10] dark:text-[#4cd964]',
-        info: 'bg-[#dbeafe] text-[#1d4ed8] dark:bg-[#1a2a4a] dark:text-[#64a5ff]',
-        warning: 'bg-[#fff8ec] text-[#b45309] dark:bg-[#3a2a10] dark:text-[#ffd60a]',
-        destructive: 'bg-[#fff1f0] text-[#c0392b] dark:bg-[#3a1010] dark:text-[#ff6b6b]',
+        default: 'bg-[var(--color-fw-bg-deep)] text-[var(--color-fw-fg-muted)]',
+        success: 'bg-[var(--color-fw-moss-100)] text-[var(--color-fw-moss-600)] dark:bg-[#1A3A14] dark:text-[#6BBF5E]',
+        info: 'bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)] dark:bg-[#1A2E1A] dark:text-[#7BA170]',
+        warning: 'bg-[var(--color-fw-ochre-100)] text-[var(--color-fw-ochre-600)] dark:bg-[#2C2010] dark:text-[#D4A043]',
+        destructive: 'bg-[var(--color-fw-crimson-100)] text-[var(--color-fw-crimson-600)] dark:bg-[#3A1410] dark:text-[#E8685E]',
       },
     },
     defaultVariants: {

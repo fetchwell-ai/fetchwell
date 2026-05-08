@@ -80,7 +80,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f5f5f7]">
+    <div className="flex h-screen overflow-hidden bg-[var(--color-fw-bg)]">
       <Sidebar
         portals={portals}
         selectedPortalId={selectedPortalId}

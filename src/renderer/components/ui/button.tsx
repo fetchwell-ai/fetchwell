@@ -4,27 +4,27 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#0071e3] disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-md)] text-sm font-medium transition-colors duration-[var(--fw-dur-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-fw-primary)] focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
         default:
-          'bg-[#0071e3] text-white shadow hover:bg-[#0077ed]',
+          'bg-[var(--color-fw-primary)] text-[var(--color-fw-primary-foreground)] shadow-[var(--shadow-fw-1)] hover:bg-[var(--color-fw-primary-hover)]',
         destructive:
-          'bg-[#fff1f0] text-[#c0392b] border border-[#f5c6c2] shadow-sm hover:bg-[#ffe4e1] dark:bg-[#3a1a1a] dark:text-[#ff6b6b] dark:border-[#5a2a2a] dark:hover:bg-[#4a1f1f]',
+          'bg-[var(--color-fw-crimson-100)] text-[var(--color-fw-crimson-600)] border border-[var(--color-fw-crimson-500)] shadow-sm hover:bg-[#F9DBD8] dark:bg-[#3A1A16] dark:text-[#E8685E] dark:border-[#5A2A24] dark:hover:bg-[#4A201A]',
         outline:
-          'border border-[#d2d2d7] bg-white shadow-sm hover:bg-[#f5f5f7] hover:text-[#1d1d1f] dark:border-[#3a3a3c] dark:bg-[#2c2c2e] dark:text-[#f5f5f7] dark:hover:bg-[#3a3a3c]',
+          'border border-[var(--color-fw-border)] bg-[var(--color-fw-card-bg)] shadow-sm hover:bg-[var(--color-fw-bg)] hover:text-[var(--color-fw-fg)]',
         secondary:
-          'bg-[#e8e8ed] text-[#1d1d1f] shadow-sm hover:bg-[#dcdce0] dark:bg-[#3a3a3c] dark:text-[#f5f5f7] dark:hover:bg-[#48484a]',
+          'bg-[var(--color-fw-bg-deep)] text-[var(--color-fw-fg)] shadow-sm hover:bg-[var(--color-fw-border)]',
         ghost:
-          'hover:bg-[#f5f5f7] hover:text-[#1d1d1f] dark:hover:bg-[#3a3a3c] dark:hover:text-[#f5f5f7]',
+          'hover:bg-[var(--color-fw-bg-deep)] hover:text-[var(--color-fw-fg)]',
         link:
-          'text-[#0071e3] underline-offset-4 hover:underline',
+          'text-[var(--color-fw-primary)] underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-9 px-4 py-2',
-        sm: 'h-8 rounded-md px-3 text-xs',
-        lg: 'h-10 rounded-md px-8',
+        sm: 'h-8 rounded-[var(--radius-sm)] px-3 text-xs',
+        lg: 'h-10 rounded-[var(--radius-md)] px-8',
         icon: 'h-9 w-9',
       },
     },

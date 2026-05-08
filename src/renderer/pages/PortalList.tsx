@@ -26,8 +26,8 @@ interface RunningOperation {
 function formatDate(iso: string | null): string {
   if (!iso) return '';
   try {
-    return new Date(iso).toLocaleDateString(undefined, {
-      year: 'numeric',
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
     });
@@ -36,7 +36,7 @@ function formatDate(iso: string | null): string {
   }
 }
 
-// ── Skeleton for the portal list loading state ───────────────────────────────
+// -- Skeleton for the portal list loading state --
 
 function SkeletonBar({
   width,
@@ -49,15 +49,20 @@ function SkeletonBar({
 }) {
   return (
     <div
-      className={`bg-[#d2d2d7]/60 dark:bg-[#48484a]/60 animate-pulse ${rounded}`}
-      style={{ width: typeof width === 'number' ? `${width}px` : width, height }}
+      className={`bg-[var(--color-fw-bg-deep)] animate-pulse ${rounded}`}
+      style={{
+        width: typeof width === 'number' ? `${width}px` : width,
+        height,
+        animationDuration: '1.4s',
+        animationTimingFunction: 'ease-in-out',
+      }}
     />
   );
 }
 
 function PortalCardSkeleton() {
   return (
-    <div className="bg-white dark:bg-[#2c2c2e] rounded-xl border border-[#e4e4e8] dark:border-[#3a3a3c] px-6 py-5 shadow-sm">
+    <div className="bg-[var(--color-fw-card-bg)] rounded-[var(--radius-md)] border border-[var(--color-fw-border)] px-6 py-5 shadow-[var(--shadow-fw-1)]">
       <div className="mb-3 flex items-start justify-between">
         <div className="flex flex-col gap-1.5">
           <SkeletonBar width={160} height={14} />
@@ -69,9 +74,9 @@ function PortalCardSkeleton() {
         <SkeletonBar width={100} height={20} rounded="rounded-full" />
       </div>
       <div className="flex gap-2">
-        <SkeletonBar width={60} height={30} rounded="rounded-lg" />
-        <SkeletonBar width={72} height={30} rounded="rounded-lg" />
-        <SkeletonBar width={68} height={30} rounded="rounded-lg" />
+        <SkeletonBar width={60} height={30} rounded="rounded-[var(--radius-md)]" />
+        <SkeletonBar width={72} height={30} rounded="rounded-[var(--radius-md)]" />
+        <SkeletonBar width={68} height={30} rounded="rounded-[var(--radius-md)]" />
       </div>
     </div>
   );
@@ -86,7 +91,7 @@ function PortalListSkeleton() {
   );
 }
 
-// ── PortalCard ────────────────────────────────────────────────────────────────
+// -- PortalCard --
 
 interface PortalCardProps {
   portal: PortalEntry;
@@ -138,7 +143,7 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
   const mapTitle = isAnotherRunning
     ? 'Another operation is in progress'
     : isThisRunning && runningOperation?.operation === 'discovery'
-      ? 'Discovery running…'
+      ? 'Discovery running...'
       : undefined;
 
   const extractTitle = isAnotherRunning
@@ -146,23 +151,23 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
     : extractDisabled
       ? 'Run Map first to enable extraction.'
       : isThisRunning && runningOperation?.operation === 'extraction'
-        ? 'Extraction running…'
+        ? 'Extraction running...'
         : undefined;
 
   return (
     <motion.div
-      whileHover={shouldReduce ? undefined : { y: -2, boxShadow: '0 4px 16px rgba(0,0,0,0.10),0 1px 4px rgba(0,0,0,0.06)' }}
+      whileHover={shouldReduce ? undefined : { y: -2, boxShadow: 'var(--shadow-fw-2)' }}
       transition={shouldReduce ? undefined : { type: 'spring', stiffness: 400, damping: 30 }}
     >
-    <Card ref={cardRef} className={cn("portal-card px-6 py-5", isSelected && "ring-2 ring-[#0071e3]")}>
+    <Card ref={cardRef} className={cn("portal-card px-6 py-5", isSelected && "ring-2 ring-[var(--color-fw-primary)]")}>
       <div className="mb-3 flex items-start justify-between">
         <div className="min-w-0 flex-1">
-          <h2 className="portal-card-name m-0 mb-0.5 text-base font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">{portal.name}</h2>
-          <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-[#6e6e73]">{portal.url}</p>
+          <h2 className="portal-card-name m-0 mb-0.5 text-base font-semibold text-[var(--color-fw-fg)]">{portal.name}</h2>
+          <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-[var(--color-fw-fg-muted)]">{portal.url}</p>
         </div>
         <button
           type="button"
-          className="ml-2 flex-shrink-0 cursor-pointer rounded-md border-none bg-transparent p-1 text-[18px] text-[#6e6e73] leading-none transition-colors hover:bg-[#f5f5f7] dark:hover:bg-[#3a3a3c] hover:text-[#1d1d1f] dark:hover:text-[#f5f5f7]"
+          className="ml-2 flex-shrink-0 cursor-pointer rounded-[var(--radius-sm)] border-none bg-transparent p-1 text-[18px] text-[var(--color-fw-fg-muted)] leading-none transition-colors duration-[var(--fw-dur-fast)] hover:bg-[var(--color-fw-bg-deep)] hover:text-[var(--color-fw-fg)]"
           aria-label="Edit portal"
           onClick={() => onEdit(portal)}
           title="Edit portal"
@@ -181,7 +186,7 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
         )}
         {portal.lastExtractedAt && (
           <Badge variant="info">
-            Last extracted {formatDate(portal.lastExtractedAt)}
+            Last fetched {formatDate(portal.lastExtractedAt)}
           </Badge>
         )}
       </div>
@@ -195,7 +200,7 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
           disabled={mapDisabled}
           title={mapTitle}
         >
-          {isThisRunning && runningOperation?.operation === 'discovery' ? 'Running…' : 'Map'}
+          {isThisRunning && runningOperation?.operation === 'discovery' ? 'Running...' : 'Map'}
         </Button>
 
         <div className="group relative inline-flex flex-col">
@@ -206,15 +211,15 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
             disabled={extractBtnDisabled}
             title={extractTitle}
           >
-            {isThisRunning && runningOperation?.operation === 'extraction' ? 'Running…' : 'Extract'}
+            {isThisRunning && runningOperation?.operation === 'extraction' ? 'Running...' : 'Extract'}
           </Button>
           {extractDisabled && !anyOperationRunning && (
-            <p className="extract-tooltip absolute left-1/2 top-[calc(100%+6px)] -translate-x-1/2 z-10 whitespace-nowrap rounded-md bg-[#1d1d1f] px-2.5 py-1.5 text-[11px] text-white opacity-0 pointer-events-none transition-opacity group-hover:opacity-100">
+            <p className="extract-tooltip absolute left-1/2 top-[calc(100%+6px)] -translate-x-1/2 z-10 whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--color-fw-ink-800)] px-2.5 py-1.5 text-[11px] text-white opacity-0 pointer-events-none transition-opacity group-hover:opacity-100">
               Run Map first to enable extraction.
             </p>
           )}
           {isAnotherRunning && (
-            <p className="extract-tooltip absolute left-1/2 top-[calc(100%+6px)] -translate-x-1/2 z-10 whitespace-nowrap rounded-md bg-[#1d1d1f] px-2.5 py-1.5 text-[11px] text-white opacity-0 pointer-events-none transition-opacity group-hover:opacity-100">
+            <p className="extract-tooltip absolute left-1/2 top-[calc(100%+6px)] -translate-x-1/2 z-10 whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--color-fw-ink-800)] px-2.5 py-1.5 text-[11px] text-white opacity-0 pointer-events-none transition-opacity group-hover:opacity-100">
               Another operation is in progress
             </p>
           )}
@@ -288,7 +293,7 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
       await window.electronAPI.removePortal(portal.id);
       setPortals((prev) => prev.filter((p) => p.id !== portal.id));
     } catch {
-      // Removal failed silently — user can retry
+      // Removal failed silently -- user can retry
     }
   };
 
@@ -334,13 +339,13 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
   return (
     <div className="portal-list-page flex-1 p-10">
       <div className="portal-list-header mb-6 flex items-center justify-between">
-        <h1 className="m-0 text-[22px] font-semibold text-[#1d1d1f] dark:text-[#f5f5f7]">Your Portals</h1>
+        <h1 className="m-0 text-[22px] font-semibold text-[var(--color-fw-fg)]">Your portals</h1>
         <div className="flex gap-2">
           <Button
             type="button"
             onClick={() => setView({ type: 'add' })}
           >
-            + Add Portal
+            + Add portal
           </Button>
           <Button
             type="button"
@@ -356,13 +361,13 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
       {loading ? (
         <PortalListSkeleton />
       ) : portals.length === 0 ? (
-        <div className="portal-empty-state flex flex-1 flex-col items-center justify-center gap-4 text-[14px] text-[#6e6e73]">
+        <div className="portal-empty-state flex flex-1 flex-col items-center justify-center gap-4 text-[14px] text-[var(--color-fw-fg-muted)]">
           <p>No portals yet. Add your first health portal to get started.</p>
           <Button
             type="button"
             onClick={() => setView({ type: 'add' })}
           >
-            + Add Portal
+            + Add portal
           </Button>
         </div>
       ) : (
