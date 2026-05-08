@@ -15,16 +15,25 @@ import { getOutputDir } from "../extract/helpers.js";
 import { discoverPortal } from "./index.js";
 import { loadNavMap, saveNavMap } from "./nav-map.js";
 import { detectLoginFormType } from "../auth/detect-login-form.js";
+import { type StructuredProgressEvent } from "../progress-events.js";
+
+/** Optional callback for emitting structured progress events to the Electron parent. */
+export type ProgressEmitter = (event: StructuredProgressEvent) => void;
 
 /**
  * Run portal discovery for a single provider.
  * Throws on failure (does not call process.exit).
  *
- * @param provider  - Provider configuration
- * @param basePath  - Optional base output directory (Electron download folder).
- *                    Defaults to OUTPUT_BASE (CLI mode) when omitted.
+ * @param provider      - Provider configuration
+ * @param basePath      - Optional base output directory (Electron download folder).
+ *                        Defaults to OUTPUT_BASE (CLI mode) when omitted.
+ * @param emitProgress  - Optional callback for structured progress events (Electron mode only).
  */
-export async function discoverProviderById(provider: ProviderConfig, basePath?: string): Promise<void> {
+export async function discoverProviderById(
+  provider: ProviderConfig,
+  basePath?: string,
+  emitProgress?: ProgressEmitter,
+): Promise<void> {
   const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
   const portalUrl = provider.url;
   const providerCredentials = provider.username || provider.password
@@ -32,6 +41,11 @@ export async function discoverProviderById(provider: ProviderConfig, basePath?: 
     : undefined;
   const authModule = getAuthModule(provider.auth, provider.id);
   const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
+
+  // Helper: emit if we have a progress emitter (Electron mode)
+  const emit = (event: StructuredProgressEvent) => {
+    if (emitProgress) emitProgress(event);
+  };
 
   console.log("=".repeat(60));
   console.log("  FetchWell — Portal Discovery");
@@ -72,6 +86,9 @@ export async function discoverProviderById(provider: ProviderConfig, basePath?: 
   const isFirstDiscovery = existingNavMap === null;
 
   try {
+    // ── Phase: login ──────────────────────────────────────────────────────
+    emit({ type: 'phase-change', phase: 'login', status: 'running', message: 'Logging in...' });
+
     console.log(`Step 2: Navigating to ${portalUrl}...`);
     await browser.navigate(portalUrl);
     console.log("Page loaded.");
@@ -129,6 +146,11 @@ export async function discoverProviderById(provider: ProviderConfig, basePath?: 
     }
     console.log();
 
+    emit({ type: 'phase-change', phase: 'login', status: 'complete', message: 'Logged in' });
+
+    // ── Phase: navigate ───────────────────────────────────────────────────
+    emit({ type: 'phase-change', phase: 'navigate', status: 'running', message: 'Discovering portal structure...' });
+
     console.log("Step 4: Discovering portal structure...");
     console.log();
     const navMap = await discoverPortal(browser, provider.id, homeUrl);
@@ -139,6 +161,8 @@ export async function discoverProviderById(provider: ProviderConfig, basePath?: 
       saveNavMap(navMap, provider.id, basePath);
       console.log(`   Detected login form type "${detectedLoginForm}" stored in nav-map.`);
     }
+
+    emit({ type: 'phase-change', phase: 'navigate', status: 'complete', message: `Discovered ${Object.keys(navMap.sections).length}/4 sections` });
 
     console.log();
     console.log("=".repeat(60));

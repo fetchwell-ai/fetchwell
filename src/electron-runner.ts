@@ -18,6 +18,7 @@ dotenv.config({ override: true });
 
 import { setOtpCallback } from './auth/strategies/two-factor.js';
 import { type ProviderConfig } from './config.js';
+import { type StructuredProgressEvent } from './progress-events.js';
 
 // ---------------------------------------------------------------------------
 // IPC message types
@@ -47,6 +48,21 @@ interface TwoFARequest {
 interface TwoFAResponse {
   type: '2fa:response';
   code: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Structured progress event emitter
+// ---------------------------------------------------------------------------
+
+/**
+ * Send a structured progress event to the parent Electron process via IPC.
+ * Only sends when process.send is available (subprocess mode).
+ * CLI mode is unaffected — existing console.log calls handle that.
+ */
+export function sendProgressEvent(event: StructuredProgressEvent): void {
+  if (process.send) {
+    process.send(event);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -142,10 +158,10 @@ async function main(): Promise<void> {
   if (cmd.command === 'extract') {
     // Dynamically import to avoid top-level side effects (dotenv, arg parsing, run())
     const { extractProvider } = await import('./extract/runner.js');
-    await extractProvider(provider, cmd.incremental, cmd.downloadFolder);
+    await extractProvider(provider, cmd.incremental, cmd.downloadFolder, sendProgressEvent);
   } else if (cmd.command === 'discover') {
     const { discoverProviderById } = await import('./discover/runner.js');
-    await discoverProviderById(provider, cmd.downloadFolder);
+    await discoverProviderById(provider, cmd.downloadFolder, sendProgressEvent);
   }
 }
 

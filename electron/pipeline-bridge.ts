@@ -11,10 +11,11 @@
  *   Parent → Child: { type: '2fa:response', code: string | null }
  *
  * IPC events emitted to the BrowserWindow renderer:
- *   extraction:log / discovery:log     — progress message string
+ *   extraction:log / discovery:log         — progress message string (stdout)
+ *   extraction:progress / discovery:progress — StructuredProgressEvent (IPC)
  *   extraction:complete / discovery:complete — success (no payload)
- *   extraction:error / discovery:error — ErrorEvent payload
- *   2fa:request                         — triggers the OTP modal
+ *   extraction:error / discovery:error     — ErrorEvent payload
+ *   2fa:request                             — triggers the OTP modal
  */
 
 import { fork } from 'child_process';
@@ -80,6 +81,16 @@ interface RunnerCommand {
     twoFactor: 'none' | 'email' | 'manual' | 'ui';
   };
 }
+
+/**
+ * Structured progress event sent from the subprocess via process.send().
+ * Mirrors the types in src/progress-events.ts (kept in sync manually to
+ * avoid a cross-tsconfig import).
+ */
+type StructuredProgressEvent =
+  | { type: 'phase-change'; phase: string; status: string; message?: string }
+  | { type: 'item-progress'; phase: string; category: string; current: number; total?: number; message?: string }
+  | { type: 'category-complete'; phase: string; category: string; count: number; status: string };
 
 // ---------------------------------------------------------------------------
 // 2FA IPC relay
@@ -184,9 +195,10 @@ function runSubprocess(
       });
     }
 
-    // Handle IPC messages from child (2FA requests)
+    // Handle IPC messages from child (2FA requests and structured progress events)
     child.on('message', (msg: unknown) => {
-      const message = msg as TwoFARequest;
+      const message = msg as TwoFARequest | StructuredProgressEvent;
+
       if (message && message.type === '2fa:request') {
         // Forward 2FA request to renderer
         if (!win.isDestroyed()) {
@@ -198,6 +210,20 @@ function runSubprocess(
           const response: TwoFAResponse = { type: '2fa:response', code };
           child.send(response);
         });
+        return;
+      }
+
+      // Forward structured progress events to the renderer
+      if (
+        message &&
+        (message.type === 'phase-change' ||
+          message.type === 'item-progress' ||
+          message.type === 'category-complete')
+      ) {
+        const progressChannel = command === 'extract' ? 'extraction:progress' : 'discovery:progress';
+        if (!win.isDestroyed()) {
+          win.webContents.send(progressChannel, message);
+        }
       }
     });
 

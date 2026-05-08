@@ -24,17 +24,27 @@ import { extractLabsDocs } from "./labs.js";
 import { extractVisits } from "./visits.js";
 import { extractMedications } from "./medications.js";
 import { extractMessages } from "./messages.js";
+import { type StructuredProgressEvent } from "../progress-events.js";
+
+/** Optional callback for emitting structured progress events to the Electron parent. */
+export type ProgressEmitter = (event: StructuredProgressEvent) => void;
 
 /**
  * Run the full extraction pipeline for a single provider.
  * Throws on failure (does not call process.exit).
  *
- * @param provider   - Provider configuration
- * @param incremental - Only fetch items newer than the last run
- * @param basePath   - Optional base output directory (Electron download folder).
- *                     Defaults to OUTPUT_BASE (CLI mode) when omitted.
+ * @param provider        - Provider configuration
+ * @param incremental     - Only fetch items newer than the last run
+ * @param basePath        - Optional base output directory (Electron download folder).
+ *                          Defaults to OUTPUT_BASE (CLI mode) when omitted.
+ * @param emitProgress    - Optional callback for structured progress events (Electron mode only).
  */
-export async function extractProvider(provider: ProviderConfig, incremental = false, basePath?: string): Promise<void> {
+export async function extractProvider(
+  provider: ProviderConfig,
+  incremental = false,
+  basePath?: string,
+  emitProgress?: ProgressEmitter,
+): Promise<void> {
   const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
   const portalUrl = provider.url;
   const providerCredentials = provider.username || provider.password
@@ -42,6 +52,11 @@ export async function extractProvider(provider: ProviderConfig, incremental = fa
     : undefined;
   const authModule = getAuthModule(provider.auth, provider.id);
   const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
+
+  // Helper: emit if we have a progress emitter (Electron mode)
+  const emit = (event: StructuredProgressEvent) => {
+    if (emitProgress) emitProgress(event);
+  };
 
   console.log("=".repeat(60));
   console.log("  FetchWell — Record Extraction");
@@ -80,6 +95,9 @@ export async function extractProvider(provider: ProviderConfig, incremental = fa
   console.log();
 
   try {
+    // ── Phase: login ──────────────────────────────────────────────────────
+    emit({ type: 'phase-change', phase: 'login', status: 'running', message: 'Logging in...' });
+
     console.log(`Step 2: Navigating to ${portalUrl}...`);
     await browser.navigate(portalUrl);
     console.log("Page loaded.");
@@ -133,6 +151,11 @@ export async function extractProvider(provider: ProviderConfig, incremental = fa
     }
     console.log();
 
+    emit({ type: 'phase-change', phase: 'login', status: 'complete', message: 'Logged in' });
+
+    // ── Phase: navigate ───────────────────────────────────────────────────
+    emit({ type: 'phase-change', phase: 'navigate', status: 'running', message: 'Loading portal sections...' });
+
     // Warn if no nav-map exists
     if (!loadNavMap(provider.id, basePath)) {
       console.log(`Warning: No nav-map found for ${provider.id}. Run discovery first for better navigation.`);
@@ -151,26 +174,45 @@ export async function extractProvider(provider: ProviderConfig, incremental = fa
       console.log();
     }
 
+    emit({ type: 'phase-change', phase: 'navigate', status: 'complete', message: 'Portal sections loaded' });
+
+    // ── Phase: extract ────────────────────────────────────────────────────
+    emit({ type: 'phase-change', phase: 'extract', status: 'running', message: 'Extracting records...' });
+
+    // Labs
+    emit({ type: 'item-progress', phase: 'extract', category: 'labs', current: 0, message: 'Extracting labs...' });
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
     const labsCount = await extractLabsDocs(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental, provider.authenticatedSelectors);
     if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
+    emit({ type: 'category-complete', phase: 'extract', category: 'labs', count: labsCount, status: 'complete' });
     console.log();
 
+    // Visits
+    emit({ type: 'item-progress', phase: 'extract', category: 'visits', current: 0, message: 'Extracting visits...' });
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
     const visitsCount = await extractVisits(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental, provider.authenticatedSelectors);
     if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
+    emit({ type: 'category-complete', phase: 'extract', category: 'visits', count: visitsCount, status: 'complete' });
     console.log();
 
+    // Medications
+    emit({ type: 'item-progress', phase: 'extract', category: 'medications', current: 0, message: 'Extracting medications...' });
     const medsCount = await extractMedications(browser, portalUrl, providerCredentials, outputDir, provider.id, incremental, provider.authenticatedSelectors);
     if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
+    emit({ type: 'category-complete', phase: 'extract', category: 'medications', count: medsCount, status: 'complete' });
     console.log();
 
+    // Messages
+    emit({ type: 'item-progress', phase: 'extract', category: 'messages', current: 0, message: 'Extracting messages...' });
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
     const msgsCount = await extractMessages(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental, provider.authenticatedSelectors);
     if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
+    emit({ type: 'category-complete', phase: 'extract', category: 'messages', count: msgsCount, status: 'complete' });
     console.log();
 
     buildIndex(outputDir, provider.id);
+
+    emit({ type: 'phase-change', phase: 'extract', status: 'complete', message: 'All records extracted' });
 
     console.log("=".repeat(60));
     console.log("  EXTRACTION COMPLETE");
