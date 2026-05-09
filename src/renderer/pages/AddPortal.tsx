@@ -5,6 +5,7 @@ import { Label } from '../components/ui/label';
 import { Select } from '../components/ui/select';
 import { Checkbox } from '../components/ui/checkbox';
 import { Card } from '../components/ui/card';
+import { validatePortalUrl } from '../lib/utils';
 
 interface AddPortalProps {
   onSave: () => void;
@@ -41,12 +42,18 @@ export default function AddPortal({
   const [saveCredentials, setSaveCredentials] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [urlError, setUrlError] = useState<string | null>(null);
 
   // Track whether name was auto-populated so we can replace it on URL change
   const nameAutoPopulated = useRef(editPortal === undefined);
 
   const handleUrlChange = (value: string) => {
     setUrl(value);
+    if (value.trim() && !validatePortalUrl(value)) {
+      setUrlError('Please enter a valid URL (e.g. https://mychart.example.org).');
+    } else {
+      setUrlError(null);
+    }
     if (nameAutoPopulated.current) {
       const suggested = suggestName(value);
       setName(suggested);
@@ -64,6 +71,10 @@ export default function AddPortal({
 
     if (!url.trim()) {
       setError('Portal URL is required.');
+      return;
+    }
+    if (!validatePortalUrl(url)) {
+      setUrlError('Please enter a valid URL (e.g. https://mychart.example.org).');
       return;
     }
     if (!name.trim()) {
@@ -119,9 +130,13 @@ export default function AddPortal({
               autoComplete="off"
               spellCheck={false}
             />
-            <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
-              The base URL of the patient portal login page.
-            </p>
+            {urlError ? (
+              <p className="mt-1 text-xs text-[var(--color-fw-crimson-600)]">{urlError}</p>
+            ) : (
+              <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
+                The base URL of the patient portal login page.
+              </p>
+            )}
           </div>
 
           <div className="mb-5">
