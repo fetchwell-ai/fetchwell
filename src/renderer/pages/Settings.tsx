@@ -1,81 +1,145 @@
 import React, { useEffect, useState } from 'react';
+import { Monitor, Sun, Moon } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card } from '../components/ui/card';
-import { Checkbox } from '../components/ui/checkbox';
 import { cn } from '../lib/utils';
 
 interface SettingsProps {
   onBack: () => void;
-  /** Which settings sub-section to show (v2 nav model). Currently unused — shows all sections. */
+  /** Which settings sub-section to show. */
   activeKey?: string | null;
 }
 
 type ThemeOption = 'system' | 'light' | 'dark';
 
-const THEME_OPTIONS: { value: ThemeOption; label: string }[] = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' },
-];
+// ── Shared page wrapper ───────────────────────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export default function Settings({ onBack, activeKey: _activeKey }: SettingsProps) {
-  const [downloadFolder, setDownloadFolder] = useState('');
-  const [showBrowser, setShowBrowser] = useState(false);
-  const [incrementalExtraction, setIncrementalExtraction] = useState(true);
+interface PageLayoutProps {
+  title: string;
+  lede: string;
+  children: React.ReactNode;
+}
+
+function PageLayout({ title, lede, children }: PageLayoutProps) {
+  return (
+    <div className="w-full max-w-[980px] px-8 py-10">
+      <div className="mb-7">
+        <h1
+          className="m-0 mb-1 text-[32px] leading-[38px] font-medium tracking-[-0.012em] text-[var(--color-fw-ink-900)]"
+          style={{ fontFamily: 'var(--font-serif)' }}
+        >
+          {title}
+        </h1>
+        <p className="m-0 text-[14px] text-[var(--color-fw-fg-muted)] max-w-[540px]">
+          {lede}
+        </p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── (a) Appearance ────────────────────────────────────────────────────────────
+
+function AppearancePage() {
+  const [theme, setTheme] = useState<ThemeOption>(() => {
+    return (localStorage.getItem('fw-theme') as ThemeOption) ?? 'system';
+  });
+
+  const handleThemeChange = async (newTheme: ThemeOption) => {
+    setTheme(newTheme);
+    localStorage.setItem('fw-theme', newTheme);
+    try {
+      const isDark = await window.electronAPI.darkModeSetTheme(newTheme);
+      document.documentElement.classList.toggle('dark', isDark);
+      await window.electronAPI.updateSettings({ theme: newTheme });
+    } catch {
+      // Best-effort — UI already updated
+    }
+  };
+
+  const SEGMENTS: { value: ThemeOption; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
+    { value: 'system', label: 'System', Icon: Monitor },
+    { value: 'light',  label: 'Light',  Icon: Sun },
+    { value: 'dark',   label: 'Dark',   Icon: Moon },
+  ];
+
+  return (
+    <PageLayout title="Appearance" lede="Match your system, or pick a side.">
+      <Card className="max-w-[560px] px-6 py-5">
+        <div
+          className="grid gap-2 p-1 rounded-[var(--radius-md)] border border-[var(--color-fw-border)]"
+          style={{
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            background: 'var(--color-fw-bg-deep)',
+          }}
+        >
+          {SEGMENTS.map(({ value, label, Icon }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => handleThemeChange(value)}
+              className={cn(
+                'inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-[6px] text-[13px] font-medium border cursor-pointer transition-colors duration-[var(--fw-dur-fast,120ms)]',
+                theme === value
+                  ? 'bg-[var(--color-fw-sage-100)] border-[var(--color-fw-border-focus)] text-[var(--color-fw-ink-900)]'
+                  : 'bg-transparent border-transparent text-[var(--color-fw-ink-700)] hover:text-[var(--color-fw-ink-900)] hover:bg-[var(--color-fw-card-bg)]',
+              )}
+            >
+              <Icon size={14} />
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-3 text-[12px] text-[var(--color-fw-fg-muted)]">
+          System follows your macOS appearance.
+        </p>
+      </Card>
+    </PageLayout>
+  );
+}
+
+// ── (b) Anthropic API key ─────────────────────────────────────────────────────
+
+function ApiKeyPage() {
   const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
-  const [theme, setTheme] = useState<ThemeOption>('system');
-  const [loading, setLoading] = useState(true);
-
-  // API key editing state
   const [editingApiKey, setEditingApiKey] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [apiKeyValidating, setApiKeyValidating] = useState(false);
-
-  // Saved feedback
-  const [savedLabel, setSavedLabel] = useState<string | null>(null);
-
-  const showSaved = (label: string) => {
-    setSavedLabel(label);
-    setTimeout(() => setSavedLabel(null), 1800);
-  };
+  const [savedVisible, setSavedVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     window.electronAPI
       .getSettings()
       .then((settings) => {
-        setDownloadFolder(settings.downloadFolder);
-        setShowBrowser(settings.showBrowser);
-        setIncrementalExtraction(settings.incrementalExtraction);
         setApiKeyConfigured(settings.apiKeyConfigured);
-        setTheme(settings.theme ?? 'system');
       })
-      .catch(() => {
-        // ignore -- defaults remain
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  // --- API Key handlers ---
+  const showSaved = () => {
+    setSavedVisible(true);
+    setTimeout(() => setSavedVisible(false), 1800);
+  };
 
-  const handleStartEditApiKey = () => {
+  const handleStartEdit = () => {
     setApiKeyInput('');
     setApiKeyError(null);
     setEditingApiKey(true);
   };
 
-  const handleCancelEditApiKey = () => {
+  const handleCancelEdit = () => {
     setEditingApiKey(false);
     setApiKeyInput('');
     setApiKeyError(null);
   };
 
-  const handleSaveApiKey = async () => {
+  const handleSave = async () => {
     const trimmed = apiKeyInput.trim();
     if (!trimmed) {
       setApiKeyError('API key is required');
@@ -93,7 +157,7 @@ export default function Settings({ onBack, activeKey: _activeKey }: SettingsProp
       setApiKeyConfigured(true);
       setEditingApiKey(false);
       setApiKeyInput('');
-      showSaved('api-key');
+      showSaved();
     } catch {
       setApiKeyError('An error occurred while saving. Try again.');
     } finally {
@@ -101,263 +165,220 @@ export default function Settings({ onBack, activeKey: _activeKey }: SettingsProp
     }
   };
 
-  // --- Download folder handler ---
+  const handleGetKey = () => {
+    window.open('https://console.anthropic.com', '_blank');
+  };
+
+  if (loading) return null;
+
+  return (
+    <PageLayout
+      title="Anthropic API key"
+      lede="Used to power navigation. Billed against your own account."
+    >
+      <Card className="max-w-[560px] px-6 py-5">
+        {!editingApiKey && apiKeyConfigured && (
+          <div className="flex items-center gap-3">
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[14px] text-[var(--color-fw-fg)]">API key configured</span>
+              <span className="text-[13px] tracking-[0.06em] text-[var(--color-fw-fg-muted)]">
+                *****************
+              </span>
+            </div>
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {savedVisible && (
+                <span className="text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
+              )}
+              <Button type="button" variant="secondary" size="sm" onClick={handleStartEdit}>
+                Change
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {(editingApiKey || !apiKeyConfigured) && (
+          <div>
+            <div className="mb-5">
+              <Label htmlFor="settings-api-key" className="mb-1.5">
+                {apiKeyConfigured ? 'New API key' : 'API key'}
+              </Label>
+              <Input
+                id="settings-api-key"
+                type="password"
+                value={apiKeyInput}
+                onChange={(e) => {
+                  setApiKeyInput(e.target.value);
+                  setApiKeyError(null);
+                }}
+                placeholder="sk-ant-..."
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
+                Starts with sk-ant-. Get one at <strong>console.anthropic.com</strong>
+              </p>
+              {apiKeyError && (
+                <p className="mt-1 text-xs text-[var(--color-fw-crimson-600)]">{apiKeyError}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSave}
+                disabled={apiKeyValidating}
+              >
+                {apiKeyValidating ? 'Validating...' : 'Save'}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleGetKey}
+              >
+                Get a key →
+              </Button>
+              {apiKeyConfigured && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={handleCancelEdit}
+                  disabled={apiKeyValidating}
+                  className="ml-auto"
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+      </Card>
+    </PageLayout>
+  );
+}
+
+// ── (c) Storage location ──────────────────────────────────────────────────────
+
+function StoragePage() {
+  const [downloadFolder, setDownloadFolder] = useState('');
+  const [savedVisible, setSavedVisible] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    window.electronAPI
+      .getSettings()
+      .then((settings) => {
+        setDownloadFolder(settings.downloadFolder);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const showSaved = () => {
+    setSavedVisible(true);
+    setTimeout(() => setSavedVisible(false), 1800);
+  };
 
   const handleChooseFolder = async () => {
     const chosen = await window.electronAPI.chooseFolder();
     if (chosen !== null) {
       setDownloadFolder(chosen);
       await window.electronAPI.updateSettings({ downloadFolder: chosen });
-      showSaved('folder');
+      showSaved();
     }
-  };
-
-  // --- Toggle handlers ---
-
-  const handleShowBrowserToggle = async () => {
-    const next = !showBrowser;
-    setShowBrowser(next);
-    await window.electronAPI.updateSettings({ showBrowser: next });
-    showSaved('show-browser');
-  };
-
-  const handleIncrementalToggle = async () => {
-    const next = !incrementalExtraction;
-    setIncrementalExtraction(next);
-    await window.electronAPI.updateSettings({ incrementalExtraction: next });
-    showSaved('incremental');
-  };
-
-  // --- Theme handler ---
-
-  const handleThemeChange = async (newTheme: ThemeOption) => {
-    setTheme(newTheme);
-    // Tell Electron to update nativeTheme.themeSource and get new isDark value
-    const isDark = await window.electronAPI.darkModeSetTheme(newTheme);
-    document.documentElement.classList.toggle('dark', isDark);
-    await window.electronAPI.updateSettings({ theme: newTheme });
-    showSaved('theme');
   };
 
   if (loading) return null;
 
   return (
-    <div className="mx-auto w-full max-w-[640px] flex-1 px-10 py-8">
-      <div className="mb-7 flex items-center gap-4">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={onBack}
-        >
-          Back
-        </Button>
-        <h1 className="m-0 text-[22px] font-semibold text-[var(--color-fw-fg)]">Settings</h1>
-      </div>
-
-      <div className="flex flex-col gap-4">
-
-        {/* Appearance section */}
-        <Card className="px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
-            Appearance
+    <PageLayout
+      title="Storage location"
+      lede="Where downloaded PDFs are saved on this Mac."
+    >
+      <Card className="max-w-[560px] px-6 py-5">
+        <div className="flex items-center gap-3">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--color-fw-bg)] px-3 py-2.5">
+            <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-mono text-[var(--color-fw-fg-muted)]">
+              {downloadFolder || 'No folder selected'}
+            </span>
           </div>
-          <div className="flex items-center gap-2">
-            {THEME_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => handleThemeChange(opt.value)}
-                className={cn(
-                  'flex-1 rounded-[var(--radius-md)] border px-3 py-2 text-[13px] font-medium transition-colors duration-[var(--fw-dur-fast)] cursor-pointer',
-                  theme === opt.value
-                    ? 'border-[var(--color-fw-primary)] bg-[var(--color-fw-primary-tint)] text-[var(--color-fw-primary)]'
-                    : 'border-[var(--color-fw-border)] bg-transparent text-[var(--color-fw-fg-muted)] hover:bg-[var(--color-fw-bg-deep)]',
-                )}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          {savedLabel === 'theme' && (
-            <p className="mt-2 text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</p>
-          )}
-          <p className="mt-2 text-xs text-[var(--color-fw-fg-muted)]">
-            System follows your macOS appearance setting.
-          </p>
-        </Card>
-
-        {/* API Key section */}
-        <Card className="px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
-            API key
-          </div>
-
-          {!editingApiKey && apiKeyConfigured && (
-            <div className="flex items-center gap-3">
-              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className="text-[14px] text-[var(--color-fw-fg)]">API key configured</span>
-                <span className="text-[13px] tracking-[0.06em] text-[var(--color-fw-fg-muted)]">*****************</span>
-              </div>
-              <div className="flex flex-shrink-0 items-center gap-2">
-                {savedLabel === 'api-key' && (
-                  <span className="settings-saved text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
-                )}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleStartEditApiKey}
-                >
-                  Change
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {(editingApiKey || !apiKeyConfigured) && (
-            <div className="mt-1">
-              <div className="mb-5">
-                <Label htmlFor="settings-api-key" className="mb-1.5">
-                  {apiKeyConfigured ? 'New API key' : 'API key'}
-                </Label>
-                <Input
-                  id="settings-api-key"
-                  type="password"
-                  value={apiKeyInput}
-                  onChange={(e) => {
-                    setApiKeyInput(e.target.value);
-                    setApiKeyError(null);
-                  }}
-                  placeholder="sk-ant-..."
-                  autoComplete="off"
-                  spellCheck={false}
-                />
-                <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
-                  Starts with sk-ant-. Get one at{' '}
-                  <strong>console.anthropic.com</strong>
-                </p>
-                {apiKeyError && <p className="mt-1 text-xs text-[var(--color-fw-crimson-600)]">{apiKeyError}</p>}
-              </div>
-              <div className="flex justify-end gap-2">
-                {apiKeyConfigured && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="sm"
-                    onClick={handleCancelEditApiKey}
-                    disabled={apiKeyValidating}
-                  >
-                    Cancel
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleSaveApiKey}
-                  disabled={apiKeyValidating}
-                >
-                  {apiKeyValidating ? 'Validating...' : 'Save'}
-                </Button>
-              </div>
-            </div>
-          )}
-        </Card>
-
-        {/* Download Folder section */}
-        <Card className="px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
-            Download folder
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--color-fw-bg)] px-3 py-2.5">
-              <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] text-[var(--color-fw-fg-muted)]">
-                {downloadFolder || 'No folder selected'}
-              </span>
-            </div>
-            <div className="flex flex-shrink-0 items-center gap-2">
-              {savedLabel === 'folder' && (
-                <span className="settings-saved text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
-              )}
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={handleChooseFolder}
-              >
-                Change
-              </Button>
-            </div>
-          </div>
-          <p className="mt-2 text-xs text-[var(--color-fw-fg-muted)]">
-            Extracted PDFs will be saved to this folder.
-          </p>
-        </Card>
-
-        {/* Browser Visibility section */}
-        <Card className="px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
-            Browser visibility
-          </div>
-          <div className="mb-2 flex items-center gap-3">
-            <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-[14px] text-[var(--color-fw-fg)]" htmlFor="show-browser">
-              <Checkbox
-                id="show-browser"
-                checked={showBrowser}
-                onChange={handleShowBrowserToggle}
-              />
-              <span>Show the browser while it works</span>
-            </label>
-            {savedLabel === 'show-browser' && (
-              <span className="settings-saved text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
+          <div className="flex flex-shrink-0 items-center gap-2">
+            {savedVisible && (
+              <span className="text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
             )}
+            <Button type="button" variant="secondary" size="sm" onClick={handleChooseFolder}>
+              Choose...
+            </Button>
           </div>
-          {showBrowser && (
-            <p className="settings-warning m-1 rounded-[var(--radius-sm)] bg-[var(--color-fw-ochre-100)] px-3 py-2.5 text-[13px] leading-relaxed text-[var(--color-fw-ochre-600)]">
-              When enabled, a browser window will be visible during portal
-              operations. This is useful for debugging but may be distracting
-              during normal use.
-            </p>
-          )}
-        </Card>
-
-        {/* Incremental Extraction section */}
-        <Card className="px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
-            Extraction mode
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="flex flex-1 cursor-pointer items-center gap-2.5 text-[14px] text-[var(--color-fw-fg)]" htmlFor="incremental-extraction">
-              <Checkbox
-                id="incremental-extraction"
-                checked={incrementalExtraction}
-                onChange={handleIncrementalToggle}
-              />
-              <span>Incremental extraction</span>
-            </label>
-            {savedLabel === 'incremental' && (
-              <span className="settings-saved text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
-            )}
-          </div>
-          <p className="mt-2 text-xs text-[var(--color-fw-fg-muted)]">
-            When enabled, only fetch records newer than the last extraction.
-            Disable to re-fetch all records.
-          </p>
-        </Card>
-
-        {/* API costs note */}
-        <Card className="bg-[var(--color-fw-bg)] px-6 py-5">
-          <div className="mb-3.5 text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)]">
-            API usage and costs
-          </div>
-          <p className="m-0 text-[13px] leading-relaxed text-[var(--color-fw-fg-muted)]">
-            API usage is billed directly by Anthropic. Typical cost: a few
-            dollars per extraction run. Manage your API key at{' '}
-            <strong>console.anthropic.com</strong>.
-          </p>
-        </Card>
-
-      </div>
-    </div>
+        </div>
+        <p className="mt-3 text-[12px] text-[var(--color-fw-fg-muted)]">
+          Each portal gets its own subfolder.
+        </p>
+      </Card>
+    </PageLayout>
   );
+}
+
+// ── (d) Privacy & data ────────────────────────────────────────────────────────
+
+function PrivacyPage() {
+  return (
+    <PageLayout
+      title="Privacy & data"
+      lede="What leaves your machine, and what stays."
+    >
+      <Card className="max-w-[560px] px-6 py-5">
+        <p className="m-0 text-[14px] leading-[22px] text-[var(--color-fw-ink-700)]">
+          Your records never leave this Mac. The only thing sent off-device is
+          anonymized navigation requests to Anthropic's API, billed against your
+          key. Logs are stored locally and you can wipe them at any time.
+        </p>
+      </Card>
+    </PageLayout>
+  );
+}
+
+// ── (e) About Fetchwell ───────────────────────────────────────────────────────
+
+function AboutPage() {
+  return (
+    <PageLayout
+      title="About Fetchwell"
+      lede="Version, licenses, acknowledgements."
+    >
+      <Card className="max-w-[560px] px-6 py-5">
+        <div className="flex flex-col gap-3">
+          <div
+            className="text-[13px] text-[var(--color-fw-ink-900)]"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            fetchwell 0.1.0 · build 2026.05.08
+          </div>
+          <div className="text-[13px] text-[var(--color-fw-fg-muted)]">
+            An app that fetches your medical records, locally. Made with care.
+          </div>
+        </div>
+      </Card>
+    </PageLayout>
+  );
+}
+
+// ── Root Settings component ───────────────────────────────────────────────────
+
+export default function Settings({ onBack: _onBack, activeKey }: SettingsProps) {
+  switch (activeKey) {
+    case 'appearance':
+      return <AppearancePage />;
+    case 'key':
+      return <ApiKeyPage />;
+    case 'storage':
+      return <StoragePage />;
+    case 'privacy':
+      return <PrivacyPage />;
+    case 'about':
+      return <AboutPage />;
+    default:
+      return <AppearancePage />;
+  }
 }
