@@ -8,6 +8,8 @@ import { cn } from '../lib/utils';
 
 interface SettingsProps {
   onBack: () => void;
+  /** Which settings sub-section to show (v2 nav model). Currently unused — shows all sections. */
+  activeKey?: string | null;
 }
 
 type ThemeOption = 'system' | 'light' | 'dark';
@@ -18,7 +20,8 @@ const THEME_OPTIONS: { value: ThemeOption; label: string }[] = [
   { value: 'dark', label: 'Dark' },
 ];
 
-export default function Settings({ onBack }: SettingsProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function Settings({ onBack, activeKey: _activeKey }: SettingsProps) {
   const [downloadFolder, setDownloadFolder] = useState('');
   const [showBrowser, setShowBrowser] = useState(false);
   const [incrementalExtraction, setIncrementalExtraction] = useState(true);
