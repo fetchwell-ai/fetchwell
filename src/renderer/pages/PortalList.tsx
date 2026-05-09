@@ -512,6 +512,7 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
         if (settings.downloadFolder) {
           setDownloadFolder(settings.downloadFolder);
         }
+        setApiKeyConfigured(!!settings.anthropicApiKey);
       })
       .catch(() => {
         // Use default fallback
@@ -610,6 +611,16 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
           </Button>
         </div>
       </div>
+
+      {!loading && !quickstartDismissed && (
+        <QuickStart
+          steps={deriveQuickStartSteps(portals, apiKeyConfigured)}
+          onDismiss={() => {
+            setQuickstartDismissed(true);
+            localStorage.setItem(QUICKSTART_DISMISSED_KEY, 'true');
+          }}
+        />
+      )}
 
       {loading ? (
         <PortalListSkeleton />
