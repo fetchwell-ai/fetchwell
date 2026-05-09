@@ -31,6 +31,11 @@ pnpm extract --incremental            # Only fetch items newer than last run
 pnpm discover --provider <id>         # Discover portal nav structure → nav-map.json
 PROBE=1 pnpm extract                  # Probe mode: screenshot only, no PDFs
 
+# Binary (equivalent to pnpm extract; enables global install via npm install -g)
+mychart-agent fetch                   # Extract all records → output/<id>/
+mychart-agent fetch --provider <id>   # Extract for a specific provider
+mychart-agent fetch --incremental     # Only fetch items newer than last run
+
 # Electron app
 pnpm electron:dev                     # Build renderer + electron, launch app
 pnpm dist                             # Build macOS DMG via electron-builder → release/
