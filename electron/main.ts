@@ -20,6 +20,14 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // Set dock icon for dev mode (macOS ignores BrowserWindow `icon`)
+  if (process.platform === 'darwin' && app.dock) {
+    const { nativeImage } = require('electron');
+    const iconPath = path.join(__dirname, '..', 'build', 'icon.png');
+    const img = nativeImage.createFromPath(iconPath);
+    if (!img.isEmpty()) app.dock.setIcon(img);
+  }
+
   registerIpcHandlers();
 
   // --- Dark mode IPC ---
