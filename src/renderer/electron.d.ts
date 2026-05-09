@@ -80,6 +80,8 @@ interface ElectronAPI {
   runExtraction(portalId: string): Promise<void>;
   chooseFolder(): Promise<string | null>;
   openInFinder(folderPath: string): Promise<void>;
+  revealInFinder(folderPath: string): Promise<void>;
+  getPortalCredentials(portalId: string): Promise<{ username: string; password: string } | null>;
   onProgress(callback: (message: string) => void): void;
   onComplete(callback: (operation: string, data: { portalId: string }) => void): void;
   onError(callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void): void;
