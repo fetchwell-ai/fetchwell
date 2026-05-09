@@ -47,7 +47,6 @@ process.argv = [process.argv[0], process.argv[1], ...rest];
 // This file lives at <repo>/bin/mychart-agent.mjs; index.ts compiles to
 // <repo>/dist/extract/index.js, but we invoke it via tsx at runtime so
 // the source .ts file is used directly.
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 

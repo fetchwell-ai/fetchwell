@@ -105,6 +105,9 @@ function PortalListSkeleton() {
 type PortalState = 'new' | 'mapped' | 'fetched' | 'error';
 
 function derivePortalState(portal: PortalEntry): PortalState {
+  // 'error' state reserved for future use — requires a lastError field on PortalEntry
+  // and corresponding IPC wiring. The error UI (badge, guidance, button) is implemented
+  // and ready to activate once the type is extended.
   if (portal.lastExtractedAt !== null) return 'fetched';
   if (portal.discoveredAt !== null) return 'mapped';
   return 'new';
@@ -273,7 +276,6 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
 
   const handleCardClick = () => {
     // Placeholder for portal detail navigation (wired in task 6)
-    console.log('[PortalCard] card body clicked for portal', portal.id);
   };
 
   const portalState = derivePortalState(portal);
