@@ -600,9 +600,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
                     {item.when}
                   </div>
                 </div>
-                <Button type="button" variant="ghost" size="sm">
-                  View log
-                </Button>
+                {/* View log — not yet wired */}
               </div>
             ))}
           </div>
