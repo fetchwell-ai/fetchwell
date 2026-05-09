@@ -1,10 +1,19 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import {
+  AlertTriangle,
+  Check,
+  Clock,
+  Compass,
+  Download,
+  FileText,
+  Folder,
+  Settings,
+} from 'lucide-react';
 import AddPortal from './AddPortal';
 import ProgressPanel from '../components/ProgressPanel';
 import TwoFactorModal from '../components/TwoFactorModal';
 import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
 import { Card } from '../components/ui/card';
 import { cn } from '../lib/utils';
 
@@ -91,6 +100,124 @@ function PortalListSkeleton() {
   );
 }
 
+// -- PortalCard v2 helpers --
+
+type PortalState = 'new' | 'mapped' | 'fetched' | 'error';
+
+function derivePortalState(portal: PortalEntry): PortalState {
+  if (portal.lastExtractedAt !== null) return 'fetched';
+  if (portal.discoveredAt !== null) return 'mapped';
+  return 'new';
+}
+
+// Pill badge with status dot
+interface PortalBadgeProps {
+  variant: 'default' | 'info' | 'success' | 'danger';
+  children: React.ReactNode;
+}
+
+function PortalBadge({ variant, children }: PortalBadgeProps) {
+  const styles: Record<PortalBadgeProps['variant'], { badge: string; dot: string }> = {
+    default: {
+      badge: 'bg-[var(--color-fw-bg-deep)] text-[var(--color-fw-ink-700)]',
+      dot: 'bg-[var(--color-fw-ink-400)]',
+    },
+    info: {
+      badge: 'bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)]',
+      dot: 'bg-[var(--color-fw-sage-700)]',
+    },
+    success: {
+      badge: 'bg-[var(--color-fw-moss-100)] text-[var(--color-fw-moss-700)]',
+      dot: 'bg-[var(--color-fw-moss-600)]',
+    },
+    danger: {
+      badge: 'bg-[var(--color-fw-crimson-100)] text-[var(--color-fw-crimson-700)]',
+      dot: 'bg-[var(--color-fw-crimson-600)]',
+    },
+  };
+
+  const s = styles[variant];
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center gap-1.5 h-[22px] px-[10px] rounded-full text-xs font-medium',
+        s.badge,
+      )}
+    >
+      <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', s.dot)} />
+      {children}
+    </span>
+  );
+}
+
+// Guidance strip
+interface GuidanceStripProps {
+  variant: 'info' | 'success' | 'error';
+  icon: React.ReactNode;
+  heading: string;
+  body: string;
+}
+
+function GuidanceStrip({ variant, icon, heading, body }: GuidanceStripProps) {
+  const styles: Record<GuidanceStripProps['variant'], string> = {
+    info: 'bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)] border-l-[var(--color-fw-sage-700)]',
+    success: 'bg-[var(--color-fw-moss-100)] text-[var(--color-fw-moss-700)] border-l-[var(--color-fw-moss-600)]',
+    error: 'bg-[var(--color-fw-crimson-100)] text-[var(--color-fw-crimson-700)] border-l-[var(--color-fw-crimson-600)]',
+  };
+
+  return (
+    <div
+      className={cn(
+        'flex gap-2.5 px-3.5 py-3 border-l-[3px] rounded-[6px] text-[13px] leading-[19px] items-start',
+        styles[variant],
+      )}
+    >
+      <span className="flex-shrink-0 mt-px">{icon}</span>
+      <div className="flex-1">
+        <p className="m-0 font-semibold">{heading}</p>
+        <span className="block mt-1 opacity-85">{body}</span>
+      </div>
+    </div>
+  );
+}
+
+// Meta strip (fetched state)
+interface MetaStripProps {
+  portal: PortalEntry;
+  downloadFolder: string;
+}
+
+function MetaStrip({ portal, downloadFolder }: MetaStripProps) {
+  const folderPath = `${downloadFolder}/${portal.id}`;
+  return (
+    <div className="flex flex-wrap gap-4 text-xs text-[var(--color-fw-fg-muted)] pt-1 border-t border-dashed border-[var(--color-fw-border)]">
+      <div className="flex items-center gap-1.5">
+        <FileText size={14} className="text-[var(--color-fw-fg-subtle)] flex-shrink-0" />
+        <span>
+          Mapped:{' '}
+          <span className="text-[var(--color-fw-ink-700)] font-medium">
+            {formatDate(portal.discoveredAt)}
+          </span>
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Clock size={14} className="text-[var(--color-fw-fg-subtle)] flex-shrink-0" />
+        <span>
+          Last fetched:{' '}
+          <span className="text-[var(--color-fw-ink-700)] font-medium">
+            {formatDate(portal.lastExtractedAt)}
+          </span>
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Folder size={14} className="text-[var(--color-fw-fg-subtle)] flex-shrink-0" />
+        <span className="font-mono text-[11px]">{folderPath}</span>
+      </div>
+    </div>
+  );
+}
+
 // -- PortalCard --
 
 interface PortalCardProps {
@@ -101,9 +228,10 @@ interface PortalCardProps {
   onExtract: (portalId: string) => void;
   runningOperation: RunningOperation | null;
   isSelected?: boolean;
+  downloadFolder: string;
 }
 
-function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperation, isSelected }: PortalCardProps) {
+function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperation, isSelected, downloadFolder }: PortalCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const shouldReduce = useReducedMotion();
 
@@ -112,20 +240,24 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
       cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [isSelected]);
+
   const isThisRunning =
     runningOperation !== null && runningOperation.portalId === portal.id;
   const isAnotherRunning =
     runningOperation !== null && runningOperation.portalId !== portal.id;
 
-  const handleMap = () => {
+  const handleMap = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onMap(portal.id);
   };
 
-  const handleExtract = () => {
+  const handleExtract = (e: React.MouseEvent) => {
+    e.stopPropagation();
     onExtract(portal.id);
   };
 
-  const handleRemove = () => {
+  const handleRemove = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const confirmed = window.confirm(
       `Remove "${portal.name}"? This cannot be undone.`,
     );
@@ -134,11 +266,20 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
     }
   };
 
-  const extractDisabled = portal.discoveredAt === null;
-  const anyOperationRunning = runningOperation !== null;
+  const handleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onEdit(portal);
+  };
 
+  const handleCardClick = () => {
+    // Placeholder for portal detail navigation (wired in task 6)
+    console.log('[PortalCard] card body clicked for portal', portal.id);
+  };
+
+  const portalState = derivePortalState(portal);
+  const anyOperationRunning = runningOperation !== null;
   const mapDisabled = anyOperationRunning;
-  const extractBtnDisabled = extractDisabled || anyOperationRunning;
+  const extractDisabled = portal.discoveredAt === null || anyOperationRunning;
 
   const mapTitle = isAnotherRunning
     ? 'Another operation is in progress'
@@ -148,94 +289,183 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
 
   const extractTitle = isAnotherRunning
     ? 'Another operation is in progress'
-    : extractDisabled
+    : portal.discoveredAt === null
       ? 'Run Map first to enable extraction.'
       : isThisRunning && runningOperation?.operation === 'extraction'
         ? 'Extraction running...'
         : undefined;
 
+  // Badge per state
+  let badge: React.ReactNode;
+  if (portalState === 'new') {
+    badge = <PortalBadge variant="default">Not mapped yet</PortalBadge>;
+  } else if (portalState === 'mapped') {
+    badge = <PortalBadge variant="info">Mapped · ready to fetch</PortalBadge>;
+  } else if (portalState === 'fetched') {
+    badge = (
+      <PortalBadge variant="success">
+        Last fetched {formatDate(portal.lastExtractedAt)}
+      </PortalBadge>
+    );
+  } else {
+    badge = <PortalBadge variant="danger">Login failed</PortalBadge>;
+  }
+
+  // Guidance strip per state
+  let guidance: React.ReactNode = null;
+  if (portalState === 'new') {
+    guidance = (
+      <GuidanceStrip
+        variant="info"
+        icon={<Compass size={16} />}
+        heading="Next: tell us where your records live."
+        body="Click Map — we'll open the portal in a window so you can sign in and walk through the labs, visits, and messages sections. Takes about 2 minutes."
+      />
+    );
+  } else if (portalState === 'mapped') {
+    guidance = (
+      <GuidanceStrip
+        variant="success"
+        icon={<Check size={16} />}
+        heading="You're ready for the first extraction."
+        body="Mapping is done — click Fetch records to download everything. Future extractions are incremental and much faster."
+      />
+    );
+  } else if (portalState === 'error') {
+    guidance = (
+      <GuidanceStrip
+        variant="error"
+        icon={<AlertTriangle size={16} />}
+        heading="The portal didn't accept your credentials."
+        body="Try signing in directly first — sometimes portals require a security challenge. Then update your saved username and password."
+      />
+    );
+  }
+
   return (
     <motion.div
-      whileHover={shouldReduce ? undefined : { y: -2, boxShadow: 'var(--shadow-fw-2)' }}
+      whileHover={shouldReduce ? undefined : { y: -1, boxShadow: 'var(--shadow-fw-2)' }}
       transition={shouldReduce ? undefined : { type: 'spring', stiffness: 400, damping: 30 }}
+      onClick={handleCardClick}
+      style={{ cursor: 'default' }}
     >
-    <Card ref={cardRef} className={cn("portal-card px-6 py-5", isSelected && "ring-2 ring-[var(--color-fw-primary)]")}>
-      <div className="mb-3 flex items-start justify-between">
-        <div className="min-w-0 flex-1">
-          <h2 className="portal-card-name m-0 mb-0.5 text-base font-semibold text-[var(--color-fw-fg)]">{portal.name}</h2>
-          <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap text-xs text-[var(--color-fw-fg-muted)]">{portal.url}</p>
+      <Card
+        ref={cardRef}
+        className={cn(
+          'portal-card px-6 py-[22px] flex flex-col gap-3.5',
+          isSelected && 'ring-2 ring-[var(--color-fw-primary)]',
+        )}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div className="min-w-0 flex-1">
+            <h2 className="portal-card-name m-0 mb-1 text-base font-semibold tracking-[-0.005em] text-[var(--color-fw-ink-900)]">
+              {portal.name}
+            </h2>
+            <p className="m-0 overflow-hidden text-ellipsis whitespace-nowrap font-mono text-xs text-[var(--color-fw-fg-muted)]">
+              {portal.url}
+            </p>
+          </div>
+          <button
+            type="button"
+            className="ml-2 flex-shrink-0 cursor-pointer rounded-[var(--radius-sm)] border-none bg-transparent p-1 text-[var(--color-fw-fg-muted)] transition-colors duration-[var(--fw-dur-fast)] hover:bg-[var(--color-fw-bg-deep)] hover:text-[var(--color-fw-ink-900)]"
+            aria-label="Edit portal"
+            onClick={handleEdit}
+            title="Edit portal"
+          >
+            <Settings size={18} />
+          </button>
         </div>
-        <button
-          type="button"
-          className="ml-2 flex-shrink-0 cursor-pointer rounded-[var(--radius-sm)] border-none bg-transparent p-1 text-[18px] text-[var(--color-fw-fg-muted)] leading-none transition-colors duration-[var(--fw-dur-fast)] hover:bg-[var(--color-fw-bg-deep)] hover:text-[var(--color-fw-fg)]"
-          aria-label="Edit portal"
-          onClick={() => onEdit(portal)}
-          title="Edit portal"
-        >
-          &#9881;
-        </button>
-      </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {portal.discoveredAt === null ? (
-          <Badge variant="default">Not mapped yet</Badge>
-        ) : (
-          <Badge variant="success">
-            Mapped {formatDate(portal.discoveredAt)}
-          </Badge>
+        {/* Badge row */}
+        <div className="flex flex-wrap gap-2">
+          {badge}
+        </div>
+
+        {/* Guidance strip (new / mapped / error states) */}
+        {guidance}
+
+        {/* Meta strip (fetched state only) */}
+        {portalState === 'fetched' && (
+          <MetaStrip portal={portal} downloadFolder={downloadFolder} />
         )}
-        {portal.lastExtractedAt && (
-          <Badge variant="info">
-            Last fetched {formatDate(portal.lastExtractedAt)}
-          </Badge>
-        )}
-      </div>
 
-      <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          onClick={handleMap}
-          disabled={mapDisabled}
-          title={mapTitle}
-        >
-          {isThisRunning && runningOperation?.operation === 'discovery' ? 'Running...' : 'Map'}
-        </Button>
+        {/* Footer buttons */}
+        <div className="flex items-center gap-2">
+          {/* Primary action */}
+          {portalState === 'new' && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleMap}
+              disabled={mapDisabled}
+              title={mapTitle}
+            >
+              <Compass size={14} />
+              {isThisRunning && runningOperation?.operation === 'discovery' ? 'Running...' : 'Map portal'}
+            </Button>
+          )}
+          {portalState === 'mapped' && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleExtract}
+              disabled={extractDisabled}
+              title={extractTitle}
+            >
+              <Download size={14} />
+              {isThisRunning && runningOperation?.operation === 'extraction' ? 'Running...' : 'Fetch records'}
+            </Button>
+          )}
+          {portalState === 'fetched' && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleExtract}
+              disabled={extractDisabled}
+              title={extractTitle}
+            >
+              <Download size={14} />
+              {isThisRunning && runningOperation?.operation === 'extraction' ? 'Running...' : 'Fetch again'}
+            </Button>
+          )}
+          {portalState === 'error' && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleEdit}
+            >
+              Update credentials
+            </Button>
+          )}
 
-        <div className="group relative inline-flex flex-col">
+          {/* Re-map button (all states except new) */}
+          {portalState !== 'new' && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleMap}
+              disabled={mapDisabled}
+              title={mapTitle}
+            >
+              <Compass size={14} />
+              {isThisRunning && runningOperation?.operation === 'discovery' ? 'Running...' : 'Re-map'}
+            </Button>
+          )}
+
+          {/* Remove — pushed to the right */}
           <Button
             type="button"
+            variant="destructive"
             size="sm"
-            onClick={handleExtract}
-            disabled={extractBtnDisabled}
-            title={extractTitle}
+            className="ml-auto"
+            onClick={handleRemove}
           >
-            {isThisRunning && runningOperation?.operation === 'extraction' ? 'Running...' : 'Extract'}
+            Remove
           </Button>
-          {extractDisabled && !anyOperationRunning && (
-            <p className="extract-tooltip absolute left-1/2 top-[calc(100%+6px)] -translate-x-1/2 z-10 whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--color-fw-ink-800)] px-2.5 py-1.5 text-[11px] text-white opacity-0 pointer-events-none transition-opacity group-hover:opacity-100">
-              Run Map first to enable extraction.
-            </p>
-          )}
-          {isAnotherRunning && (
-            <p className="extract-tooltip absolute left-1/2 top-[calc(100%+6px)] -translate-x-1/2 z-10 whitespace-nowrap rounded-[var(--radius-sm)] bg-[var(--color-fw-ink-800)] px-2.5 py-1.5 text-[11px] text-white opacity-0 pointer-events-none transition-opacity group-hover:opacity-100">
-              Another operation is in progress
-            </p>
-          )}
         </div>
-
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          className="btn-danger"
-          onClick={handleRemove}
-        >
-          Remove
-        </Button>
-      </div>
-    </Card>
+      </Card>
     </motion.div>
   );
 }
@@ -246,6 +476,7 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
   const [loading, setLoading] = useState(true);
   const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
   const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
+  const [downloadFolder, setDownloadFolder] = useState<string>('~/Documents/HealthRecords');
 
   const loadPortals = useCallback(() => {
     window.electronAPI
@@ -264,6 +495,19 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
   useEffect(() => {
     loadPortals();
   }, [loadPortals]);
+
+  useEffect(() => {
+    window.electronAPI
+      .getSettings()
+      .then((settings) => {
+        if (settings.downloadFolder) {
+          setDownloadFolder(settings.downloadFolder);
+        }
+      })
+      .catch(() => {
+        // Use default fallback
+      });
+  }, []);
 
   useEffect(() => {
     if (runningOperation === null) return;
@@ -382,6 +626,7 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
               onExtract={handleExtract}
               runningOperation={runningOperation}
               isSelected={portal.id === selectedPortalId}
+              downloadFolder={downloadFolder}
             />
           ))}
         </div>
