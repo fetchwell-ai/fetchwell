@@ -8,6 +8,7 @@ function createWindow(): void {
     width: 1200,
     height: 800,
     titleBarStyle: 'hiddenInset',
+    icon: path.join(__dirname, '..', 'build', 'icon.icns'),
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
