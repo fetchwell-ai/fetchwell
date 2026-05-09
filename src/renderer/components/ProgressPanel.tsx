@@ -377,8 +377,6 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
     }
   };
 
-  const hasAnyStructuredEvent = Object.values(structured.phases).some(p => p.status !== 'pending') ||
-    Object.keys(structured.categories).length > 0;
   const shouldReduce = useReducedMotion();
 
   // --fw-ease-out: cubic-bezier(0.16, 1, 0.3, 1)
@@ -422,8 +420,8 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
           )}
         </div>
 
-        {/* Structured progress body */}
-        {hasAnyStructuredEvent ? (
+        {/* Structured progress body — always shown; phases start as "pending" */}
+        {(
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             {/* Step indicator */}
             <StepIndicator phases={structured.phases} activePhases={activePhases} />
@@ -588,21 +586,6 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
           </div>
         )}
 
-        {panelState === 'running' && !hasAnyStructuredEvent && (
-          <div className="progress-panel-footer flex-shrink-0 border-t border-[var(--color-fw-border)] px-6 pb-5 pt-4">
-            <div className="flex items-center gap-2.5 text-[13px] text-[var(--color-fw-fg-muted)]">
-              <span
-                className="progress-spinner inline-block h-3.5 w-3.5 flex-shrink-0 rounded-full"
-                style={{
-                  border: '2px solid var(--color-fw-border)',
-                  borderTopColor: 'var(--color-fw-sage-700)',
-                  animation: 'progress-spin 0.8s linear infinite',
-                }}
-              />
-              <span>Working...</span>
-            </div>
-          </div>
-        )}
       </motion.div>
     </motion.div>
   );
