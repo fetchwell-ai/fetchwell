@@ -168,6 +168,18 @@ export function registerIpcHandlers(userDataPath?: string): void {
     await shell.openPath(folderPath);
   });
 
+  // --- Reveal in Finder (select/highlight the item) ---
+
+  ipcMain.handle('revealInFinder', (_event, folderPath: string): void => {
+    shell.showItemInFolder(folderPath);
+  });
+
+  // --- Portal credentials (read-only for display) ---
+
+  ipcMain.handle('getPortalCredentials', (_event, portalId: string): { username: string; password: string } | null => {
+    return credentialsManager!.getPortalCredentials(portalId);
+  });
+
   ipcMain.handle('runDiscovery', async (_event, portalId: string): Promise<void> => {
     const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
     if (!win) throw new Error('No active window');

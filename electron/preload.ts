@@ -24,6 +24,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // --- Open in Finder ---
   openInFinder: (folderPath: string) => ipcRenderer.invoke('openInFinder', folderPath),
 
+  // --- Reveal in Finder (select/highlight the item) ---
+  revealInFinder: (folderPath: string) => ipcRenderer.invoke('revealInFinder', folderPath),
+
+  // --- Portal credentials (read-only for display) ---
+  getPortalCredentials: (portalId: string) => ipcRenderer.invoke('getPortalCredentials', portalId),
+
   // --- Progress event listeners ---
   onProgress: (callback: (message: string) => void) => {
     ipcRenderer.on('extraction:log', (_event, message: string) => callback(message));
