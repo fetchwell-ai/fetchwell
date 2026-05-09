@@ -33,6 +33,7 @@ PROBE=1 pnpm extract                  # Probe mode: screenshot only, no PDFs
 
 # Electron app
 pnpm electron:dev                     # Build renderer + electron, launch app
+pnpm dist                             # Build macOS DMG via electron-builder → release/
 
 # Checks
 pnpm typecheck                        # TypeScript check (src/)
@@ -43,7 +44,7 @@ pnpm lint                             # ESLint (src/)
 ## Testing
 
 ```bash
-pnpm test:unit                        # Vitest — 73 unit tests, <1s
+pnpm test:unit                        # Vitest — 87 unit tests, <1s
 pnpm test:e2e                         # Playwright Electron — 16 tests, ~15s
 ```
 
