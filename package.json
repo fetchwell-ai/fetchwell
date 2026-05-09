@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "bin": {
+    "mychart-agent": "./bin/mychart-agent.mjs"
+  },
   "scripts": {
     "extract": "tsx src/extract/index.ts",
     "discover": "tsx src/discover/cli.ts",
