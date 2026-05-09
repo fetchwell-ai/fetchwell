@@ -40,6 +40,18 @@ describe('matchSection', () => {
   it('matches "reports" to labs', () => {
     expect(matchSection('View your reports')).toBe('labs');
   });
+
+  it('matches "radiology results" to labs', () => {
+    expect(matchSection('Radiology results and imaging')).toBe('labs');
+  });
+
+  it('matches "operative reports" to labs', () => {
+    expect(matchSection('View operative reports')).toBe('labs');
+  });
+
+  it('matches "surgical records" to labs', () => {
+    expect(matchSection('Surgical records and procedures')).toBe('labs');
+  });
 });
 
 // ---------------------------------------------------------------------------

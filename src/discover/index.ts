@@ -21,7 +21,7 @@ type ProgressEmitter = (event: StructuredProgressEvent) => void;
 // ---------------------------------------------------------------------------
 
 const SECTION_KEYWORDS: Record<string, string[]> = {
-  labs: ["test results", "labs", "lab results", "laboratory", "imaging", "radiology", "diagnostics", "pathology", "procedures", "reports"],
+  labs: ["test results", "labs", "lab results", "laboratory", "imaging", "radiology", "diagnostics", "pathology", "procedures", "reports", "surgical", "operative"],
   visits: [
     "visits", "appointments", "past visits", "after visit summary", "after-visit summary",
     "office visits", "encounter", "encounters", "avs", "visit summaries", "visit summary",
@@ -281,6 +281,7 @@ export async function discoverPortal(
       "- TEST RESULTS / LABS: a list of lab test results, blood work, imaging results, pathology reports\n" +
       "- VISITS / APPOINTMENTS: a list of past doctor visits, office visits, appointments, after-visit summaries\n" +
       "- MEDICATIONS: a list of current prescriptions, medicines, medication refills\n" +
+      "- PROCEDURES / IMAGING: a list of procedures, imaging studies, radiology results, X-rays, MRIs, CT scans, surgical records, or operative reports\n" +
       "- MESSAGES / INBOX: a list of secure message threads or conversations with healthcare providers\n" +
       "- OTHER: anything else (settings, profile, billing, scheduling a video visit, informational pages, etc.)\n" +
       "Describe only what the main content area shows. " +
