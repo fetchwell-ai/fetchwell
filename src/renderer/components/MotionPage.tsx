@@ -26,8 +26,8 @@ export default function MotionPage({
         exit: { opacity: 0, y: -4 },
       };
 
-  // --fw-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1)
-  const easeInOut: [number, number, number, number] = [0.4, 0, 0.2, 1];
+  // --fw-ease-in-out: cubic-bezier(.5, 0, .2, 1)
+  const easeInOut: [number, number, number, number] = [0.5, 0, 0.2, 1];
 
   return (
     <motion.div

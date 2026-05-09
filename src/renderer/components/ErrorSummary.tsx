@@ -32,7 +32,7 @@ function getCategoryLabel(category: string): string {
 function getCategoryColors(category: string): { border: string; bg: string } {
   switch (category) {
     case 'credentials':
-      return { border: 'border-l-[var(--color-fw-ochre-400)]', bg: 'bg-[var(--color-fw-ochre-100)]' };
+      return { border: 'border-l-[var(--color-fw-ochre-500)]', bg: 'bg-[var(--color-fw-ochre-100)]' };
     case '2fa_timeout':
       return { border: 'border-l-[var(--color-fw-sage-500)]', bg: 'bg-[var(--color-fw-sage-50)]' };
     case 'portal_structure':
