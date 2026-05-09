@@ -434,7 +434,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
             {/* Current activity status message */}
             {panelState === 'running' && statusMessage && (
               <div className="flex items-center gap-2 px-6 pt-2 text-[13px] text-[#6e6e73] dark:text-[#aeaeb2]">
-                <SpinnerIcon color="#0071e3" size={13} />
+                <SpinnerIcon color="var(--color-fw-sage-700)" size={13} />
                 <span>{statusMessage}</span>
               </div>
             )}
