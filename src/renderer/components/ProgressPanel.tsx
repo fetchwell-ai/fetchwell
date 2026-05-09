@@ -56,14 +56,14 @@ const EXTRACTION_PHASES: ProgressPhase[] = ['login', 'navigate', 'extract'];
 const EXTRACTION_CATEGORIES: ProgressCategory[] = ['labs', 'visits', 'medications', 'messages'];
 
 const PHASE_LABELS: Record<ProgressPhase, string> = {
-  login: 'Login',
+  login: 'Sign in',
   navigate: 'Navigate',
-  extract: 'Extract',
+  extract: 'Download',
 };
 
 const CATEGORY_LABELS: Record<ProgressCategory, string> = {
-  labs: 'Labs',
-  visits: 'Visits',
+  labs: 'Lab results',
+  visits: 'Visit notes',
   medications: 'Medications',
   messages: 'Messages',
 };
@@ -407,7 +407,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
             {panelState === 'complete'
               ? completedTitle
               : panelState === 'error'
-                ? 'Something went wrong'
+                ? (operation === 'discovery' ? 'Mapping failed' : 'Extraction failed')
                 : title}
           </h2>
           {panelState !== 'running' && (
@@ -599,7 +599,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
                   animation: 'progress-spin 0.8s linear infinite',
                 }}
               />
-              <span>In progress...</span>
+              <span>Working...</span>
             </div>
           </div>
         )}

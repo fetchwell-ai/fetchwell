@@ -50,7 +50,7 @@ export default function AddPortal({
   const handleUrlChange = (value: string) => {
     setUrl(value);
     if (value.trim() && !validatePortalUrl(value)) {
-      setUrlError('Please enter a valid URL (e.g. https://mychart.example.org).');
+      setUrlError('Enter a valid URL (e.g. https://mychart.example.org).');
     } else {
       setUrlError(null);
     }
@@ -74,7 +74,7 @@ export default function AddPortal({
       return;
     }
     if (!validatePortalUrl(url)) {
-      setUrlError('Please enter a valid URL (e.g. https://mychart.example.org).');
+      setUrlError('Enter a valid URL (e.g. https://mychart.example.org).');
       return;
     }
     if (!name.trim()) {
