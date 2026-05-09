@@ -6,89 +6,106 @@
 /* ── FetchWell design tokens ──────────────────────────────────────────────── */
 @theme {
   /* ── Sage palette ──────────────────────────────────────── */
-  --color-fw-sage-50: #F0F4EE;
-  --color-fw-sage-100: #DCE5D8;
-  --color-fw-sage-200: #BFD1B8;
-  --color-fw-sage-300: #9DBA93;
-  --color-fw-sage-400: #7BA170;
-  --color-fw-sage-500: #5F8A54;
-  --color-fw-sage-600: #4F7546;
-  --color-fw-sage-700: #4A6741;
-  --color-fw-sage-800: #3A5234;
-  --color-fw-sage-900: #2A3D26;
+  --color-fw-sage-50:  #F1F6F2;
+  --color-fw-sage-100: #E1ECE6;
+  --color-fw-sage-200: #BFD6CB;
+  --color-fw-sage-300: #97BBAA;
+  --color-fw-sage-500: #4A7C66;
+  --color-fw-sage-600: #2C604F;
+  --color-fw-sage-700: #1F4D3E;
+  --color-fw-sage-800: #173B30;
+  --color-fw-sage-900: #102A22;
 
   /* ── Ochre / amber palette ─────────────────────────────── */
-  --color-fw-ochre-100: #FFF0D4;
-  --color-fw-ochre-200: #FFE0A8;
-  --color-fw-ochre-400: #D4A043;
-  --color-fw-ochre-600: #A67A2E;
-
-  /* ── Cream / paper palette ─────────────────────────────── */
-  --color-fw-cream-50: #FAF8F4;
-  --color-fw-cream-100: #F4EFE6;
-  --color-fw-cream-200: #EBE5D7;
-  --color-fw-cream-300: #DED6C4;
-
-  /* ── Ink palette ───────────────────────────────────────── */
-  --color-fw-ink-50: #F6F5F3;
-  --color-fw-ink-100: #E8E6E1;
-  --color-fw-ink-200: #D1CDC5;
-  --color-fw-ink-300: #A9A49A;
-  --color-fw-ink-400: #7A756C;
-  --color-fw-ink-500: #5C574F;
-  --color-fw-ink-600: #46423B;
-  --color-fw-ink-700: #342F28;
-  --color-fw-ink-800: #231F1A;
-  --color-fw-ink-900: #14100C;
-
-  /* ── Moss (success) ────────────────────────────────────── */
-  --color-fw-moss-100: #DFF0D8;
-  --color-fw-moss-600: #3A7D2C;
+  --color-fw-ochre-50:  #FBF6EC;
+  --color-fw-ochre-100: #F2E6D0;
+  --color-fw-ochre-300: #DCB57E;
+  --color-fw-ochre-500: #C68F47;
+  --color-fw-ochre-600: #B47834;
+  --color-fw-ochre-700: #8E5C25;
 
   /* ── Crimson (error) ───────────────────────────────────── */
-  --color-fw-crimson-100: #FCE8E6;
-  --color-fw-crimson-500: #D44033;
-  --color-fw-crimson-600: #B5342A;
+  --color-fw-crimson-100: #F4DAD9;
+  --color-fw-crimson-500: #BF3F40;
+  --color-fw-crimson-600: #9E2A2B;
+  --color-fw-crimson-700: #7B2021;
+
+  /* ── Moss (success) ────────────────────────────────────── */
+  --color-fw-moss-100: #E1ECDA;
+  --color-fw-moss-500: #5C9070;
+  --color-fw-moss-600: #4A7C59;
+  --color-fw-moss-700: #345B3F;
+
+  /* ── Ink palette ───────────────────────────────────────── */
+  --color-fw-ink-200: #D4CDBE;
+  --color-fw-ink-300: #B0A99C;
+  --color-fw-ink-400: #8C857B;
+  --color-fw-ink-500: #6B655C;
+  --color-fw-ink-600: #545047;
+  --color-fw-ink-700: #3D3A33;
+  --color-fw-ink-800: #2A2823;
+  --color-fw-ink-900: #161714;
+
+  /* ── Paper / background palette ───────────────────────── */
+  --color-fw-paper-deep:    #EBE5D7;
+  --color-fw-paper:         #F4EFE6;
+  --color-fw-paper-light:   #F8F4EC;
+  --color-fw-surface:       #FCFAF6;
+  --color-fw-surface-raised:#FFFFFF;
 
   /* ── Semantic tokens (light mode) ──────────────────────── */
-  --color-fw-bg: #F4EFE6;
-  --color-fw-bg-deep: #EBE5D7;
-  --color-fw-card-bg: #FFFFFF;
-  --color-fw-fg: #231F1A;
-  --color-fw-fg-muted: #7A756C;
-  --color-fw-fg-subtle: #A9A49A;
-  --color-fw-border: #DED6C4;
-  --color-fw-border-strong: #A9A49A;
-  --color-fw-primary: #4A6741;
-  --color-fw-primary-hover: #3A5234;
-  --color-fw-primary-tint: #DCE5D8;
-  --color-fw-primary-foreground: #FFFFFF;
+  --color-fw-bg:              #F4EFE6;
+  --color-fw-bg-deep:         #EBE5D7;
+  --color-fw-card-bg:         #FCFAF6;
+  --color-fw-modal-bg:        #FFFFFF;
+  --color-fw-fg:              #161714;
+  --color-fw-fg-muted:        #6B655C;
+  --color-fw-fg-subtle:       #8C857B;
+  --color-fw-fg-on-primary:   #F8F4EC;
+  --color-fw-border:          #E5DFD2;
+  --color-fw-border-strong:   #C9C0AC;
+  --color-fw-border-focus:    #1F4D3E;
+  --color-fw-primary:         #1F4D3E;
+  --color-fw-primary-hover:   #173B30;
+  --color-fw-primary-tint:    #E1ECE6;
+  --color-fw-primary-foreground: #F8F4EC;
+  --color-fw-accent:          #B47834;
+  --color-fw-accent-tint:     #F2E6D0;
+  --color-fw-success:         #4A7C59;
+  --color-fw-success-tint:    #E1ECDA;
+  --color-fw-warning:         #B47834;
+  --color-fw-warning-tint:    #F2E6D0;
+  --color-fw-danger:          #9E2A2B;
+  --color-fw-danger-tint:     #F4DAD9;
+  --color-fw-link:            #1F4D3E;
+  --color-fw-link-hover:      #173B30;
 
   /* ── Shadows ───────────────────────────────────────────── */
-  --shadow-fw-1: 0 1px 3px rgba(35,31,26,0.06), 0 1px 2px rgba(35,31,26,0.04);
-  --shadow-fw-2: 0 4px 12px rgba(35,31,26,0.08), 0 1px 3px rgba(35,31,26,0.06);
-  --shadow-fw-3: 0 8px 32px rgba(35,31,26,0.14), 0 2px 8px rgba(35,31,26,0.06);
+  --shadow-fw-1: 0 1px 2px rgba(40,30,15,0.06), 0 1px 1px rgba(40,30,15,0.04);
+  --shadow-fw-2: 0 4px 12px rgba(40,30,15,0.08), 0 1px 3px rgba(40,30,15,0.06);
+  --shadow-fw-3: 0 16px 40px rgba(40,30,15,0.18), 0 4px 12px rgba(40,30,15,0.10);
 
   /* ── Border radii ──────────────────────────────────────── */
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
   --radius-pill: 9999px;
 
   /* ── Fonts ─────────────────────────────────────────────── */
-  --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
-  --font-mono: 'Recursive', 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  --font-sans:  'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-serif: 'Newsreader', 'Source Serif 4', Georgia, serif;
+  --font-mono:  'Recursive', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* ── Motion ────────────────────────────────────────────── */
-  --fw-dur-fast: 140ms;
-  --fw-dur-slow: 280ms;
-  --fw-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --fw-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --fw-dur-fast:    120ms;
+  --fw-dur-base:    180ms;
+  --fw-dur-slow:    280ms;
+  --fw-ease-out:    cubic-bezier(.2,.7,.2,1);
+  --fw-ease-in-out: cubic-bezier(.5,0,.2,1);
 
   /* ── Scrim / modal ─────────────────────────────────────── */
   --fw-scrim: rgba(20, 15, 5, 0.55);
-  --fw-modal-bg: #FFFFFF;
 }
 
 *,
@@ -101,35 +118,78 @@ body {
   margin: 0;
   font-family: var(--font-sans);
   font-size: 14px;
+  line-height: 22px;
   background: var(--color-fw-bg);
   color: var(--color-fw-fg);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* ── Dark mode overrides ──────────────────────────────────────────────────── */
 .dark body {
-  background: #1A1814;
-  color: #E8E6E1;
+  background: #0B0B0A;
+  color: #EDE6D7;
 }
 
 :root.dark {
-  --color-fw-bg: #1A1814;
-  --color-fw-bg-deep: #15140F;
-  --color-fw-card-bg: #242018;
-  --color-fw-fg: #E8E6E1;
-  --color-fw-fg-muted: #A9A49A;
-  --color-fw-fg-subtle: #7A756C;
-  --color-fw-border: #3A352C;
-  --color-fw-border-strong: #5C574F;
-  --color-fw-primary: #7BA170;
-  --color-fw-primary-hover: #9DBA93;
-  --color-fw-primary-tint: #2A3D26;
-  --color-fw-primary-foreground: #FFFFFF;
-  --shadow-fw-1: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-  --shadow-fw-2: 0 4px 12px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2);
-  --shadow-fw-3: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+  --color-fw-bg:            #0B0B0A;
+  --color-fw-bg-deep:       #0B0B0A;
+  --color-fw-card-bg:       #1A1A18;
+  --color-fw-modal-bg:      #1F1F1C;
+  --color-fw-paper:         #0B0B0A;
+  --color-fw-paper-deep:    #0B0B0A;
+  --color-fw-paper-light:   #1A1A18;
+  --color-fw-surface:       #1A1A18;
+  --color-fw-fg:            #EDE6D7;
+  --color-fw-fg-muted:      #9A938A;
+  --color-fw-fg-subtle:     #6E6862;
+  --color-fw-fg-on-primary: #EDE6D7;
+  --color-fw-border:        #2A2A26;
+  --color-fw-border-strong: #3A3A36;
+  --color-fw-border-focus:  #C68F47;
+  --color-fw-primary:       #1F4D3E;
+  --color-fw-primary-hover: #2C604F;
+  --color-fw-primary-tint:  #1F3A30;
+  --color-fw-primary-foreground: #EDE6D7;
+  --color-fw-accent:        #D9A463;
+  --color-fw-accent-tint:   #3A2A14;
+  --color-fw-success:       #7BAE89;
+  --color-fw-success-tint:  #1F2E22;
+  --color-fw-warning:       #D9A463;
+  --color-fw-warning-tint:  #3A2A14;
+  --color-fw-danger:        #D9706F;
+  --color-fw-danger-tint:   #3A1A1A;
+  --color-fw-link:          #3F8068;
+  --color-fw-link-hover:    #5BA386;
+  /* Dark ink overrides */
+  --color-fw-ink-900: #EDE6D7;
+  --color-fw-ink-800: #D8D1C1;
+  --color-fw-ink-700: #BFB8A8;
+  --color-fw-ink-600: #A39C8E;
+  --color-fw-ink-500: #9A938A;
+  --color-fw-ink-400: #6E6862;
+  --color-fw-ink-300: #4A4640;
+  --color-fw-ink-200: #34312B;
+  /* Dark sage overrides */
+  --color-fw-sage-100: #1F3A30;
+  --color-fw-sage-200: #2C604F;
+  --color-fw-sage-700: #3F8068;
+  --color-fw-sage-800: #5BA386;
+  /* Dark moss overrides */
+  --color-fw-moss-100: #1F2E22;
+  --color-fw-moss-700: #8FBF9C;
+  /* Dark ochre overrides */
+  --color-fw-ochre-100: #3A2A14;
+  --color-fw-ochre-700: #D9A463;
+  /* Dark crimson overrides */
+  --color-fw-crimson-100: #3A1A1A;
+  --color-fw-crimson-700: #E08583;
+  /* Dark shadows */
+  --shadow-fw-1: 0 1px 2px rgba(0,0,0,0.4), 0 1px 1px rgba(0,0,0,0.3);
+  --shadow-fw-2: 0 4px 12px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.35);
+  --shadow-fw-3: 0 16px 40px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
   --fw-scrim: rgba(0, 0, 0, 0.65);
-  --fw-modal-bg: #242018;
 }
 
 #root {
