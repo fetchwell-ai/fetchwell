@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import Welcome from './pages/Welcome';
 import PortalList from './pages/PortalList';
+import PortalDetail from './pages/PortalDetail';
 import Settings from './pages/Settings';
 import Sidebar, { type SettingsKey } from './components/Sidebar';
 import AppSkeleton from './components/AppSkeleton';
@@ -20,6 +21,7 @@ export default function App() {
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   // Increment this key to force PortalList to re-mount (refreshes its own portal data)
   const [portalListKey, setPortalListKey] = useState(0);
+  const [downloadFolder, setDownloadFolder] = useState<string>('~/Documents/HealthRecords');
 
   // Track whether we're showing the portal list view vs a portal detail or settings view
   // "portals" view = no activePortalId and no activeSettingsKey, OR activePortalId is set
@@ -49,6 +51,9 @@ export default function App() {
       .getSettings()
       .then((settings) => {
         setRootPage(settings.apiKeyConfigured ? 'main' : 'welcome');
+        if (settings.downloadFolder) {
+          setDownloadFolder(settings.downloadFolder);
+        }
       })
       .catch(() => {
         setRootPage('welcome');
@@ -117,6 +122,14 @@ export default function App() {
               <Settings
                 activeKey={activeSettingsKey}
                 onBack={handleBackFromSettings}
+              />
+            </MotionPage>
+          ) : activePortalId !== null ? (
+            <MotionPage key={`portal-detail-${activePortalId}`} className="h-full">
+              <PortalDetail
+                portalId={activePortalId}
+                onBack={() => setActivePortalId(null)}
+                downloadFolder={downloadFolder}
               />
             </MotionPage>
           ) : (
