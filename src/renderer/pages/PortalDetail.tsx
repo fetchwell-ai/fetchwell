@@ -62,6 +62,101 @@ function SectionHeader({ children, className }: { children: React.ReactNode; cla
   );
 }
 
+// ── Credentials section with inline editing ─────────────────────────────────
+
+function CredentialsSection({
+  portalId,
+  credentials,
+  onSaved,
+}: {
+  portalId: string;
+  credentials: { username: string; password: string } | null;
+  onSaved: (creds: { username: string; password: string }) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [username, setUsername] = useState(credentials?.username ?? '');
+  const [password, setPassword] = useState(credentials?.password ?? '');
+  const [saving, setSaving] = useState(false);
+
+  // Sync local state when credentials load from IPC
+  React.useEffect(() => {
+    if (credentials) {
+      setUsername(credentials.username);
+      setPassword(credentials.password);
+    }
+  }, [credentials]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await window.electronAPI.updatePortal(portalId, { username, password });
+      onSaved({ username, password });
+      setEditing(false);
+    } catch {
+      // silently fail — credentials manager handles errors
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setUsername(credentials?.username ?? '');
+    setPassword(credentials?.password ?? '');
+    setEditing(false);
+  };
+
+  return (
+    <section className="mb-8">
+      <SectionHeader>Credentials</SectionHeader>
+      <Card className="px-6 py-5">
+        <div className="flex flex-col gap-3 mb-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-[var(--color-fw-ink-900)]">
+              Username
+            </label>
+            <Input
+              type="text"
+              readOnly={!editing}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className={editing ? '' : 'cursor-default'}
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-[var(--color-fw-ink-900)]">
+              Password
+            </label>
+            <Input
+              type="password"
+              readOnly={!editing}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={editing ? '' : 'cursor-default'}
+            />
+            <span className="text-[12px] text-[var(--color-fw-fg-muted)]">
+              Stored in macOS Keychain — never sent to Anthropic.
+            </span>
+          </div>
+        </div>
+        {editing ? (
+          <div className="flex gap-2">
+            <Button type="button" size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : 'Save'}
+            </Button>
+            <Button type="button" variant="secondary" size="sm" onClick={handleCancel} disabled={saving}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>
+            Update credentials
+          </Button>
+        )}
+      </Card>
+    </section>
+  );
+}
+
 // ── Toggle switch ──────────────────────────────────────────────────────────────
 
 function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
@@ -536,41 +631,11 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
       )}
 
       {/* Credentials */}
-      <section className="mb-8">
-        <SectionHeader>Credentials</SectionHeader>
-        <Card className="px-6 py-5">
-          <div className="flex flex-col gap-3 mb-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-medium text-[var(--color-fw-ink-900)]">
-                Username
-              </label>
-              <Input
-                type="text"
-                readOnly
-                value={credentials?.username ?? ''}
-                className="cursor-default"
-              />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[13px] font-medium text-[var(--color-fw-ink-900)]">
-                Password
-              </label>
-              <Input
-                type="password"
-                readOnly
-                value={credentials?.password ?? ''}
-                className="cursor-default"
-              />
-              <span className="text-[12px] text-[var(--color-fw-fg-muted)]">
-                Stored in macOS Keychain — never sent to Anthropic.
-              </span>
-            </div>
-          </div>
-          <Button type="button" variant="secondary" size="sm">
-            Update credentials
-          </Button>
-        </Card>
-      </section>
+      <CredentialsSection
+        portalId={portalId}
+        credentials={credentials}
+        onSaved={(creds) => setCredentials(creds)}
+      />
 
       {/* Danger zone */}
       <section className="mb-8">
