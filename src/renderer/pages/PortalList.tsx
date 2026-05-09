@@ -13,6 +13,7 @@ import {
 import AddPortal from './AddPortal';
 import ProgressPanel from '../components/ProgressPanel';
 import TwoFactorModal from '../components/TwoFactorModal';
+import QuickStart, { deriveQuickStartSteps } from '../components/QuickStart';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { cn } from '../lib/utils';
@@ -472,6 +473,8 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
   );
 }
 
+const QUICKSTART_DISMISSED_KEY = 'quickstartDismissed';
+
 export default function PortalList({ onOpenSettings, selectedPortalId }: PortalListProps) {
   const [view, setView] = useState<View>({ type: 'list' });
   const [portals, setPortals] = useState<PortalEntry[]>([]);
@@ -479,6 +482,10 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
   const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
   const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
   const [downloadFolder, setDownloadFolder] = useState<string>('~/Documents/HealthRecords');
+  const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
+  const [quickstartDismissed, setQuickstartDismissed] = useState<boolean>(
+    () => localStorage.getItem(QUICKSTART_DISMISSED_KEY) === 'true',
+  );
 
   const loadPortals = useCallback(() => {
     window.electronAPI
