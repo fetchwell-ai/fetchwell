@@ -25,7 +25,7 @@ function getCategoryLabel(category: string): string {
     case 'portal_structure':
       return 'Portal structure changed';
     default:
-      return 'Unknown error';
+      return 'Unexpected error';
   }
 }
 
@@ -94,7 +94,7 @@ export default function ErrorSummary({
       {showReDiscoverSuggestion && (
         <div className="mt-2.5 flex flex-col gap-2 border-t border-black/[0.08] pt-2.5">
           <p className="m-0 text-[13px] leading-[1.5] text-[var(--color-fw-fg-muted)]">
-            This portal has failed multiple times. Try re-running Map to update the portal structure.
+            This portal has failed multiple times. Re-map it to update the navigation structure.
           </p>
           <Button
             type="button"
@@ -102,7 +102,7 @@ export default function ErrorSummary({
             size="sm"
             onClick={onReDiscover}
           >
-            Re-discover
+            Re-map
           </Button>
         </div>
       )}

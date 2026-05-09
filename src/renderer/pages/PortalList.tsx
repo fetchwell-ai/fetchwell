@@ -293,7 +293,7 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
   const extractTitle = isAnotherRunning
     ? 'Another operation is in progress'
     : portal.discoveredAt === null
-      ? 'Run Map first to enable extraction.'
+      ? 'Map this portal once before extracting.'
       : isThisRunning && runningOperation?.operation === 'extraction'
         ? 'Extraction running...'
         : undefined;

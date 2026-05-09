@@ -43,18 +43,13 @@ interface OverviewStepProps {
 function OverviewStep({ onNext }: OverviewStepProps) {
   return (
     <Card className="p-8">
-      <h2 className="m-0 mb-4 text-[18px] font-semibold text-[var(--color-fw-fg)]">Welcome</h2>
+      <h2 className="m-0 mb-4 text-[18px] font-semibold text-[var(--color-fw-fg)]">How it works</h2>
       <div className="mb-6 rounded-[var(--radius-sm)] bg-[var(--color-fw-bg)] p-4 text-[13px] leading-relaxed text-[var(--color-fw-fg-muted)]">
         <p className="m-0 mb-3">
-          FetchWell downloads your medical records from patient
-          portals. It runs a browser on your computer to log in and save records
-          as PDFs. <strong>Your data never leaves your machine.</strong>
+          Fetchwell opens your patient portal in a browser window on this Mac, logs in with your credentials, and saves your records as PDFs to a folder you choose. <strong>Your records stay on this Mac. We don't see them, ever.</strong>
         </p>
         <p className="m-0">
-          The app uses an AI model (Claude) to navigate portal pages -- this
-          requires an Anthropic API key, which you provide. You&apos;ll be
-          billed directly by Anthropic for API usage (typically a few dollars
-          per extraction).
+          Navigation is powered by Claude — this requires an Anthropic API key, which you provide. You&apos;ll be billed directly by Anthropic for API usage (typically a few dollars per extraction).
         </p>
       </div>
       <div className="mt-6 flex justify-end gap-2">

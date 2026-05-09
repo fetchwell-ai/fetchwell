@@ -236,7 +236,7 @@ function ApiKeyPage() {
                 size="sm"
                 onClick={handleGetKey}
               >
-                Get a key →
+                Get a key
               </Button>
               {apiKeyConfigured && (
                 <Button
