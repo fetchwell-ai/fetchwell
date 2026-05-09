@@ -45,9 +45,10 @@ export default function Sidebar({
     >
       {/* Title bar — drag region for traffic lights (hiddenInset) */}
       <div
-        className="flex-shrink-0 flex items-end px-3.5 pb-3 gap-2"
+        className="flex-shrink-0 flex items-center px-3.5 gap-2"
         style={{
           height: 52,
+          paddingTop: 20,
           WebkitAppRegion: 'drag',
         } as React.CSSProperties}
       >
