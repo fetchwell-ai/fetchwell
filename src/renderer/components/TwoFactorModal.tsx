@@ -65,7 +65,7 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
     >
       <motion.div
         className="w-[400px] max-w-[calc(100vw-48px)] overflow-hidden rounded-[var(--radius-lg)] shadow-[var(--shadow-fw-3)]"
-        style={{ background: 'var(--fw-modal-bg)' }}
+        style={{ background: 'var(--color-fw-modal-bg)' }}
         initial={shouldReduce ? false : { opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={shouldReduce ? undefined : { opacity: 0, scale: 0.97 }}

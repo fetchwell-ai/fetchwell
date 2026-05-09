@@ -395,7 +395,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
     >
       <motion.div
         className="progress-panel flex w-[600px] max-w-[calc(100vw-48px)] max-h-[calc(100vh-80px)] flex-col overflow-hidden rounded-[var(--radius-lg)] shadow-[var(--shadow-fw-3)]"
-        style={{ background: 'var(--fw-modal-bg)' }}
+        style={{ background: 'var(--color-fw-modal-bg)' }}
         initial={shouldReduce ? false : { opacity: 0, scale: 0.97 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={shouldReduce ? undefined : { opacity: 0, scale: 0.97 }}
