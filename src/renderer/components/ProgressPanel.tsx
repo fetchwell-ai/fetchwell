@@ -166,6 +166,18 @@ function OverallProgressBar({ structured }: { structured: StructuredState }) {
   );
 }
 
+// -- Noise filter for raw log lines --
+
+const LOG_NOISE_PATTERNS: RegExp[] = [
+  /drawOverlay parameter has been deprecated/,
+  /\[observation\] Getting accessibility tree data/,
+  /\[observation\] got accessibility tree in/,
+];
+
+function isNoisyLogLine(line: string): boolean {
+  return LOG_NOISE_PATTERNS.some((pattern) => pattern.test(line));
+}
+
 // -- Main component --
 
 export default function ProgressPanel({ portalId, operation, onClose, onReDiscover }: ProgressPanelProps) {
@@ -190,6 +202,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
 
   useEffect(() => {
     const handleProgress = (message: string) => {
+      if (isNoisyLogLine(message)) return;
       setLogs((prev) => [...prev, message]);
     };
 
