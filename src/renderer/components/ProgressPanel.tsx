@@ -322,6 +322,10 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
         return;
       }
 
+      if (event.type === 'phase-change') {
+        setStatusMessage(null);
+      }
+
       setStructured((prev) => {
         const next = {
           phases: { ...prev.phases },
