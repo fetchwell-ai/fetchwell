@@ -396,6 +396,24 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
             </div>
           </div>
 
+        {/* Footer — running state: Cancel */}
+        {panelState === 'running' && (
+          <div className="progress-panel-footer flex-shrink-0 border-t border-[var(--color-fw-border)] px-6 pb-5 pt-4">
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={async () => {
+                  await window.electronAPI.cancelOperation(portalId);
+                  onClose();
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         {panelState === 'complete' && (
           <div className="progress-panel-footer flex-shrink-0 border-t border-[var(--color-fw-border)] px-6 pb-5 pt-4">

@@ -77,6 +77,7 @@ interface ElectronAPI {
   updateSettings(updates: Partial<Settings & { apiKey?: string; theme?: ThemePreference }>): Promise<void>;
   validateApiKey(key: string): Promise<boolean>;
   runExtraction(portalId: string): Promise<void>;
+  cancelOperation(portalId: string): Promise<boolean>;
   chooseFolder(): Promise<string | null>;
   openInFinder(folderPath: string): Promise<void>;
   revealInFinder(folderPath: string): Promise<void>;

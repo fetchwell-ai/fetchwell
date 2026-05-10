@@ -1,7 +1,7 @@
 import { ipcMain, safeStorage, app, BrowserWindow, dialog, shell } from 'electron';
 import { ConfigManager, PortalEntry, ThemePreference } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
-import { runExtraction } from './pipeline-bridge';
+import { runExtraction, cancelOperation } from './pipeline-bridge';
 
 /** Input shape for adding/updating a portal (id is derived from name). */
 interface PortalInput {
@@ -152,6 +152,12 @@ export function registerIpcHandlers(userDataPath?: string): void {
     } catch {
       // Error already sent to renderer via IPC event
     }
+  });
+
+  // --- Cancel operation ---
+
+  ipcMain.handle('cancelOperation', (_event, portalId: string): boolean => {
+    return cancelOperation(portalId);
   });
 
   // --- Folder picker ---
