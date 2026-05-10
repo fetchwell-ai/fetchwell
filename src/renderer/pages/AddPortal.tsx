@@ -3,7 +3,6 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Select } from '../components/ui/select';
-import { Checkbox } from '../components/ui/checkbox';
 import { Card } from '../components/ui/card';
 import { validatePortalUrl } from '../lib/utils';
 
@@ -39,7 +38,6 @@ export default function AddPortal({
   const [twoFactor, setTwoFactor] = useState<
     'none' | 'email' | 'manual' | 'ui'
   >(editPortal?.twoFactor ?? 'manual');
-  const [saveCredentials, setSaveCredentials] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -89,8 +87,8 @@ export default function AddPortal({
         url: url.trim(),
         loginForm,
         twoFactor,
-        ...(saveCredentials && username ? { username: username.trim() } : {}),
-        ...(saveCredentials && password ? { password } : {}),
+        ...(username ? { username: username.trim() } : {}),
+        ...(password ? { password } : {}),
       };
 
       if (isEdit) {
@@ -208,21 +206,6 @@ export default function AddPortal({
                 <option value="none">None</option>
               </Select>
             </div>
-          </div>
-
-          <div className="mb-5 flex flex-col gap-1">
-            <label className="flex cursor-pointer items-center gap-2 text-[14px] text-[var(--color-fw-fg)]">
-              <Checkbox
-                checked={saveCredentials}
-                onChange={(e) => setSaveCredentials(e.target.checked)}
-              />
-              <span>Save credentials (stored securely on this device)</span>
-            </label>
-            {!saveCredentials && (
-              <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
-                Credentials will be prompted each time extraction runs.
-              </p>
-            )}
           </div>
 
           {error && <p className="form-error mb-2 text-xs text-[var(--color-fw-crimson-600)]">{error}</p>}
