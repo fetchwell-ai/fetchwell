@@ -15,7 +15,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   validateApiKey: (key: string) => ipcRenderer.invoke('validateApiKey', key),
 
   // --- Pipeline operations ---
-  runDiscovery: (portalId: string) => ipcRenderer.invoke('runDiscovery', portalId),
   runExtraction: (portalId: string) => ipcRenderer.invoke('runExtraction', portalId),
 
   // --- Folder picker ---

@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 
 export interface ProgressPanelProps {
   portalId: string;
-  operation: 'discovery' | 'extraction';
+  operation: 'extraction';
   onClose: () => void;
   onReDiscover?: () => void;
 }
@@ -50,9 +50,7 @@ const INITIAL_STRUCTURED_STATE: StructuredState = {
   categories: {},
 };
 
-// Discovery only shows login + navigate phases
-const DISCOVERY_PHASES: ProgressPhase[] = ['login', 'navigate'];
-const EXTRACTION_PHASES: ProgressPhase[] = ['login', 'navigate', 'extract'];
+const EXTRACTION_PHASES: ProgressPhase[] = ['login', 'extract'];
 const EXTRACTION_CATEGORIES: ProgressCategory[] = ['labs', 'visits', 'medications', 'messages'];
 
 const PHASE_LABELS: Record<ProgressPhase, string> = {
@@ -223,25 +221,15 @@ function CategoryRow({ category, state }: { category: ProgressCategory; state: C
   );
 }
 
-function OverallProgressBar({ structured, operation }: { structured: StructuredState; operation: 'discovery' | 'extraction' }) {
-  const phases = operation === 'discovery' ? DISCOVERY_PHASES : EXTRACTION_PHASES;
-
-  // For extraction: progress is based on phase completion + category completion
+function OverallProgressBar({ structured }: { structured: StructuredState }) {
+  // Progress is based on phase completion + category completion
+  // login + 4 categories (extract is tracked via categories)
   let completed = 0;
-  const total = operation === 'extraction'
-    ? 2 + EXTRACTION_CATEGORIES.length  // login + navigate + 4 categories
-    : DISCOVERY_PHASES.length;           // login + navigate
+  const total = 1 + EXTRACTION_CATEGORIES.length;  // login + 4 categories
 
-  if (operation === 'extraction') {
-    if (structured.phases.login.status === 'complete') completed++;
-    if (structured.phases.navigate.status === 'complete') completed++;
-    for (const cat of EXTRACTION_CATEGORIES) {
-      if (structured.categories[cat]?.status === 'complete') completed++;
-    }
-  } else {
-    for (const phase of phases) {
-      if (structured.phases[phase].status === 'complete') completed++;
-    }
+  if (structured.phases.login.status === 'complete') completed++;
+  for (const cat of EXTRACTION_CATEGORIES) {
+    if (structured.categories[cat]?.status === 'complete') completed++;
   }
 
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -278,9 +266,9 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
   const [showRawLog, setShowRawLog] = useState(false);
   const logEndRef = useRef<HTMLDivElement>(null);
 
-  const title = operation === 'discovery' ? 'Mapping your portal...' : 'Fetching your records...';
-  const completedTitle = operation === 'discovery' ? 'Portal mapped' : 'Records fetched';
-  const activePhases = operation === 'discovery' ? DISCOVERY_PHASES : EXTRACTION_PHASES;
+  const title = 'Fetching your records...';
+  const completedTitle = 'Records fetched';
+  const activePhases = EXTRACTION_PHASES;
 
   // Auto-scroll raw log to bottom on new messages
   useEffect(() => {
@@ -409,7 +397,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
             {panelState === 'complete'
               ? completedTitle
               : panelState === 'error'
-                ? (operation === 'discovery' ? 'Mapping failed' : 'Extraction failed')
+                ? 'Extraction failed'
                 : title}
           </h2>
           {panelState !== 'running' && (
@@ -441,39 +429,16 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
               </div>
             )}
 
-            {/* Category rows (extraction only) */}
-            {operation === 'extraction' && (
-              <div style={{ padding: '8px 24px 4px' }}>
-                {EXTRACTION_CATEGORIES.map((cat) => (
-                  <CategoryRow
-                    key={cat}
-                    category={cat}
-                    state={structured.categories[cat]}
-                  />
-                ))}
-              </div>
-            )}
-
-            {/* Discovery status message */}
-            {operation === 'discovery' && panelState === 'running' && (
-              <div style={{ padding: '12px 24px 4px' }}>
-                {activePhases.map((phase) => {
-                  const state = structured.phases[phase];
-                  if (state.status === 'running' && state.message) {
-                    return (
-                      <div key={phase} style={{
-                        display: 'flex', alignItems: 'center', gap: 8,
-                        fontSize: 13, color: 'var(--color-fw-fg-muted)',
-                      }}>
-                        <SpinnerIcon color="var(--color-fw-sage-700)" size={13} />
-                        {state.message}
-                      </div>
-                    );
-                  }
-                  return null;
-                })}
-              </div>
-            )}
+            {/* Category rows */}
+            <div style={{ padding: '8px 24px 4px' }}>
+              {EXTRACTION_CATEGORIES.map((cat) => (
+                <CategoryRow
+                  key={cat}
+                  category={cat}
+                  state={structured.categories[cat]}
+                />
+              ))}
+            </div>
 
             {/* Raw log toggle */}
             <div style={{ padding: '8px 24px 4px' }}>
@@ -549,9 +514,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
         {panelState === 'complete' && (
           <div className="progress-panel-footer flex-shrink-0 border-t border-[var(--color-fw-border)] px-6 pb-5 pt-4">
             <div className="progress-complete-message rounded-[var(--radius-sm)] bg-[var(--color-fw-moss-100)] px-3.5 py-2.5 text-[14px] text-[var(--color-fw-moss-600)]">
-              {operation === 'discovery'
-                ? 'Mapped. Ready to fetch records.'
-                : 'Done. Your records are in your download folder.'}
+              Done. Your records are in your download folder.
             </div>
             <div className="mt-3 flex justify-end gap-2">
               <Button
@@ -577,7 +540,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
               portalId={portalId}
               error={errorData}
               logs={logs}
-              onReDiscover={operation === 'extraction' ? onReDiscover : undefined}
+              onReDiscover={onReDiscover}
             />
             <div className="mt-3 flex justify-end gap-2">
               <Button

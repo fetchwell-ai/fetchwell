@@ -2,9 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   AlertTriangle,
-  Check,
   Clock,
-  Compass,
   Download,
   FileText,
   Folder,
@@ -30,7 +28,7 @@ type View =
 
 interface RunningOperation {
   portalId: string;
-  operation: 'discovery' | 'extraction';
+  operation: 'extraction';
 }
 
 function formatDate(iso: string | null): string {
@@ -103,15 +101,14 @@ function PortalListSkeleton() {
 
 // -- PortalCard v2 helpers --
 
-type PortalState = 'new' | 'mapped' | 'fetched' | 'error';
+type PortalState = 'ready' | 'fetched' | 'error';
 
 function derivePortalState(portal: PortalEntry): PortalState {
   // 'error' state reserved for future use — requires a lastError field on PortalEntry
   // and corresponding IPC wiring. The error UI (badge, guidance, button) is implemented
   // and ready to activate once the type is extended.
   if (portal.lastExtractedAt !== null) return 'fetched';
-  if (portal.discoveredAt !== null) return 'mapped';
-  return 'new';
+  return 'ready';
 }
 
 // Pill badge with status dot
@@ -281,29 +278,18 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
 
   const portalState = derivePortalState(portal);
   const anyOperationRunning = runningOperation !== null;
-  const mapDisabled = anyOperationRunning;
-  const extractDisabled = portal.discoveredAt === null || anyOperationRunning;
-
-  const mapTitle = isAnotherRunning
-    ? 'Another operation is in progress'
-    : isThisRunning && runningOperation?.operation === 'discovery'
-      ? 'Discovery running...'
-      : undefined;
+  const extractDisabled = anyOperationRunning;
 
   const extractTitle = isAnotherRunning
     ? 'Another operation is in progress'
-    : portal.discoveredAt === null
-      ? 'Map this portal once before extracting.'
-      : isThisRunning && runningOperation?.operation === 'extraction'
-        ? 'Extraction running...'
-        : undefined;
+    : isThisRunning && runningOperation?.operation === 'extraction'
+      ? 'Extraction running...'
+      : undefined;
 
   // Badge per state
   let badge: React.ReactNode;
-  if (portalState === 'new') {
-    badge = <PortalBadge variant="default">Not mapped yet</PortalBadge>;
-  } else if (portalState === 'mapped') {
-    badge = <PortalBadge variant="info">Mapped · ready to fetch</PortalBadge>;
+  if (portalState === 'ready') {
+    badge = <PortalBadge variant="info">Ready to fetch</PortalBadge>;
   } else if (portalState === 'fetched') {
     badge = (
       <PortalBadge variant="success">
@@ -316,22 +302,13 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
 
   // Guidance strip per state
   let guidance: React.ReactNode = null;
-  if (portalState === 'new') {
+  if (portalState === 'ready') {
     guidance = (
       <GuidanceStrip
         variant="info"
-        icon={<Compass size={16} />}
-        heading="Next: tell us where your records live."
-        body="Click Map — we'll open the portal in a window so you can sign in and walk through the labs, visits, and messages sections. Takes about 2 minutes."
-      />
-    );
-  } else if (portalState === 'mapped') {
-    guidance = (
-      <GuidanceStrip
-        variant="success"
-        icon={<Check size={16} />}
-        heading="You're ready for the first extraction."
-        body="Mapping is done — click Fetch records to download everything. Future extractions are incremental and much faster."
+        icon={<Download size={16} />}
+        heading="Ready to fetch your records."
+        body="Click Fetch records to download labs, visits, medications, and messages. The first run may take a few minutes while we learn your portal's layout."
       />
     );
   } else if (portalState === 'error') {
@@ -396,43 +373,7 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
         {/* Footer buttons */}
         <div className="flex items-center gap-2">
           {/* Primary action */}
-          {portalState === 'new' && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleMap}
-              disabled={mapDisabled}
-              title={mapTitle}
-            >
-              <Compass size={14} />
-              {isThisRunning && runningOperation?.operation === 'discovery' ? 'Running...' : 'Map portal'}
-            </Button>
-          )}
-          {portalState === 'mapped' && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleExtract}
-              disabled={extractDisabled}
-              title={extractTitle}
-            >
-              <Download size={14} />
-              {isThisRunning && runningOperation?.operation === 'extraction' ? 'Running...' : 'Fetch records'}
-            </Button>
-          )}
-          {portalState === 'fetched' && (
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleExtract}
-              disabled={extractDisabled}
-              title={extractTitle}
-            >
-              <Download size={14} />
-              {isThisRunning && runningOperation?.operation === 'extraction' ? 'Running...' : 'Fetch again'}
-            </Button>
-          )}
-          {portalState === 'error' && (
+          {portalState === 'error' ? (
             <Button
               type="button"
               size="sm"
@@ -440,20 +381,18 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
             >
               Update credentials
             </Button>
-          )}
-
-          {/* Re-map button (all states except new) */}
-          {portalState !== 'new' && (
+          ) : (
             <Button
               type="button"
-              variant="secondary"
               size="sm"
-              onClick={handleMap}
-              disabled={mapDisabled}
-              title={mapTitle}
+              onClick={handleExtract}
+              disabled={extractDisabled}
+              title={extractTitle}
             >
-              <Compass size={14} />
-              {isThisRunning && runningOperation?.operation === 'discovery' ? 'Running...' : 'Re-map'}
+              <Download size={14} />
+              {isThisRunning && runningOperation?.operation === 'extraction'
+                ? 'Running...'
+                : portalState === 'fetched' ? 'Fetch again' : 'Fetch records'}
             </Button>
           )}
 
@@ -548,16 +487,6 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
       setPortals((prev) => prev.filter((p) => p.id !== portal.id));
     } catch {
       // Removal failed silently -- user can retry
-    }
-  };
-
-  const handleMap = async (portalId: string) => {
-    if (runningOperation !== null) return;
-    setRunningOperation({ portalId, operation: 'discovery' });
-    try {
-      await window.electronAPI.runDiscovery(portalId);
-    } catch {
-      // Errors are surfaced via the ProgressPanel error state
     }
   };
 
