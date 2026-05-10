@@ -1,7 +1,7 @@
 import { ipcMain, safeStorage, app, BrowserWindow, dialog, shell } from 'electron';
 import { ConfigManager, PortalEntry, ThemePreference } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
-import { runExtraction, runDiscovery } from './pipeline-bridge';
+import { runExtraction } from './pipeline-bridge';
 
 /** Input shape for adding/updating a portal (id is derived from name). */
 interface PortalInput {
@@ -180,36 +180,4 @@ export function registerIpcHandlers(userDataPath?: string): void {
     return credentialsManager!.getPortalCredentials(portalId);
   });
 
-  ipcMain.handle('runDiscovery', async (_event, portalId: string): Promise<void> => {
-    const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
-    if (!win) throw new Error('No active window');
-
-    const portal = configManager!.getPortal(portalId);
-    if (!portal) throw new Error(`Portal not found: ${portalId}`);
-
-    const settings = configManager!.getSettings();
-    const apiKey = credentialsManager!.getApiKey();
-    if (!apiKey) throw new Error('API key not configured');
-
-    const creds = credentialsManager!.getPortalCredentials(portalId);
-    if (!creds) throw new Error(`No credentials stored for portal: ${portalId}`);
-
-    try {
-      await runDiscovery(portalId, win, {
-        apiKey,
-        credentials: creds,
-        portalUrl: portal.url,
-        portalId: portal.id,
-        portalName: portal.name,
-        downloadFolder: settings.downloadFolder,
-        showBrowser: settings.showBrowser,
-        incremental: settings.incrementalExtraction,
-        loginForm: portal.loginForm,
-        twoFactor: portal.twoFactor,
-      });
-      configManager!.updatePortal(portalId, { discoveredAt: new Date().toISOString() });
-    } catch {
-      // Error already sent to renderer via IPC event
-    }
-  });
 }

@@ -24,20 +24,17 @@ export interface QuickStartProps {
  * Steps:
  *   0: API key set (apiKeyConfigured)
  *   1: Any portal added (portals.length > 0)
- *   2: Any portal mapped (any portal has discoveredAt)
- *   3: First extraction run (any portal has lastExtractedAt)
+ *   2: First fetch run (any portal has lastExtractedAt)
  */
 export function deriveQuickStartSteps(
   portals: PortalEntry[],
   apiKeyConfigured: boolean,
 ): QuickStartStep[] {
   const hasPortal = portals.length > 0;
-  const mappedPortal = portals.find((p) => p.discoveredAt !== null);
   const extractedPortal = portals.find((p) => p.lastExtractedAt !== null);
 
   const apiKeyDone = apiKeyConfigured;
   const portalDone = hasPortal;
-  const mappedDone = mappedPortal !== undefined;
   const extractedDone = extractedPortal !== undefined;
 
   // Meta: contextual info for each step
@@ -47,7 +44,6 @@ export function deriveQuickStartSteps(
       ? '1 added'
       : `${portals.length} added`
     : undefined;
-  const mappedMeta = mappedDone ? undefined : hasPortal ? 'Try Stanford →' : undefined;
   const extractedMeta = extractedDone
     ? formatShortDate(extractedPortal!.lastExtractedAt)
     : undefined;
@@ -55,8 +51,7 @@ export function deriveQuickStartSteps(
   return [
     { key: 'api-key', label: 'Add your Anthropic API key', done: apiKeyDone, meta: apiKeyMeta },
     { key: 'portal', label: 'Add a patient portal', done: portalDone, meta: portalMeta },
-    { key: 'map', label: 'Map records on each portal', done: mappedDone, meta: mappedMeta },
-    { key: 'extract', label: 'Run your first extraction', done: extractedDone, meta: extractedMeta },
+    { key: 'extract', label: 'Fetch your records', done: extractedDone, meta: extractedMeta },
   ];
 }
 

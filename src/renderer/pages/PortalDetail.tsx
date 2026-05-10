@@ -3,8 +3,6 @@ import { AnimatePresence } from 'framer-motion';
 import {
   Activity,
   ArrowLeft,
-  Check,
-  Compass,
   Download,
   FileText,
   Folder,
@@ -24,17 +22,16 @@ export interface PortalDetailProps {
   downloadFolder: string;
 }
 
-type PortalState = 'new' | 'mapped' | 'fetched';
+type PortalState = 'ready' | 'fetched';
 
 interface RunningOperation {
   portalId: string;
-  operation: 'discovery' | 'extraction';
+  operation: 'extraction';
 }
 
 function derivePortalState(portal: PortalEntry): PortalState {
   if (portal.lastExtractedAt !== null) return 'fetched';
-  if (portal.discoveredAt !== null) return 'mapped';
-  return 'new';
+  return 'ready';
 }
 
 function formatDate(iso: string | null): string {
@@ -289,16 +286,6 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
     };
   }, [runningOperation]);
 
-  const handleMap = async () => {
-    if (runningOperation !== null) return;
-    setRunningOperation({ portalId, operation: 'discovery' });
-    try {
-      await window.electronAPI.runDiscovery(portalId);
-    } catch {
-      // Errors surfaced in ProgressPanel
-    }
-  };
-
   const handleExtract = async () => {
     if (runningOperation !== null) return;
     setRunningOperation({ portalId, operation: 'extraction' });
@@ -381,16 +368,10 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
                 <span>Last fetched <strong className="text-[var(--color-fw-ink-800)] font-medium">{formatDate(portal.lastExtractedAt)}</strong></span>
               </>
             )}
-            {portal.discoveredAt && (
+            {portalState === 'ready' && (
               <>
                 <span className="text-[var(--color-fw-ink-300)]">·</span>
-                <span>Mapped <strong className="text-[var(--color-fw-ink-800)] font-medium">{formatDate(portal.discoveredAt)}</strong></span>
-              </>
-            )}
-            {portalState === 'new' && (
-              <>
-                <span className="text-[var(--color-fw-ink-300)]">·</span>
-                <span>Not mapped yet</span>
+                <span>Ready to fetch</span>
               </>
             )}
           </div>
@@ -398,47 +379,14 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
 
         {/* Action buttons */}
         <div className="flex-shrink-0 flex items-center gap-2 pt-1">
-          {portalState === 'new' && (
-            <Button
-              type="button"
-              onClick={handleMap}
-              disabled={anyOperationRunning}
-            >
-              <Compass size={14} />
-              Map portal
-            </Button>
-          )}
-          {portalState === 'mapped' && (
-            <Button
-              type="button"
-              onClick={handleExtract}
-              disabled={anyOperationRunning}
-            >
-              <Download size={14} />
-              Fetch records
-            </Button>
-          )}
-          {portalState === 'fetched' && (
-            <>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleMap}
-                disabled={anyOperationRunning}
-              >
-                <Compass size={14} />
-                Re-map
-              </Button>
-              <Button
-                type="button"
-                onClick={handleExtract}
-                disabled={anyOperationRunning}
-              >
-                <Download size={14} />
-                Fetch again
-              </Button>
-            </>
-          )}
+          <Button
+            type="button"
+            onClick={handleExtract}
+            disabled={anyOperationRunning}
+          >
+            <Download size={14} />
+            {portalState === 'fetched' ? 'Fetch again' : 'Fetch records'}
+          </Button>
         </div>
       </div>
 
@@ -499,66 +447,31 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
         </section>
       )}
 
-      {/* Empty state (new portal) */}
-      {portalState === 'new' && (
-        <section className="mb-8">
-          <Card className="px-7 py-8">
-            <div className="flex gap-4 items-start">
-              <div
-                className="flex-shrink-0 w-10 h-10 rounded-[10px] flex items-center justify-center"
-                style={{
-                  background: 'var(--color-fw-sage-100)',
-                  color: 'var(--color-fw-sage-700)',
-                }}
-              >
-                <Compass size={20} />
-              </div>
-              <div className="flex-1">
-                <h3 className="m-0 mb-1.5 text-[16px] font-semibold text-[var(--color-fw-ink-900)]">
-                  Map this portal first
-                </h3>
-                <p className="m-0 mb-3.5 text-[14px] leading-[22px] text-[var(--color-fw-ink-700)]">
-                  Mapping is a one-time walk-through. Fetchwell opens {portal.name} in a window — you sign in, then click through the labs, visits, medications, and messages sections. Fetchwell remembers the navigation so future extractions are automatic.
-                </p>
-                <Button
-                  type="button"
-                  onClick={handleMap}
-                  disabled={anyOperationRunning}
-                >
-                  <Compass size={14} />
-                  Start mapping
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </section>
-      )}
-
-      {/* Ready state (mapped portal) */}
-      {portalState === 'mapped' && (
+      {/* Ready state (no records fetched yet) */}
+      {portalState === 'ready' && (
         <section className="mb-8">
           <Card
             className="px-6 py-5"
             style={{
-              background: 'var(--color-fw-moss-100)',
+              background: 'var(--color-fw-sage-50)',
               borderColor: 'rgba(74,124,89,0.25)',
             }}
           >
             <div className="flex gap-3 items-start">
-              <Check
+              <Download
                 size={18}
                 className="flex-shrink-0 mt-0.5"
-                style={{ color: 'var(--color-fw-moss-600)' }}
+                style={{ color: 'var(--color-fw-sage-700)' }}
               />
               <div>
                 <h3
                   className="m-0 mb-1.5 text-[15px] font-semibold"
-                  style={{ color: 'var(--color-fw-moss-700)' }}
+                  style={{ color: 'var(--color-fw-sage-800)' }}
                 >
-                  Mapped and ready to fetch
+                  Ready to fetch your records
                 </h3>
                 <p className="m-0 text-[13px] leading-[20px] text-[var(--color-fw-ink-700)]">
-                  Click <em>Fetch records</em> to run the first extraction. It usually takes 30–90 seconds depending on how many records the portal has.
+                  Click <em>Fetch records</em> to download labs, visits, medications, and messages. The first run may take a few minutes while we learn your portal's layout.
                 </p>
               </div>
             </div>
@@ -608,7 +521,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
       )}
 
       {/* Schedule (mapped or fetched) */}
-      {(portalState === 'mapped' || portalState === 'fetched') && (
+      {portalState === 'fetched' && (
         <section className="mb-8">
           <SectionHeader>Schedule</SectionHeader>
           <Card className="px-6 py-5 flex items-center justify-between gap-4">

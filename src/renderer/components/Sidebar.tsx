@@ -24,8 +24,7 @@ const SETTINGS_ITEMS: { key: SettingsKey; label: string; Icon: React.ComponentTy
 
 function getPortalStatusColor(portal: PortalEntry): string {
   if (portal.lastExtractedAt) return 'var(--color-fw-moss-600)';
-  if (portal.discoveredAt)    return 'var(--color-fw-sage-700)';
-  return 'var(--color-fw-ink-300)';
+  return 'var(--color-fw-sage-700)';
 }
 
 export default function Sidebar({

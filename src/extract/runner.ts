@@ -19,7 +19,6 @@ import {
   setLastExtractedDate,
   type IncrementalSection,
 } from "./helpers.js";
-import { loadNavMap } from "../discover/nav-map.js";
 import { extractLabsDocs } from "./labs.js";
 import { extractVisits } from "./visits.js";
 import { extractMedications } from "./medications.js";
@@ -158,15 +157,6 @@ export async function extractProvider(
 
     emit({ type: 'phase-change', phase: 'login', status: 'complete', message: 'Logged in' });
 
-    // ── Phase: navigate ───────────────────────────────────────────────────
-    emit({ type: 'phase-change', phase: 'navigate', status: 'running', message: 'Loading portal sections...' });
-
-    // Warn if no nav-map exists
-    if (!loadNavMap(provider.id, basePath)) {
-      console.log(`Warning: No nav-map found for ${provider.id}. Run discovery first for better navigation.`);
-      console.log();
-    }
-
     const navNotes = readNavNotes(outputDir);
 
     if (incremental) {
@@ -178,8 +168,6 @@ export async function extractProvider(
       }
       console.log();
     }
-
-    emit({ type: 'phase-change', phase: 'navigate', status: 'complete', message: 'Portal sections loaded' });
 
     // ── Phase: extract ────────────────────────────────────────────────────
     emit({ type: 'phase-change', phase: 'extract', status: 'running', message: 'Extracting records...' });
