@@ -148,13 +148,16 @@ export function registerIpcHandlers(userDataPath?: string): void {
         loginForm: portal.loginForm,
         twoFactor: portal.twoFactor,
       });
-      configManager!.updatePortal(portalId, {
+      const countUpdate: Partial<PortalEntry> = {
         lastExtractedAt: new Date().toISOString(),
-        labCount: counts.labCount,
-        visitCount: counts.visitCount,
-        medicationCount: counts.medicationCount,
-        messageCount: counts.messageCount,
-      });
+      };
+      // Only update counts that are > 0 — incremental runs report 0 for
+      // categories with no new items, and we don't want to erase prior totals.
+      if (counts.labCount > 0) countUpdate.labCount = counts.labCount;
+      if (counts.visitCount > 0) countUpdate.visitCount = counts.visitCount;
+      if (counts.medicationCount > 0) countUpdate.medicationCount = counts.medicationCount;
+      if (counts.messageCount > 0) countUpdate.messageCount = counts.messageCount;
+      configManager!.updatePortal(portalId, countUpdate);
     } catch {
       // Error already sent to renderer via IPC event
     }
