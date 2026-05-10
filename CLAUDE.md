@@ -11,7 +11,7 @@ Multi-provider support via `providers.json` (see `providers.example.json`). Each
 ## Key directories
 
 - `src/extract/` — extraction pipeline: labs, visits, medications, messages (entry: `index.ts`, runner: `runner.ts`)
-- `src/discover/` — portal navigation discovery engine, builds `nav-map.json` per provider
+- `src/discover/` — agentic portal discovery engine using browser.act() + browser.extract(), builds `nav-map.json` per provider
 - `src/auth/` — composable auth system with strategy registries for login form and 2FA
 - `src/browser/` — BrowserProvider abstraction (stagehand-local default, plain playwright fallback)
 - `src/renderer/` — React UI for the Electron app (Vite-built, Tailwind CSS v4, shadcn/ui, Framer Motion, dark mode)
@@ -28,7 +28,7 @@ Multi-provider support via `providers.json` (see `providers.example.json`). Each
 # CLI mode
 pnpm extract                          # Extract all records → output/<id>/
 pnpm extract --incremental            # Only fetch items newer than last run
-pnpm discover --provider <id>         # Discover portal nav structure → nav-map.json
+pnpm discover --provider <id>         # Debug tool: discover portal nav structure → nav-map.json
 PROBE=1 pnpm extract                  # Probe mode: screenshot only, no PDFs
 
 # Binary (equivalent to pnpm extract; enables global install via npm install -g)
@@ -49,7 +49,7 @@ pnpm lint                             # ESLint (src/)
 ## Testing
 
 ```bash
-pnpm test:unit                        # Vitest — 102 unit tests, <1s
+pnpm test:unit                        # Vitest — 96 unit tests, <1s
 pnpm test:e2e                         # Playwright Electron — 16 tests, ~15s
 ```
 
@@ -66,7 +66,7 @@ E2E tests launch the Electron app via Playwright and cover Welcome wizard, porta
 - **PDF-only output.** `page.pdf()` captures full page height and waits for async content.
 - **Two browser providers.** `stagehand-local` (default, AI-powered) and `local` (plain Playwright). Set via `BROWSER_PROVIDER` env var.
 - **Auth is composable.** Two axes: `loginForm` (two-step | single-page) and `twoFactor` (none | email | manual | ui). Configured per provider.
-- **Nav-map drives navigation.** Discovery engine builds nav-map.json. Extraction modules follow it.
+- **Nav-map is a cache, not a contract.** Agentic discovery builds nav-map.json with cached URLs and act() instructions. Extraction uses a 3-tier fallback: cached URL → replay steps → fresh agentic search. Discovery is not a required user-facing step — extraction discovers on-the-fly if no nav-map exists.
 - **Session persistence.** Cookies in `output/<provider-id>/session.json` (12h TTL). Skips login + 2FA when valid.
 - **Electron ↔ Pipeline bridge.** Electron forks `src/electron-runner.ts` as a subprocess (ESM via tsx). IPC for progress events, 2FA relay, and error reporting. One operation per portal at a time.
 - **Three TypeScript configs.** `tsconfig.json` (src/, ESM), `electron/tsconfig.json` (electron/, CJS), `src/renderer/tsconfig.json` (renderer/, Vite/bundler).
