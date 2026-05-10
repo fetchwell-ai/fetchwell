@@ -4,6 +4,7 @@ import { z } from "zod";
 import { PDFDocument } from "pdf-lib";
 import { type BrowserProvider } from "../browser/interface.js";
 import { loadNavMap, saveNavMap } from "../discover/nav-map.js";
+import { loadSavedSession } from "../session.js";
 import { SECTION_INSTRUCTIONS, VERIFY_INSTRUCTIONS } from "../discover/index.js";
 
 /** Default base output directory (parent of all provider-scoped dirs). */
@@ -245,6 +246,14 @@ export async function navigateToSection(
 ): Promise<{ listInstruction?: string; navigationFailed?: boolean }> {
   const navMap = providerId ? loadNavMap(providerId, basePath) : null;
   const entry = navMap?.sections?.[section];
+
+  // Resolve the authenticated dashboard URL for agentic navigation.
+  // The caller may pass the portal login URL, which would log us out if navigated to.
+  // Always prefer the session's saved homeUrl (the post-login dashboard).
+  const session = providerId ? loadSavedSession(providerId, basePath) : null;
+  if (session?.homeUrl) {
+    homeUrl = session.homeUrl;
+  }
 
   // ── Tier 1: Try cached URL ──────────────────────────────────────────────
   if (entry?.url) {
