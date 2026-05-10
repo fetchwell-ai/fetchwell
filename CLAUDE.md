@@ -49,7 +49,7 @@ pnpm lint                             # ESLint (src/)
 ## Testing
 
 ```bash
-pnpm test:unit                        # Vitest — 87 unit tests, <1s
+pnpm test:unit                        # Vitest — 102 unit tests, <1s
 pnpm test:e2e                         # Playwright Electron — 16 tests, ~15s
 ```
 
