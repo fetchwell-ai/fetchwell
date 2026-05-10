@@ -105,6 +105,10 @@ export async function extractProvider(
     console.log();
 
     // Step 3: Login or restore session
+    // homeUrl = the authenticated dashboard URL (NOT the login page).
+    // This is passed to extractors for agentic navigation fallback.
+    let homeUrl: string = portalUrl;
+
     if (savedSession && browser.loadSession) {
       emit({ type: 'status-message', phase: 'login', message: 'Restoring saved session...' });
       console.log("Step 3: Restoring saved session...");
@@ -120,6 +124,7 @@ export async function extractProvider(
 
       if (!onAuthPage && (selectors.length === 0 || hasAuthElement)) {
         console.log("   Session restored — skipping login and 2FA.");
+        homeUrl = currentUrl;
         console.log();
       } else {
         if (onAuthPage) {
@@ -135,9 +140,10 @@ export async function extractProvider(
         await browser.navigate(portalUrl);
         await new Promise((r) => setTimeout(r, 2000));
         await authModule.login(browser, authConfig, debugUrl);
+        homeUrl = await browser.url();
         if (browser.saveSession) {
           const session = await browser.saveSession();
-          session.homeUrl = await browser.url();
+          session.homeUrl = homeUrl;
           saveSession(session, provider.id, basePath);
           console.log(`   Session saved to output/${provider.id}/session.json.`);
         }
@@ -146,13 +152,15 @@ export async function extractProvider(
       emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
       console.log("Step 3: Login");
       await authModule.login(browser, authConfig, debugUrl);
+      homeUrl = await browser.url();
       if (browser.saveSession) {
         const session = await browser.saveSession();
-        session.homeUrl = await browser.url();
+        session.homeUrl = homeUrl;
         saveSession(session, provider.id, basePath);
         console.log(`   Session saved to output/${provider.id}/session.json (login + 2FA skipped next run).`);
       }
     }
+    console.log(`   Dashboard URL: ${homeUrl}`);
     console.log();
 
     emit({ type: 'phase-change', phase: 'login', status: 'complete', message: 'Logged in' });
@@ -176,7 +184,7 @@ export async function extractProvider(
     emit({ type: 'status-message', phase: 'extract', message: 'Opening lab results...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'labs', current: 0, message: 'Extracting labs...' });
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    const labsCount = await extractLabsDocs(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
+    const labsCount = await extractLabsDocs(browser, homeUrl, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
     if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
     emit({ type: 'status-message', phase: 'extract', message: `Labs complete — ${labsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'labs', count: labsCount, status: 'complete' });
@@ -186,7 +194,7 @@ export async function extractProvider(
     emit({ type: 'status-message', phase: 'extract', message: 'Opening visits...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'visits', current: 0, message: 'Extracting visits...' });
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    const visitsCount = await extractVisits(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
+    const visitsCount = await extractVisits(browser, homeUrl, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
     if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
     emit({ type: 'status-message', phase: 'extract', message: `Visits complete — ${visitsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'visits', count: visitsCount, status: 'complete' });
@@ -195,7 +203,7 @@ export async function extractProvider(
     // Medications
     emit({ type: 'status-message', phase: 'extract', message: 'Opening medications...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'medications', current: 0, message: 'Extracting medications...' });
-    const medsCount = await extractMedications(browser, portalUrl, providerCredentials, outputDir, provider.id, incremental, provider.authenticatedSelectors, emitProgress);
+    const medsCount = await extractMedications(browser, homeUrl, providerCredentials, outputDir, provider.id, incremental, provider.authenticatedSelectors, emitProgress);
     if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
     emit({ type: 'status-message', phase: 'extract', message: `Medications complete — ${medsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'medications', count: medsCount, status: 'complete' });
@@ -205,7 +213,7 @@ export async function extractProvider(
     emit({ type: 'status-message', phase: 'extract', message: 'Opening messages...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'messages', current: 0, message: 'Extracting messages...' });
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    const msgsCount = await extractMessages(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
+    const msgsCount = await extractMessages(browser, homeUrl, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
     if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
     emit({ type: 'status-message', phase: 'extract', message: `Messages complete — ${msgsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'messages', count: msgsCount, status: 'complete' });
