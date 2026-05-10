@@ -12,16 +12,17 @@ export default function AppSkeleton() {
         className="flex flex-col h-full bg-[var(--color-fw-bg-deep)] border-r border-[var(--color-fw-border)]"
         style={{ width: 240, minWidth: 240, maxWidth: 240 }}
       >
-        {/* Traffic-light drag region */}
-        <div className="flex-shrink-0" style={{ height: 52 }} />
-
-        {/* App name placeholder */}
-        <div className="px-4 pb-3 flex-shrink-0">
-          <SkeletonBar width={24} height={24} rounded="rounded-md" />
+        {/* Traffic-light drag region + logo — matches Sidebar.tsx titlebar height */}
+        <div
+          className="flex-shrink-0 flex items-end pb-[10px] gap-2"
+          style={{ height: 52, paddingLeft: 16 }}
+        >
+          <SkeletonBar width={20} height={20} rounded="rounded-md" />
+          <SkeletonBar width={72} height={14} />
         </div>
 
         {/* Section label placeholder */}
-        <div className="px-4 mb-2 flex-shrink-0">
+        <div className="px-2 pt-2.5 pb-1.5 flex-shrink-0" style={{ paddingLeft: 16 }}>
           <SkeletonBar width={55} height={10} />
         </div>
 
