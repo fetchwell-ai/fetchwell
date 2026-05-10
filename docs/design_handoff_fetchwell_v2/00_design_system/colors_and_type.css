@@ -1,0 +1,307 @@
+/* ============================================================================
+   Fetchwell — Color, Type, Spacing, Motion tokens
+   ----------------------------------------------------------------------------
+   The single source of truth for the brand. Import from any HTML / JSX:
+     <link rel="stylesheet" href="/colors_and_type.css">
+   Then style with the semantic vars (--fw-fg, --fw-h1, --fw-card-bg, etc.)
+   not the raw color names — palettes can shift, semantic roles shouldn't.
+   ============================================================================ */
+
+/* ── Webfonts — official Fetchwell type stack ─────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Recursive:wght,CASL,MONO@400..600,1,1&display=swap');
+
+:root {
+  /* ── Palette — warm apothecary ──────────────────────────────────────────── */
+
+  /* Sage (primary) */
+  --fw-sage-50:   #F1F6F2;
+  --fw-sage-100:  #E1ECE6;
+  --fw-sage-200:  #BFD6CB;
+  --fw-sage-300:  #97BBAA;
+  --fw-sage-500:  #4A7C66;
+  --fw-sage-600:  #2C604F;
+  --fw-sage-700:  #1F4D3E;
+  --fw-sage-800:  #173B30;
+  --fw-sage-900:  #102A22;
+
+  /* Ochre (accent / warning) */
+  --fw-ochre-50:  #FBF6EC;
+  --fw-ochre-100: #F2E6D0;
+  --fw-ochre-300: #DCB57E;
+  --fw-ochre-500: #C68F47;
+  --fw-ochre-600: #B47834;
+  --fw-ochre-700: #8E5C25;
+
+  /* Crimson (destructive) — earthy, not neon */
+  --fw-crimson-100: #F4DAD9;
+  --fw-crimson-500: #BF3F40;
+  --fw-crimson-600: #9E2A2B;
+  --fw-crimson-700: #7B2021;
+
+  /* Moss (success — sage cousin) */
+  --fw-moss-100: #E1ECDA;
+  --fw-moss-500: #5C9070;
+  --fw-moss-600: #4A7C59;
+  --fw-moss-700: #345B3F;
+
+  /* Ink (text) — warm near-black */
+  --fw-ink-900: #161714;
+  --fw-ink-800: #2A2823;
+  --fw-ink-700: #3D3A33;
+  --fw-ink-600: #545047;
+  --fw-ink-500: #6B655C;
+  --fw-ink-400: #8C857B;
+  --fw-ink-300: #B0A99C;
+  --fw-ink-200: #D4CDBE;
+
+  /* Paper (backgrounds) — warm cream */
+  --fw-paper-deep:    #EBE5D7;
+  --fw-paper:         #F4EFE6;
+  --fw-paper-light:   #F8F4EC;
+  --fw-surface:       #FCFAF6;
+  --fw-surface-raised:#FFFFFF;
+
+  /* Borders */
+  --fw-border:        #E5DFD2;
+  --fw-border-strong: #C9C0AC;
+  --fw-border-focus:  var(--fw-sage-700);
+
+  /* ── Semantic color tokens ──────────────────────────────────────────────── */
+  --fw-bg:            var(--fw-paper);
+  --fw-bg-deep:       var(--fw-paper-deep);
+  --fw-card-bg:       var(--fw-surface);
+  --fw-modal-bg:      var(--fw-surface-raised);
+
+  --fw-fg:            var(--fw-ink-900);
+  --fw-fg-muted:      var(--fw-ink-500);
+  --fw-fg-subtle:     var(--fw-ink-400);
+  --fw-fg-on-primary: var(--fw-paper-light);
+
+  --fw-primary:        var(--fw-sage-700);
+  --fw-primary-hover:  var(--fw-sage-800);
+  --fw-primary-tint:   var(--fw-sage-100);
+
+  --fw-accent:         var(--fw-ochre-600);
+  --fw-accent-tint:    var(--fw-ochre-100);
+
+  --fw-success:        var(--fw-moss-600);
+  --fw-success-tint:   var(--fw-moss-100);
+
+  --fw-warning:        var(--fw-ochre-600);
+  --fw-warning-tint:   var(--fw-ochre-100);
+
+  --fw-danger:         var(--fw-crimson-600);
+  --fw-danger-tint:    var(--fw-crimson-100);
+
+  --fw-link:           var(--fw-sage-700);
+  --fw-link-hover:     var(--fw-sage-800);
+
+  /* Scrim for modals */
+  --fw-scrim: rgba(20, 15, 5, 0.55);
+
+  /* ── Type families ──────────────────────────────────────────────────────── */
+  --fw-font-display: "Newsreader", "Source Serif 4", Georgia, serif;
+  --fw-font-sans:    "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --fw-font-mono:    "Recursive", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --fw-font-mono-feat: "MONO" 1, "CASL" 1;  /* casual + monospaced axes */
+
+  /* ── Type roles — size / line-height / weight / tracking ────────────────── */
+  /* Display (Newsreader) */
+  --fw-display-xl-size: 56px;  --fw-display-xl-lh: 60px;  --fw-display-xl-tracking: -0.02em;
+  --fw-display-l-size:  40px;  --fw-display-l-lh:  44px;  --fw-display-l-tracking:  -0.015em;
+  --fw-h1-size:         28px;  --fw-h1-lh:         34px;  --fw-h1-tracking:         -0.01em;
+
+  /* Body (Geist) */
+  --fw-h2-size:         20px;  --fw-h2-lh:         26px;  --fw-h2-tracking:         -0.005em;
+  --fw-h3-size:         16px;  --fw-h3-lh:         22px;  --fw-h3-tracking:         0;
+  --fw-body-size:       14px;  --fw-body-lh:       22px;  --fw-body-tracking:       0;
+  --fw-body-sm-size:    13px;  --fw-body-sm-lh:    20px;  --fw-body-sm-tracking:    0;
+  --fw-caption-size:    11px;  --fw-caption-lh:    16px;  --fw-caption-tracking:    0.08em;
+
+  /* Mono */
+  --fw-mono-size:       13px;  --fw-mono-lh:       20px;  --fw-mono-tracking:       0;
+
+  /* Weights */
+  --fw-w-regular: 400;
+  --fw-w-medium:  500;
+  --fw-w-semi:    600;
+  --fw-w-bold:    700;
+
+  /* ── Spacing — 4pt grid ─────────────────────────────────────────────────── */
+  --fw-sp-1:  4px;
+  --fw-sp-2:  8px;
+  --fw-sp-3:  12px;
+  --fw-sp-4:  16px;
+  --fw-sp-5:  20px;
+  --fw-sp-6:  24px;
+  --fw-sp-8:  32px;
+  --fw-sp-10: 40px;
+  --fw-sp-12: 48px;
+  --fw-sp-16: 64px;
+  --fw-sp-24: 96px;
+
+  /* ── Radii ──────────────────────────────────────────────────────────────── */
+  --fw-radius-xs:   4px;
+  --fw-radius-sm:   6px;
+  --fw-radius-md:   10px;
+  --fw-radius-lg:   14px;
+  --fw-radius-pill: 999px;
+
+  /* ── Shadow — warm-tinted ───────────────────────────────────────────────── */
+  --fw-shadow-1: 0 1px 2px rgba(40,30,15,0.06), 0 1px 1px rgba(40,30,15,0.04);
+  --fw-shadow-2: 0 4px 12px rgba(40,30,15,0.08), 0 1px 3px rgba(40,30,15,0.06);
+  --fw-shadow-3: 0 16px 40px rgba(40,30,15,0.18), 0 4px 12px rgba(40,30,15,0.10);
+
+  /* ── Motion ─────────────────────────────────────────────────────────────── */
+  --fw-dur-fast:    120ms;
+  --fw-dur-base:    180ms;
+  --fw-dur-slow:    280ms;
+  --fw-ease-out:    cubic-bezier(.2,.7,.2,1);
+  --fw-ease-in-out: cubic-bezier(.5,0,.2,1);
+
+  /* Layout */
+  --fw-sidebar-w:   240px;
+  --fw-titlebar-h:  52px;
+  --fw-form-max:    560px;
+  --fw-prose-max:   640px;
+}
+
+/* ── Dark mode — warm, not cold ──────────────────────────────────────────── */
+/* Opt-in: add class="dark" on <html> or <body>. Matches the app's existing
+   class-based dark-mode strategy (Tailwind v4 @variant dark in src/renderer/styles.css). */
+:root.dark, .dark {
+    --fw-bg:           #0B0B0A;
+    --fw-bg-deep:      #0B0B0A;
+    --fw-card-bg:      #1A1A18;
+    --fw-modal-bg:     #1F1F1C;
+    --fw-paper:        #0B0B0A;
+    --fw-paper-deep:   #0B0B0A;
+    --fw-paper-light:  #1A1A18;
+    --fw-surface:      #1A1A18;
+
+    --fw-fg:           #EDE6D7;
+    --fw-fg-muted:     #9A938A;
+    --fw-fg-subtle:    #6E6862;
+    --fw-fg-on-primary:#EDE6D7;
+
+    --fw-border:        #2A2A26;
+    --fw-border-strong: #3A3A36;
+    --fw-border-focus:  #C68F47;
+
+    --fw-primary:       #1F4D3E;
+    --fw-primary-hover: #2C604F;
+    --fw-primary-tint:  #1F3A30;
+
+    --fw-accent:        #D9A463;
+    --fw-accent-tint:   #3A2A14;
+
+    --fw-success:       #7BAE89;
+    --fw-success-tint:  #1F2E22;
+
+    --fw-warning:       #D9A463;
+    --fw-warning-tint:  #3A2A14;
+
+    --fw-danger:        #D9706F;
+    --fw-danger-tint:   #3A1A1A;
+
+    --fw-shadow-1: 0 1px 2px rgba(0,0,0,0.4), 0 1px 1px rgba(0,0,0,0.3);
+    --fw-shadow-2: 0 4px 12px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.35);
+    --fw-shadow-3: 0 16px 40px rgba(0,0,0,0.6),  0 4px 12px rgba(0,0,0,0.4);
+
+    --fw-ink-900:  #EDE6D7;
+    --fw-ink-800:  #D8D1C1;
+    --fw-ink-700:  #BFB8A8;
+    --fw-ink-600:  #A39C8E;
+    --fw-ink-500:  #9A938A;
+    --fw-ink-400:  #6E6862;
+    --fw-ink-300:  #4A4640;
+    --fw-ink-200:  #34312B;
+
+    --fw-sage-100: #1F3A30;
+    --fw-sage-200: #2C604F;
+    --fw-sage-700: #3F8068;
+    --fw-sage-800: #5BA386;
+    --fw-moss-100: #1F2E22;
+    --fw-moss-700: #8FBF9C;
+    --fw-ochre-100: #3A2A14;
+    --fw-ochre-700: #D9A463;
+    --fw-crimson-100: #3A1A1A;
+    --fw-crimson-700: #E08583;
+}
+
+/* ── Typography reset / base ─────────────────────────────────────────────── */
+html { font-family: var(--fw-font-sans); }
+body {
+  margin: 0;
+  background: var(--fw-bg);
+  color: var(--fw-fg);
+  font-family: var(--fw-font-sans);
+  font-size: var(--fw-body-size);
+  line-height: var(--fw-body-lh);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Semantic typography roles. Use these in markup OR mirror the CSS in components. */
+.fw-display-xl {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-w-regular);
+  font-size: var(--fw-display-xl-size); line-height: var(--fw-display-xl-lh);
+  letter-spacing: var(--fw-display-xl-tracking);
+}
+.fw-display-l {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-w-regular);
+  font-size: var(--fw-display-l-size); line-height: var(--fw-display-l-lh);
+  letter-spacing: var(--fw-display-l-tracking);
+}
+.fw-h1 {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-w-medium);
+  font-size: var(--fw-h1-size); line-height: var(--fw-h1-lh);
+  letter-spacing: var(--fw-h1-tracking);
+}
+.fw-h2 {
+  font-family: var(--fw-font-sans);
+  font-weight: var(--fw-w-semi);
+  font-size: var(--fw-h2-size); line-height: var(--fw-h2-lh);
+  letter-spacing: var(--fw-h2-tracking);
+}
+.fw-h3 {
+  font-family: var(--fw-font-sans);
+  font-weight: var(--fw-w-semi);
+  font-size: var(--fw-h3-size); line-height: var(--fw-h3-lh);
+  letter-spacing: var(--fw-h3-tracking);
+}
+.fw-body { font-size: var(--fw-body-size); line-height: var(--fw-body-lh); }
+.fw-body-sm { font-size: var(--fw-body-sm-size); line-height: var(--fw-body-sm-lh); }
+.fw-caption {
+  font-size: var(--fw-caption-size); line-height: var(--fw-caption-lh);
+  letter-spacing: var(--fw-caption-tracking);
+  text-transform: uppercase;
+  font-weight: var(--fw-w-medium);
+  color: var(--fw-fg-muted);
+}
+.fw-mono {
+  font-family: var(--fw-font-mono);
+  font-variation-settings: var(--fw-font-mono-feat);
+  font-size: var(--fw-mono-size); line-height: var(--fw-mono-lh);
+}
+
+/* Selection — sage tint */
+::selection {
+  background: var(--fw-sage-100);
+  color: var(--fw-sage-900);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
