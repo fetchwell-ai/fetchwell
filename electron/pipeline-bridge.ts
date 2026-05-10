@@ -106,6 +106,9 @@ const pendingOtpResolvers = new Map<string, (code: string | null) => void>();
 /** Track active pipeline runs to prevent concurrent runs for the same portal. */
 const activeRuns = new Set<string>();
 
+/** Map from portalId → active child process, so we can kill it on cancel. */
+const activeChildren = new Map<string, ReturnType<typeof fork>>();
+
 /**
  * Register the ipcMain handler for '2fa:submit' once.
  * The renderer sends: { portalId, code }
@@ -168,6 +171,7 @@ function runSubprocess(
       env: childEnv,
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     });
+    activeChildren.set(config.portalId, child);
 
     // Capture stdout lines → forward as progress events
     if (child.stdout) {
@@ -250,6 +254,7 @@ function runSubprocess(
     // missing events if the child process exits synchronously.
     child.on('close', (code: number | null) => {
       activeRuns.delete(config.portalId);
+      activeChildren.delete(config.portalId);
       pendingOtpResolvers.delete(config.portalId);
 
       if (code === 0) {
@@ -261,6 +266,7 @@ function runSubprocess(
 
     child.on('error', (err: Error) => {
       activeRuns.delete(config.portalId);
+      activeChildren.delete(config.portalId);
       pendingOtpResolvers.delete(config.portalId);
       reject(err);
     });
@@ -294,6 +300,20 @@ export async function runExtraction(portalId: string, win: BrowserWindow, config
     }
     throw err;
   }
+}
+
+/**
+ * Kill the active child process for a portal, if one is running.
+ * Returns true if a process was found and killed, false otherwise.
+ */
+export function cancelOperation(portalId: string): boolean {
+  const child = activeChildren.get(portalId);
+  if (!child) return false;
+  child.kill('SIGTERM');
+  activeChildren.delete(portalId);
+  activeRuns.delete(portalId);
+  pendingOtpResolvers.delete(portalId);
+  return true;
 }
 
 /**

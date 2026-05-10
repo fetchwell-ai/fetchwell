@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // --- Pipeline operations ---
   runExtraction: (portalId: string) => ipcRenderer.invoke('runExtraction', portalId),
+  cancelOperation: (portalId: string) => ipcRenderer.invoke('cancelOperation', portalId),
 
   // --- Folder picker ---
   chooseFolder: () => ipcRenderer.invoke('chooseFolder'),
