@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card } from '../components/ui/card';
+import { Checkbox } from '../components/ui/checkbox';
 import { cn } from '../lib/utils';
 
 interface SettingsProps {
@@ -262,6 +263,7 @@ function ApiKeyPage() {
 
 function StoragePage() {
   const [downloadFolder, setDownloadFolder] = useState('');
+  const [showBrowser, setShowBrowser] = useState(false);
   const [savedVisible, setSavedVisible] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -270,6 +272,7 @@ function StoragePage() {
       .getSettings()
       .then((settings) => {
         setDownloadFolder(settings.downloadFolder);
+        setShowBrowser(settings.showBrowser);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -286,6 +289,15 @@ function StoragePage() {
       setDownloadFolder(chosen);
       await window.electronAPI.updateSettings({ downloadFolder: chosen });
       showSaved();
+    }
+  };
+
+  const handleShowBrowserChange = async (checked: boolean) => {
+    setShowBrowser(checked);
+    try {
+      await window.electronAPI.updateSettings({ showBrowser: checked });
+    } catch {
+      // Best-effort — UI already updated
     }
   };
 
@@ -315,6 +327,26 @@ function StoragePage() {
         <p className="mt-3 text-[12px] text-[var(--color-fw-fg-muted)]">
           Each portal gets its own subfolder.
         </p>
+      </Card>
+
+      <Card className="mt-4 max-w-[560px] px-6 py-5">
+        <label
+          htmlFor="show-browser-toggle"
+          className="flex cursor-pointer items-start gap-3"
+        >
+          <Checkbox
+            id="show-browser-toggle"
+            checked={showBrowser}
+            onChange={(e) => handleShowBrowserChange(e.target.checked)}
+            className="mt-0.5"
+          />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[14px] text-[var(--color-fw-fg)]">Show browser window</span>
+            <span className="text-[12px] text-[var(--color-fw-fg-muted)]">
+              Display the browser window during record fetching. Useful for debugging.
+            </span>
+          </div>
+        </label>
       </Card>
     </PageLayout>
   );
