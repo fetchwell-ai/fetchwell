@@ -60,8 +60,9 @@ export default function App() {
   const prevIsPortalsView = useRef<boolean | null>(null);
   useEffect(() => {
     if (rootPage !== 'main') return;
-    // On first entry, or when navigating back to portals from settings
-    if (prevIsPortalsView.current !== isPortalsView && isPortalsView) {
+    // On initial mount (prevIsPortalsView.current is null) always load portals.
+    // Also reload when navigating back to portals from settings.
+    if (prevIsPortalsView.current === null || (prevIsPortalsView.current !== isPortalsView && isPortalsView)) {
       loadPortals();
       setPortalListKey((k) => k + 1);
     }
@@ -136,6 +137,7 @@ export default function App() {
                 onOpenSettings={() => handleSelectSettings('appearance')}
                 onNavigateToApiKey={handleNavigateToApiKey}
                 selectedPortalId={activePortalId}
+                onPortalsChanged={loadPortals}
               />
             </MotionPage>
           )}

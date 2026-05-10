@@ -20,6 +20,7 @@ interface PortalListProps {
   onOpenSettings: () => void;
   onNavigateToApiKey: () => void;
   selectedPortalId?: string | null;
+  onPortalsChanged?: () => void;
 }
 
 type View =
@@ -399,7 +400,7 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
 
 const QUICKSTART_DISMISSED_KEY = 'quickstartDismissed';
 
-export default function PortalList({ onOpenSettings, onNavigateToApiKey, selectedPortalId }: PortalListProps) {
+export default function PortalList({ onOpenSettings, onNavigateToApiKey, selectedPortalId, onPortalsChanged }: PortalListProps) {
   const [view, setView] = useState<View>({ type: 'list' });
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -460,6 +461,7 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
   const handleSave = () => {
     setView({ type: 'list' });
     loadPortals();
+    onPortalsChanged?.();
   };
 
   const handleCancel = () => {
@@ -470,6 +472,7 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
     try {
       await window.electronAPI.removePortal(portal.id);
       setPortals((prev) => prev.filter((p) => p.id !== portal.id));
+      onPortalsChanged?.();
     } catch {
       // Removal failed silently -- user can retry
     }
