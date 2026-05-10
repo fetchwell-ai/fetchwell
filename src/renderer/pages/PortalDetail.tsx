@@ -59,7 +59,7 @@ function SectionHeader({ children, className }: { children: React.ReactNode; cla
   );
 }
 
-// ── Credentials section with inline editing ─────────────────────────────────
+// ── Credentials section ─────────────────────────────────────────────────────
 
 function CredentialsSection({
   portalId,
@@ -70,7 +70,6 @@ function CredentialsSection({
   credentials: { username: string; password: string } | null;
   onSaved: (creds: { username: string; password: string }) => void;
 }) {
-  const [editing, setEditing] = useState(false);
   const [username, setUsername] = useState(credentials?.username ?? '');
   const [password, setPassword] = useState(credentials?.password ?? '');
   const [saving, setSaving] = useState(false);
@@ -88,7 +87,6 @@ function CredentialsSection({
     try {
       await window.electronAPI.updatePortal(portalId, { username, password });
       onSaved({ username, password });
-      setEditing(false);
     } catch {
       // silently fail — credentials manager handles errors
     } finally {
@@ -99,7 +97,6 @@ function CredentialsSection({
   const handleCancel = () => {
     setUsername(credentials?.username ?? '');
     setPassword(credentials?.password ?? '');
-    setEditing(false);
   };
 
   return (
@@ -113,10 +110,8 @@ function CredentialsSection({
             </label>
             <Input
               type="text"
-              readOnly={!editing}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className={editing ? '' : 'cursor-default'}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -125,30 +120,22 @@ function CredentialsSection({
             </label>
             <Input
               type="password"
-              readOnly={!editing}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={editing ? '' : 'cursor-default'}
             />
             <span className="text-[12px] text-[var(--color-fw-fg-muted)]">
               Stored in macOS Keychain — never sent to Anthropic.
             </span>
           </div>
         </div>
-        {editing ? (
-          <div className="flex gap-2">
-            <Button type="button" size="sm" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save'}
-            </Button>
-            <Button type="button" variant="secondary" size="sm" onClick={handleCancel} disabled={saving}>
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <Button type="button" variant="secondary" size="sm" onClick={() => setEditing(true)}>
-            Update credentials
+        <div className="flex gap-2">
+          <Button type="button" size="sm" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving...' : 'Save'}
           </Button>
-        )}
+          <Button type="button" variant="secondary" size="sm" onClick={handleCancel} disabled={saving}>
+            Cancel
+          </Button>
+        </div>
       </Card>
     </section>
   );
