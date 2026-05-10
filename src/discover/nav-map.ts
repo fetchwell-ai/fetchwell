@@ -4,6 +4,7 @@ import { OUTPUT_BASE } from "../extract/helpers.js";
 
 export interface NavMapSection {
   steps: string[];           // act() instructions to navigate to this section
+  url?: string;              // URL of the section page (for direct navigation on re-run)
   listInstruction?: string;  // observe() instruction to find items on the list page
   itemInstruction?: string;  // observe() instruction for drilling into individual items
 }
