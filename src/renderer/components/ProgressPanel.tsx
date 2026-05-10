@@ -50,14 +50,7 @@ const INITIAL_STRUCTURED_STATE: StructuredState = {
   categories: {},
 };
 
-const EXTRACTION_PHASES: ProgressPhase[] = ['login', 'extract'];
 const EXTRACTION_CATEGORIES: ProgressCategory[] = ['labs', 'visits', 'medications', 'messages'];
-
-const PHASE_LABELS: Record<ProgressPhase, string> = {
-  login: 'Sign in',
-  navigate: 'Navigate',
-  extract: 'Download',
-};
 
 const CATEGORY_LABELS: Record<ProgressCategory, string> = {
   labs: 'Lab results',
@@ -67,87 +60,6 @@ const CATEGORY_LABELS: Record<ProgressCategory, string> = {
 };
 
 // -- Sub-components --
-
-function StepIndicator({
-  phases,
-  activePhases,
-}: {
-  phases: Record<ProgressPhase, PhaseState>;
-  activePhases: ProgressPhase[];
-}) {
-  return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 0,
-      padding: '16px 24px 12px',
-      borderBottom: '1px solid var(--color-fw-border)',
-    }}>
-      {activePhases.map((phase, idx) => {
-        const state = phases[phase];
-        const isLast = idx === activePhases.length - 1;
-        return (
-          <React.Fragment key={phase}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <StepIcon status={state.status} />
-              <span style={{
-                fontSize: 13,
-                fontWeight: state.status === 'running' ? 600 : 500,
-                color: state.status === 'pending' ? 'var(--color-fw-fg-subtle)' :
-                       state.status === 'running' ? 'var(--color-fw-sage-700)' :
-                       state.status === 'complete' ? 'var(--color-fw-moss-600)' :
-                       'var(--color-fw-crimson-600)',
-              }}>
-                {PHASE_LABELS[phase]}
-              </span>
-            </div>
-            {!isLast && (
-              <div style={{
-                flex: 1,
-                height: 1,
-                background: state.status === 'complete' ? 'var(--color-fw-moss-600)' : 'var(--color-fw-border)',
-                margin: '0 8px',
-                minWidth: 20,
-              }} />
-            )}
-          </React.Fragment>
-        );
-      })}
-    </div>
-  );
-}
-
-function StepIcon({ status }: { status: PhaseStatus }) {
-  if (status === 'complete') {
-    return (
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        width: 18, height: 18, borderRadius: '50%',
-        background: 'var(--color-fw-moss-600)', color: '#fff', fontSize: 11, flexShrink: 0,
-      }}>&#10003;</span>
-    );
-  }
-  if (status === 'running') {
-    return <SpinnerIcon color="var(--color-fw-sage-700)" size={18} />;
-  }
-  if (status === 'error') {
-    return (
-      <span style={{
-        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        width: 18, height: 18, borderRadius: '50%',
-        background: 'var(--color-fw-crimson-600)', color: '#fff', fontSize: 11, flexShrink: 0,
-      }}>&#10005;</span>
-    );
-  }
-  // pending
-  return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-      width: 18, height: 18, borderRadius: '50%',
-      border: '2px solid var(--color-fw-border)', flexShrink: 0,
-    }} />
-  );
-}
 
 function SpinnerIcon({ color = 'var(--color-fw-sage-700)', size = 14 }: { color?: string; size?: number }) {
   return (
@@ -237,14 +149,14 @@ function OverallProgressBar({ structured }: { structured: StructuredState }) {
   return (
     <div style={{ padding: '8px 24px 4px' }}>
       <div style={{
-        height: 4,
-        borderRadius: 2,
+        height: 7,
+        borderRadius: 4,
         background: 'var(--color-fw-border)',
         overflow: 'hidden',
       }}>
         <div style={{
           height: '100%',
-          borderRadius: 2,
+          borderRadius: 4,
           background: 'var(--color-fw-sage-700)',
           width: `${pct}%`,
           transition: 'width 0.4s ease',
@@ -268,7 +180,6 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
 
   const title = 'Fetching your records...';
   const completedTitle = 'Records fetched';
-  const activePhases = EXTRACTION_PHASES;
 
   // Auto-scroll raw log to bottom on new messages
   useEffect(() => {
@@ -414,9 +325,6 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
 
         {/* Structured progress body — always shown; phases start as "pending" */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-            {/* Step indicator */}
-            <StepIndicator phases={structured.phases} activePhases={activePhases} />
-
             {/* Progress bar */}
             <OverallProgressBar structured={structured} />
 
