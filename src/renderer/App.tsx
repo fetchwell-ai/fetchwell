@@ -17,6 +17,8 @@ export default function App() {
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   // Increment this key to force PortalList to re-mount (refreshes its own portal data)
   const [portalListKey, setPortalListKey] = useState(0);
+  // When true, the next PortalList mount will open in add form mode
+  const [openAddPortal, setOpenAddPortal] = useState(false);
   const [downloadFolder, setDownloadFolder] = useState<string>('~/Documents/HealthRecords');
 
   // Track whether we're showing the portal list view vs a portal detail or settings view
@@ -69,6 +71,13 @@ export default function App() {
     prevIsPortalsView.current = isPortalsView;
   }, [rootPage, isPortalsView, loadPortals]);
 
+  // Reset the add-form flag after PortalList has mounted with it (one render cycle later)
+  useEffect(() => {
+    if (openAddPortal) {
+      setOpenAddPortal(false);
+    }
+  }, [portalListKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleNavigateToApiKey = () => {
     setActivePortalId(null);
     setActiveSettingsKey('key');
@@ -91,9 +100,10 @@ export default function App() {
   };
 
   const handleAddPortal = () => {
-    // Clear active selections and navigate to portals list where Add is available
+    // Clear active selections and remount PortalList in add form mode
     setActiveSettingsKey(null);
     setActivePortalId(null);
+    setOpenAddPortal(true);
     setPortalListKey((k) => k + 1);
   };
 
@@ -138,6 +148,7 @@ export default function App() {
                 onNavigateToApiKey={handleNavigateToApiKey}
                 selectedPortalId={activePortalId}
                 onPortalsChanged={loadPortals}
+                initialView={openAddPortal ? 'add' : 'list'}
               />
             </MotionPage>
           )}
