@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import {
   AlertTriangle,
   Clock,
@@ -18,6 +18,7 @@ import { cn } from '../lib/utils';
 
 interface PortalListProps {
   onOpenSettings: () => void;
+  onNavigateToApiKey: () => void;
   selectedPortalId?: string | null;
 }
 
@@ -233,7 +234,6 @@ interface PortalCardProps {
 
 function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isSelected, downloadFolder }: PortalCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const shouldReduce = useReducedMotion();
 
   useEffect(() => {
     if (isSelected && cardRef.current) {
@@ -264,10 +264,6 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
   const handleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
     onEdit(portal);
-  };
-
-  const handleCardClick = () => {
-    // Placeholder for portal detail navigation (wired in task 6)
   };
 
   const portalState = derivePortalState(portal);
@@ -317,12 +313,7 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
   }
 
   return (
-    <motion.div
-      whileHover={shouldReduce ? undefined : { y: -1, boxShadow: 'var(--shadow-fw-2)' }}
-      transition={shouldReduce ? undefined : { type: 'spring', stiffness: 400, damping: 30 }}
-      onClick={handleCardClick}
-      style={{ cursor: 'default' }}
-    >
+    <div>
       <Card
         ref={cardRef}
         className={cn(
@@ -402,13 +393,13 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
           </Button>
         </div>
       </Card>
-    </motion.div>
+    </div>
   );
 }
 
 const QUICKSTART_DISMISSED_KEY = 'quickstartDismissed';
 
-export default function PortalList({ onOpenSettings, selectedPortalId }: PortalListProps) {
+export default function PortalList({ onOpenSettings, onNavigateToApiKey, selectedPortalId }: PortalListProps) {
   const [view, setView] = useState<View>({ type: 'list' });
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -538,6 +529,17 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
       {!loading && !quickstartDismissed && (
         <QuickStart
           steps={deriveQuickStartSteps(portals, apiKeyConfigured)}
+          onStepClick={(key) => {
+            if (key === 'api-key') {
+              onNavigateToApiKey();
+            } else if (key === 'portal') {
+              setView({ type: 'add' });
+            } else if (key === 'extract') {
+              if (portals.length > 0) {
+                handleExtract(portals[0].id);
+              }
+            }
+          }}
           onDismiss={() => {
             setQuickstartDismissed(true);
             localStorage.setItem(QUICKSTART_DISMISSED_KEY, 'true');
