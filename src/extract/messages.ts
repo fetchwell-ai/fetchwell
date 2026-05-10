@@ -28,7 +28,7 @@ export async function probeMessages(browser: BrowserProvider, portalUrl: string,
     'It may be labeled "Messages", "Inbox", or "MyChart Messages".';
   const defaultObserve = "Find all clickable message threads or conversations on this page. " +
     "Each entry is a row with a subject line, sender, and date. Return each one separately.";
-  const { listInstruction } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct });
+  const { listInstruction } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct }, portalUrl);
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "messages");
@@ -75,7 +75,11 @@ export async function extractMessages(browser: BrowserProvider, portalUrl: strin
     'It may be labeled "Messages", "Inbox", or "MyChart Messages".';
   const defaultObserve = "Find all clickable message threads or conversations on this page. " +
     "Each entry is a row with a subject line, sender, and date. Return each one separately.";
-  const { listInstruction } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct });
+  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct }, portalUrl);
+  if (navigationFailed) {
+    console.log("   Messages: navigation failed — skipping section.");
+    return 0;
+  }
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "messages");

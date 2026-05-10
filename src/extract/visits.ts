@@ -30,7 +30,7 @@ export async function probeVisits(browser: BrowserProvider, portalUrl: string, p
     "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
     "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +
     "Return each link separately.";
-  const { listInstruction } = await navigateToSection(browser, providerId, "visits", { act: fallbackAct });
+  const { listInstruction } = await navigateToSection(browser, providerId, "visits", { act: fallbackAct }, portalUrl);
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "visits");
@@ -82,7 +82,11 @@ export async function extractVisits(browser: BrowserProvider, portalUrl: string,
     "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
     "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +
     "Return each link separately.";
-  const { listInstruction } = await navigateToSection(browser, providerId, "visits", { act: fallbackAct });
+  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "visits", { act: fallbackAct }, portalUrl);
+  if (navigationFailed) {
+    console.log("   Visits: navigation failed — skipping section.");
+    return 0;
+  }
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "visits");
