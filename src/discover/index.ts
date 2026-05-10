@@ -21,45 +21,18 @@ type ProgressEmitter = (event: StructuredProgressEvent) => void;
 // ---------------------------------------------------------------------------
 
 const SECTION_KEYWORDS: Record<string, string[]> = {
-  labs: ["test results", "labs", "lab results", "laboratory", "imaging", "radiology", "diagnostics", "pathology", "procedures", "reports", "surgical", "operative"],
+  labs: ["test results", "labs", "lab results", "results", "laboratory", "imaging", "radiology", "diagnostics", "pathology"],
   visits: [
     "visits", "appointments", "past visits", "after visit summary", "after-visit summary",
-    "office visits", "encounter", "encounters", "avs", "visit summaries", "visit summary",
+    "office visits", "encounter", "avs", "visit summaries", "visit summary",
     "care plan", "care summary", "clinical notes", "clinical summary",
     "upcoming appointments", "past appointments",
   ],
   medications: ["medications", "medicines", "prescriptions", "medication list", "pharmacy", "drugs", "rx", "current medications", "active medications"],
-  messages: ["messages", "inbox", "message center", "messaging", "secure messages", "conversations"],
+  messages: ["messages", "inbox", "message center", "messaging", "secure messages", "compose", "conversations"],
 };
 
-export type SectionKey = "labs" | "visits" | "medications" | "messages";
-
-/** Skip patterns for nav elements that are clearly not health-record sections. */
-export const SKIP_PATTERNS = [
-  // Account / session
-  "log out", "logout", "sign out", "signout",
-  "home", "dashboard",
-  "profile", "account", "settings", "preferences",
-  "help", "support", "contact",
-  "billing", "payment", "insurance",
-  "proxy", "family", "dependents",
-  "share access", "personalize", "security", "verification",
-  // Public hospital website navigation (NOT the patient portal)
-  "doctors", "providers", "clinics", "locations",
-  "conditions", "treatments", "patients & visitors",
-  "about us", "careers", "newsroom", "nursing",
-  "clinical trials", "sustainability", "quality",
-  "allied health", "healthcare professionals",
-  "referring physician", "get a second opinion",
-  "covid", "resource center", "donation",
-  "price transparency", "financial assistance",
-  "surprise medical bill", "stanford health care now",
-  "hospital check-in",
-  "facilities", "services planning",
-  "search", "footer",
-  // Portal non-record sections
-  "notifications", "alerts",
-];
+type SectionKey = "labs" | "visits" | "medications" | "messages";
 
 /**
  * Match a page description (from observe()) against our known extraction targets.
@@ -68,7 +41,7 @@ export const SKIP_PATTERNS = [
  * Uses word-boundary matching to avoid false positives like "welcome message"
  * matching the "messages" section. Also skips dashboard/home pages.
  */
-export function matchSection(description: string): SectionKey | null {
+function matchSection(description: string): SectionKey | null {
   const lower = description.toLowerCase();
 
   // Dashboard/home pages should never match a section
@@ -88,7 +61,6 @@ export function matchSection(description: string): SectionKey | null {
     "find a doctor", "find a clinic",
     "second opinion", "clinical trial",
     "price transparency", "financial assistance",
-    "schedule an appointment", "make an appointment", "book an appointment",
   ];
   if (rejectIndicators.some((r) => lower.includes(r))) {
     return null;
@@ -213,12 +185,12 @@ export async function discoverPortal(
   // not the public hospital website navigation (Doctors & Providers, etc.).
   console.log("Discovery: observing patient portal navigation elements...");
   const navElements = await browser.observe(
-    "This is a patient health portal (such as MyChart, MyHealth, FollowMyHealth, " +
-    "Cerner, or Athena). Find all navigation elements within the patient portal " +
-    "that lead to health record sections — for example: Messages, Visits, " +
-    "Appointments, Test Results, Medications, My Medical Record, Procedures, " +
-    "or Billing. These may appear anywhere on the page (tab bars, sidebars, " +
-    "dropdown menus, card links, etc.). " +
+    "This is a patient health portal (like MyChart or MyHealth). " +
+    "Look for the PATIENT PORTAL navigation bar or tabs — these are links " +
+    "that lead to health record sections like 'Messages', 'Visits', 'Appointments', " +
+    "'My Medical Record', 'Test Results', 'Medications', 'Procedures', 'Billing'. " +
+    "They are typically in a horizontal tab bar below the hospital logo, or in a " +
+    "sidebar/hamburger menu within the patient portal. " +
     "Do NOT include public hospital website navigation (like 'Doctors & Providers', " +
     "'Clinics & Locations', 'Conditions & Treatments', 'Patients & Visitors', " +
     "'About Us', 'Careers', 'Clinical Trials', etc.). " +
@@ -247,7 +219,33 @@ export async function discoverPortal(
   for (const navEl of navElements) {
     // Skip nav elements that are clearly not health-record sections
     const lowerDesc = navEl.description.toLowerCase();
-    if (SKIP_PATTERNS.some((p) => lowerDesc.includes(p))) {
+    const skipPatterns = [
+      // Account / session
+      "log out", "logout", "sign out", "signout",
+      "home", "dashboard",
+      "profile", "account", "settings", "preferences",
+      "help", "support", "contact",
+      "billing", "payment", "insurance",
+      "proxy", "family", "dependents",
+      "share access", "personalize", "security", "verification",
+      // Public hospital website navigation (NOT the patient portal)
+      "doctors", "providers", "clinics", "locations",
+      "conditions", "treatments", "patients & visitors",
+      "about us", "careers", "newsroom", "nursing",
+      "clinical trials", "sustainability", "quality",
+      "allied health", "healthcare professionals",
+      "referring physician", "get a second opinion",
+      "covid", "resource center", "donation",
+      "price transparency", "financial assistance",
+      "surprise medical bill", "stanford health care now",
+      "medical records", "hospital check-in",
+      "facilities", "services planning",
+      "search", "footer",
+      // Portal non-record sections
+      "procedures",
+      "notifications", "alerts",
+    ];
+    if (skipPatterns.some((p) => lowerDesc.includes(p))) {
       console.log(`Discovery: skipping "${navEl.description}" (not a health record section)`);
       continue;
     }
@@ -281,7 +279,6 @@ export async function discoverPortal(
       "- TEST RESULTS / LABS: a list of lab test results, blood work, imaging results, pathology reports\n" +
       "- VISITS / APPOINTMENTS: a list of past doctor visits, office visits, appointments, after-visit summaries\n" +
       "- MEDICATIONS: a list of current prescriptions, medicines, medication refills\n" +
-      "- PROCEDURES / IMAGING: a list of procedures, imaging studies, radiology results, X-rays, MRIs, CT scans, surgical records, or operative reports\n" +
       "- MESSAGES / INBOX: a list of secure message threads or conversations with healthcare providers\n" +
       "- OTHER: anything else (settings, profile, billing, scheduling a video visit, informational pages, etc.)\n" +
       "Describe only what the main content area shows. " +
@@ -359,6 +356,7 @@ export async function discoverPortal(
       const subLowerDesc = subItem.description.toLowerCase();
       const skipSubNavPatterns = [
         "video visit", "schedule a visit", "book a visit",
+        "e-visit", "evisit",
         "covid", "resource center",
         "find a doctor", "find a clinic",
       ];
@@ -581,7 +579,7 @@ function findRelevantSubTab(
 ): ObserveResult | null {
   const relevanceKeywords: Record<SectionKey, string[]> = {
     labs: ["results", "completed", "past results", "all results", "all test", "lab results", "test results"],
-    visits: ["past", "notes", "avs", "documents", "summary", "after visit", "completed", "visit summaries", "visit summary", "care summary", "history", "previous", "previous visits"],
+    visits: ["past", "notes", "avs", "documents", "summary", "after visit", "completed", "visit summaries", "visit summary", "care summary"],
     medications: ["current medications", "active prescriptions", "current meds", "medications", "medicines"],
     messages: ["inbox", "received", "all messages", "sent", "conversations"],
   };
