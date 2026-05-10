@@ -11,6 +11,10 @@ export interface PortalEntry {
   hasCredentials: boolean;
   discoveredAt: string | null;
   lastExtractedAt: string | null;
+  labCount?: number;
+  visitCount?: number;
+  medicationCount?: number;
+  messageCount?: number;
 }
 
 export type ThemePreference = 'system' | 'light' | 'dark';

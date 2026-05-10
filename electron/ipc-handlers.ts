@@ -1,7 +1,7 @@
 import { ipcMain, safeStorage, app, BrowserWindow, dialog, shell } from 'electron';
 import { ConfigManager, PortalEntry, ThemePreference } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
-import { runExtraction, cancelOperation } from './pipeline-bridge';
+import { runExtraction, cancelOperation, CategoryCounts } from './pipeline-bridge';
 
 /** Input shape for adding/updating a portal (id is derived from name). */
 interface PortalInput {
@@ -136,7 +136,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     if (!creds) throw new Error(`No credentials stored for portal: ${portalId}`);
 
     try {
-      await runExtraction(portalId, win, {
+      const counts: CategoryCounts = await runExtraction(portalId, win, {
         apiKey,
         credentials: creds,
         portalUrl: portal.url,
@@ -148,7 +148,13 @@ export function registerIpcHandlers(userDataPath?: string): void {
         loginForm: portal.loginForm,
         twoFactor: portal.twoFactor,
       });
-      configManager!.updatePortal(portalId, { lastExtractedAt: new Date().toISOString() });
+      configManager!.updatePortal(portalId, {
+        lastExtractedAt: new Date().toISOString(),
+        labCount: counts.labCount,
+        visitCount: counts.visitCount,
+        medicationCount: counts.medicationCount,
+        messageCount: counts.messageCount,
+      });
     } catch {
       // Error already sent to renderer via IPC event
     }
