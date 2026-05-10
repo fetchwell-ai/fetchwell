@@ -23,7 +23,7 @@ const PORTAL_CONTEXT =
   "sidebars, or card links. Do NOT click public hospital website navigation (Doctors, Clinics, About Us, etc.).";
 
 // Two act() instructions per section: primary attempt, then hamburger-menu fallback.
-const SECTION_INSTRUCTIONS: Record<SectionKey, [string, string]> = {
+export const SECTION_INSTRUCTIONS: Record<SectionKey, [string, string]> = {
   labs: [
     `Find and navigate to the test results or lab results page ${PORTAL_CONTEXT} ` +
     "It may be called Test Results, Lab Results, Results, My Medical Record, Diagnostics, Pathology, Imaging, or Radiology.",
@@ -47,7 +47,7 @@ const SECTION_INSTRUCTIONS: Record<SectionKey, [string, string]> = {
 };
 
 const NOT_THESE = "Answer false if this is a dashboard, home page, settings page, or any other section.";
-const VERIFY_INSTRUCTIONS: Record<SectionKey, string> = {
+export const VERIFY_INSTRUCTIONS: Record<SectionKey, string> = {
   labs: `Is this page showing a list of lab results or test results? It should display individual lab panels, blood work, imaging results, or diagnostic reports. ${NOT_THESE}`,
   visits: `Is this page showing a list of past visits, appointments, or after-visit summaries? It should display individual visit or appointment records. ${NOT_THESE} A page about scheduling or explaining video visits is NOT correct.`,
   medications: `Is this page showing a list of medications, prescriptions, or medicines? It should display current medications or a medication list. ${NOT_THESE}`,

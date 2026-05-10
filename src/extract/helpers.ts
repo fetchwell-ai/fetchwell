@@ -1,8 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { z } from "zod";
 import { PDFDocument } from "pdf-lib";
 import { type BrowserProvider } from "../browser/interface.js";
-import { loadNavMap } from "../discover/nav-map.js";
+import { loadNavMap, saveNavMap } from "../discover/nav-map.js";
+import { SECTION_INSTRUCTIONS, VERIFY_INSTRUCTIONS } from "../discover/index.js";
 
 /** Default base output directory (parent of all provider-scoped dirs). */
 export const OUTPUT_BASE = path.resolve(import.meta.dirname, "..", "..", "output");
@@ -197,33 +199,167 @@ ${body}
 
 type SectionName = "labs" | "visits" | "medications" | "messages";
 
+/** Zod schema for page verification during resilient section navigation. */
+const VerifySchema = z.object({ isCorrectPage: z.boolean(), description: z.string() });
+
 /**
- * Navigate to a section using nav-map steps if available, otherwise fall back
- * to the hardcoded act() instruction.
+ * Verify that the browser is currently on the expected section page.
+ * Uses browser.extract() with the same instructions as the discovery engine.
+ */
+async function verifySectionPage(
+  browser: BrowserProvider,
+  section: SectionName,
+): Promise<boolean> {
+  try {
+    const result = await browser.extract(VerifySchema, VERIFY_INSTRUCTIONS[section]);
+    console.log(`   Page verification: ${result.isCorrectPage} — ${result.description.slice(0, 100)}`);
+    return result.isCorrectPage;
+  } catch (err: any) {
+    console.log(`   Page verification failed (extract error): ${err?.message?.slice(0, 80)}`);
+    return false;
+  }
+}
+
+/**
+ * Navigate to a section using a three-tier resilient strategy:
  *
- * Returns { listInstruction } from the nav-map if present, so callers can use
- * it for observe() instead of their hardcoded observe instruction.
+ * 1. Try the cached URL from the nav-map (fast path, skips act() calls).
+ *    Verify with browser.extract() that the page is correct.
+ * 2. If URL is stale/missing: replay the nav-map steps (act() instructions).
+ *    Verify again.
+ * 3. If steps also fail: do a fresh agentic search from homeUrl using the
+ *    same SECTION_INSTRUCTIONS as the discovery engine.
+ *    On success, update the nav-map with the new URL/steps for next time.
+ * 4. If all three approaches fail: log a clear error and return
+ *    { listInstruction: undefined, navigationFailed: true } — caller skips the section.
+ *
+ * Returns { listInstruction?, navigationFailed? } from the nav-map if present.
  */
 export async function navigateToSection(
   browser: BrowserProvider,
   providerId: string | undefined,
   section: SectionName,
   fallback: { act: string; observe?: string },
-): Promise<{ listInstruction?: string }> {
-  const navMap = providerId ? loadNavMap(providerId) : null;
+  homeUrl?: string,
+  basePath?: string,
+): Promise<{ listInstruction?: string; navigationFailed?: boolean }> {
+  const navMap = providerId ? loadNavMap(providerId, basePath) : null;
   const entry = navMap?.sections?.[section];
 
-  if (entry && entry.steps.length > 0) {
-    console.log(`   Using nav-map for ${section} navigation (${entry.steps.length} step(s))`);
-    for (const step of entry.steps) {
-      await browser.act(step);
+  // ── Tier 1: Try cached URL ──────────────────────────────────────────────
+  if (entry?.url) {
+    console.log(`   [nav] ${section}: trying cached URL ${entry.url}`);
+    try {
+      await browser.navigate(entry.url);
+      await new Promise((r) => setTimeout(r, 2000));
+      const isCorrect = await verifySectionPage(browser, section);
+      if (isCorrect) {
+        console.log(`   [nav] ${section}: cached URL valid`);
+        return { listInstruction: entry.listInstruction };
+      }
+      console.log(`   [nav] ${section}: cached URL stale, falling back to nav-map steps`);
+    } catch (err: any) {
+      console.log(`   [nav] ${section}: cached URL navigation error: ${err?.message?.slice(0, 80)}`);
     }
-    return { listInstruction: entry.listInstruction };
   }
 
-  // No nav-map or no entry for this section — use hardcoded fallback
-  await browser.act(fallback.act);
-  return {};
+  // ── Tier 2: Replay nav-map steps ────────────────────────────────────────
+  if (entry && entry.steps.length > 0) {
+    console.log(`   [nav] ${section}: replaying ${entry.steps.length} nav-map step(s)`);
+    try {
+      // Navigate home before replaying steps so we start from a known state
+      if (homeUrl) {
+        await browser.navigate(homeUrl);
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      for (const step of entry.steps) {
+        await browser.act(step);
+      }
+      await new Promise((r) => setTimeout(r, 2000));
+      const isCorrect = await verifySectionPage(browser, section);
+      if (isCorrect) {
+        // Steps worked — update the URL in the nav-map so the fast path works next time
+        const newUrl = await browser.url();
+        console.log(`   [nav] ${section}: steps succeeded, updating nav-map URL to ${newUrl}`);
+        if (providerId && navMap) {
+          const updatedNavMap = {
+            ...navMap,
+            sections: {
+              ...navMap.sections,
+              [section]: { ...entry, url: newUrl },
+            },
+          };
+          try { saveNavMap(updatedNavMap, providerId, basePath); } catch { /* non-fatal */ }
+        }
+        return { listInstruction: entry.listInstruction };
+      }
+      console.log(`   [nav] ${section}: steps did not reach the correct page, trying agentic search`);
+    } catch (err: any) {
+      console.log(`   [nav] ${section}: steps replay error: ${err?.message?.slice(0, 80)}`);
+    }
+  } else if (!entry) {
+    // No nav-map entry at all — fall through to agentic search or hardcoded fallback
+    console.log(`   [nav] ${section}: no nav-map entry, trying agentic search`);
+  }
+
+  // ── Tier 3: Agentic search from home ────────────────────────────────────
+  const searchHomeUrl = homeUrl;
+  if (searchHomeUrl) {
+    console.log(`   [nav] ${section}: starting agentic search from ${searchHomeUrl}`);
+    const instructions = SECTION_INSTRUCTIONS[section];
+    for (let attempt = 0; attempt < instructions.length; attempt++) {
+      const actInstruction = instructions[attempt];
+      try {
+        await browser.navigate(searchHomeUrl);
+        await new Promise((r) => setTimeout(r, 2000));
+        await browser.act(actInstruction);
+        await new Promise((r) => setTimeout(r, 3000));
+        const isCorrect = await verifySectionPage(browser, section);
+        if (isCorrect) {
+          const newUrl = await browser.url();
+          console.log(`   [nav] ${section}: agentic search found section at ${newUrl}`);
+          // Update nav-map with new URL and instruction
+          if (providerId && navMap) {
+            const existingEntry = navMap.sections?.[section];
+            const updatedNavMap = {
+              ...navMap,
+              sections: {
+                ...navMap.sections,
+                [section]: {
+                  ...(existingEntry ?? {}),
+                  steps: [actInstruction],
+                  url: newUrl,
+                  listInstruction: existingEntry?.listInstruction,
+                  itemInstruction: existingEntry?.itemInstruction,
+                },
+              },
+            };
+            try {
+              saveNavMap(updatedNavMap, providerId, basePath);
+              console.log(`   [nav] ${section}: nav-map updated with new URL`);
+            } catch { /* non-fatal */ }
+          }
+          return { listInstruction: entry?.listInstruction };
+        }
+      } catch (err: any) {
+        console.log(`   [nav] ${section}: agentic attempt ${attempt + 1} error: ${err?.message?.slice(0, 80)}`);
+      }
+    }
+    console.log(`   [nav] ${section}: agentic search exhausted all attempts`);
+  } else {
+    // No homeUrl available — try the hardcoded fallback act() as a last resort
+    console.log(`   [nav] ${section}: no homeUrl for agentic search, trying hardcoded fallback`);
+    try {
+      await browser.act(fallback.act);
+      return {};
+    } catch (err: any) {
+      console.log(`   [nav] ${section}: hardcoded fallback error: ${err?.message?.slice(0, 80)}`);
+    }
+  }
+
+  // ── All tiers failed ────────────────────────────────────────────────────
+  console.error(`   [nav] ERROR: Could not navigate to ${section} — all strategies exhausted. Skipping section.`);
+  return { navigationFailed: true };
 }
 
 // ---------------------------------------------------------------------------

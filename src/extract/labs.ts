@@ -29,7 +29,7 @@ export async function probeLabsDocs(browser: BrowserProvider, portalUrl: string,
   const defaultObserve = "Find all clickable lab result or test result entries on this page. " +
     "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
     "Return each one as a separate result.";
-  const { listInstruction } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct });
+  const { listInstruction } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct }, portalUrl);
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "labs");
@@ -85,7 +85,11 @@ export async function extractLabsDocs(browser: BrowserProvider, portalUrl: strin
   const defaultObserve = "Find all clickable lab result or test result entries on this page. " +
     "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
     "Return each one as a separate result.";
-  const { listInstruction } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct });
+  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct }, portalUrl);
+  if (navigationFailed) {
+    console.log("   Labs: navigation failed — skipping section.");
+    return 0;
+  }
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "labs");
