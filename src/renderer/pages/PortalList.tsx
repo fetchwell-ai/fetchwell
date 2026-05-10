@@ -24,6 +24,7 @@ interface PortalListProps {
   onNavigateToApiKey: () => void;
   selectedPortalId?: string | null;
   onPortalsChanged?: () => void;
+  initialView?: 'list' | 'add';
 }
 
 type View =
@@ -439,8 +440,8 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
 
 const QUICKSTART_DISMISSED_KEY = 'quickstartDismissed';
 
-export default function PortalList({ onOpenSettings, onNavigateToApiKey, selectedPortalId, onPortalsChanged }: PortalListProps) {
-  const [view, setView] = useState<View>({ type: 'list' });
+export default function PortalList({ onOpenSettings, onNavigateToApiKey, selectedPortalId, onPortalsChanged, initialView }: PortalListProps) {
+  const [view, setView] = useState<View>(initialView === 'add' ? { type: 'add' } : { type: 'list' });
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
