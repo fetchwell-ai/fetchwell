@@ -384,7 +384,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
           <div className="grid grid-cols-4 gap-3 mb-3">
             <RecordTile
               icon={<Activity size={16} />}
-              count={0}
+              count={portal.labCount ?? 0}
               label="Lab results"
               accentColor="var(--color-fw-moss-600)"
               iconBg="var(--color-fw-moss-100)"
@@ -392,7 +392,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
             />
             <RecordTile
               icon={<FileText size={16} />}
-              count={0}
+              count={portal.visitCount ?? 0}
               label="Visit notes"
               accentColor="var(--color-fw-sage-700)"
               iconBg="var(--color-fw-sage-100)"
@@ -400,7 +400,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
             />
             <RecordTile
               icon={<Pill size={16} />}
-              count={0}
+              count={portal.medicationCount ?? 0}
               label="Medications"
               accentColor="var(--color-fw-ochre-600)"
               iconBg="var(--color-fw-ochre-100)"
@@ -408,7 +408,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
             />
             <RecordTile
               icon={<MessageSquare size={16} />}
-              count={0}
+              count={portal.messageCount ?? 0}
               label="Messages"
               accentColor="var(--color-fw-ink-400)"
               iconBg="var(--color-fw-bg-deep)"

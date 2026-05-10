@@ -7,6 +7,10 @@ interface PortalEntry {
   hasCredentials: boolean;
   discoveredAt: string | null;
   lastExtractedAt: string | null;
+  labCount?: number;
+  visitCount?: number;
+  medicationCount?: number;
+  messageCount?: number;
 }
 
 interface PortalInput {

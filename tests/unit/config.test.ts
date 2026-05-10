@@ -79,6 +79,50 @@ describe('ConfigManager', () => {
     });
   });
 
+  describe('record counts', () => {
+    it('persists count fields after updatePortal', () => {
+      manager.addPortal({ name: 'Count Portal', url: 'https://c.com', loginForm: 'two-step', twoFactor: 'none' });
+      const updated = manager.updatePortal('count-portal', {
+        lastExtractedAt: new Date().toISOString(),
+        labCount: 3,
+        visitCount: 16,
+        medicationCount: 1,
+        messageCount: 17,
+      });
+      expect(updated.labCount).toBe(3);
+      expect(updated.visitCount).toBe(16);
+      expect(updated.medicationCount).toBe(1);
+      expect(updated.messageCount).toBe(17);
+    });
+
+    it('count fields round-trip through disk', () => {
+      manager.addPortal({ name: 'Count Portal', url: 'https://c.com', loginForm: 'two-step', twoFactor: 'none' });
+      manager.updatePortal('count-portal', {
+        lastExtractedAt: new Date().toISOString(),
+        labCount: 5,
+        visitCount: 10,
+        medicationCount: 2,
+        messageCount: 8,
+      });
+
+      const manager2 = new ConfigManager(tmpDir);
+      const portal = manager2.getPortal('count-portal');
+      expect(portal?.labCount).toBe(5);
+      expect(portal?.visitCount).toBe(10);
+      expect(portal?.medicationCount).toBe(2);
+      expect(portal?.messageCount).toBe(8);
+    });
+
+    it('counts default to undefined for portals that have never been extracted', () => {
+      manager.addPortal({ name: 'New Portal', url: 'https://n.com', loginForm: 'two-step', twoFactor: 'none' });
+      const portal = manager.getPortal('new-portal');
+      expect(portal?.labCount).toBeUndefined();
+      expect(portal?.visitCount).toBeUndefined();
+      expect(portal?.medicationCount).toBeUndefined();
+      expect(portal?.messageCount).toBeUndefined();
+    });
+  });
+
   describe('removePortal', () => {
     it('removes a portal by id', () => {
       manager.addPortal({ name: 'Remove Me', url: 'https://a.com', loginForm: 'two-step', twoFactor: 'none' });

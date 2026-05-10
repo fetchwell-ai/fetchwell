@@ -40,6 +40,13 @@ export interface RunConfig {
   twoFactor: 'none' | 'email' | 'manual' | 'ui';
 }
 
+export interface CategoryCounts {
+  labCount: number;
+  visitCount: number;
+  medicationCount: number;
+  messageCount: number;
+}
+
 // ---------------------------------------------------------------------------
 // Internal types (IPC messages)
 // ---------------------------------------------------------------------------
@@ -145,7 +152,7 @@ function runSubprocess(
   win: BrowserWindow,
   config: RunConfig,
   logChannel: string,
-): Promise<void> {
+): Promise<CategoryCounts> {
   return new Promise((resolve, reject) => {
     if (activeRuns.has(config.portalId)) {
       reject(new Error(`A pipeline operation is already running for portal: ${config.portalId}`));
@@ -153,6 +160,14 @@ function runSubprocess(
     }
     activeRuns.add(config.portalId);
     ensureTwoFaHandler();
+
+    // Accumulate category-complete counts during extraction
+    const counts: CategoryCounts = {
+      labCount: 0,
+      visitCount: 0,
+      medicationCount: 0,
+      messageCount: 0,
+    };
 
     // Path to the runner script, resolved relative to this file
     const runnerScript = path.join(__dirname, '..', 'src', 'electron-runner.ts');
@@ -218,6 +233,16 @@ function runSubprocess(
         return;
       }
 
+      // Accumulate category-complete counts
+      if (message && message.type === 'category-complete') {
+        const cat = (message as { type: 'category-complete'; category: string; count: number }).category;
+        const count = (message as { type: 'category-complete'; category: string; count: number }).count;
+        if (cat === 'labs') counts.labCount = count;
+        else if (cat === 'visits') counts.visitCount = count;
+        else if (cat === 'medications') counts.medicationCount = count;
+        else if (cat === 'messages') counts.messageCount = count;
+      }
+
       // Forward structured progress events to the renderer
       if (
         message &&
@@ -258,7 +283,7 @@ function runSubprocess(
       pendingOtpResolvers.delete(config.portalId);
 
       if (code === 0) {
-        resolve();
+        resolve(counts);
       } else {
         reject(new Error(`Pipeline process exited with code ${code}`));
       }
@@ -283,14 +308,16 @@ function runSubprocess(
 /**
  * Run the extraction pipeline for a portal.
  * Emits extraction:log, extraction:complete, or extraction:error to the window.
+ * Resolves with accumulated CategoryCounts on success.
  * Rejects on error so callers can distinguish success from failure.
  */
-export async function runExtraction(portalId: string, win: BrowserWindow, config: RunConfig): Promise<void> {
+export async function runExtraction(portalId: string, win: BrowserWindow, config: RunConfig): Promise<CategoryCounts> {
   try {
-    await runSubprocess('extract', win, { ...config, portalId }, 'extraction:log');
+    const counts = await runSubprocess('extract', win, { ...config, portalId }, 'extraction:log');
     if (!win.isDestroyed()) {
       win.webContents.send('extraction:complete', { portalId });
     }
+    return counts;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const { category, suggestion } = categorizeError(message);
@@ -337,3 +364,4 @@ export async function runDiscovery(portalId: string, win: BrowserWindow, config:
     throw err;
   }
 }
+

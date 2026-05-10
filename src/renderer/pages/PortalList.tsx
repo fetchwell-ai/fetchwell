@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
+  Activity,
   AlertTriangle,
   Clock,
   Download,
   FileText,
   Folder,
+  MessageSquare,
+  Pill,
   Settings,
 } from 'lucide-react';
 import AddPortal from './AddPortal';
@@ -221,6 +224,37 @@ function MetaStrip({ portal, downloadFolder }: MetaStripProps) {
   );
 }
 
+// Compact inline record count badges (fetched state only)
+
+interface RecordCountBadgesProps {
+  portal: PortalEntry;
+}
+
+function RecordCountBadges({ portal }: RecordCountBadgesProps) {
+  const items: Array<{ icon: React.ReactNode; count: number; label: string }> = [
+    { icon: <Activity size={11} />, count: portal.labCount ?? 0, label: 'labs' },
+    { icon: <FileText size={11} />, count: portal.visitCount ?? 0, label: 'visits' },
+    { icon: <Pill size={11} />, count: portal.medicationCount ?? 0, label: 'meds' },
+    { icon: <MessageSquare size={11} />, count: portal.messageCount ?? 0, label: 'messages' },
+  ].filter((item) => item.count > 0);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {items.map((item) => (
+        <span
+          key={item.label}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[var(--color-fw-bg-deep)] text-[var(--color-fw-ink-700)]"
+        >
+          <span className="text-[var(--color-fw-fg-subtle)]">{item.icon}</span>
+          {item.count} {item.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // -- PortalCard --
 
 interface PortalCardProps {
@@ -344,8 +378,13 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
         </div>
 
         {/* Badge row */}
-        <div className="flex flex-wrap gap-2">
-          {badge}
+        <div className="flex flex-col gap-1.5">
+          <div className="flex flex-wrap gap-2">
+            {badge}
+          </div>
+          {portalState === 'fetched' && (
+            <RecordCountBadges portal={portal} />
+          )}
         </div>
 
         {/* Guidance strip (new / mapped / error states) */}
