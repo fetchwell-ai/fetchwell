@@ -413,13 +413,12 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
         </div>
 
         {/* Structured progress body — always shown; phases start as "pending" */}
-        {(
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             {/* Step indicator */}
             <StepIndicator phases={structured.phases} activePhases={activePhases} />
 
             {/* Progress bar */}
-            <OverallProgressBar structured={structured} operation={operation} />
+            <OverallProgressBar structured={structured} />
 
             {/* Current activity status message */}
             {panelState === 'running' && statusMessage && (
@@ -488,27 +487,6 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
               )}
             </div>
           </div>
-        ) : (
-          /* Fallback: raw log (shown while waiting for first structured event) */
-          <div
-            className="progress-panel-log flex-1 overflow-y-auto px-5 py-3.5 text-[13px] leading-[1.7] min-h-[220px] max-h-[400px]"
-            style={{
-              background: 'var(--color-fw-ink-900)',
-              fontFamily: 'var(--font-mono)',
-              fontFeatureSettings: '"MONO" 1, "CASL" 1',
-            }}
-          >
-            {logs.map((line, i) => (
-              <div key={i} className="progress-log-line whitespace-pre-wrap break-words" style={{ color: 'var(--color-fw-ink-300)' }}>
-                {line}
-              </div>
-            ))}
-            {panelState === 'running' && logs.length === 0 && (
-              <div className="progress-log-line progress-log-waiting italic" style={{ color: 'var(--color-fw-fg-muted)' }}>Starting...</div>
-            )}
-            <div ref={logEndRef} />
-          </div>
-        )}
 
         {/* Footer */}
         {panelState === 'complete' && (
