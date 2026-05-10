@@ -35,3 +35,5 @@ test-results/
 
 # electron-builder output
 release/
+*.bak
+CertificateSigningRequest.certSigningRequest
