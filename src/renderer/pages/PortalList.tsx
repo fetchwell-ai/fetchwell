@@ -225,14 +225,13 @@ interface PortalCardProps {
   portal: PortalEntry;
   onEdit: (portal: PortalEntry) => void;
   onRemove: (portal: PortalEntry) => void;
-  onMap: (portalId: string) => void;
   onExtract: (portalId: string) => void;
   runningOperation: RunningOperation | null;
   isSelected?: boolean;
   downloadFolder: string;
 }
 
-function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperation, isSelected, downloadFolder }: PortalCardProps) {
+function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isSelected, downloadFolder }: PortalCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const shouldReduce = useReducedMotion();
 
@@ -246,11 +245,6 @@ function PortalCard({ portal, onEdit, onRemove, onMap, onExtract, runningOperati
     runningOperation !== null && runningOperation.portalId === portal.id;
   const isAnotherRunning =
     runningOperation !== null && runningOperation.portalId !== portal.id;
-
-  const handleMap = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onMap(portal.id);
-  };
 
   const handleExtract = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -571,7 +565,6 @@ export default function PortalList({ onOpenSettings, selectedPortalId }: PortalL
               portal={portal}
               onEdit={(p) => setView({ type: 'edit', portal: p })}
               onRemove={handleRemove}
-              onMap={handleMap}
               onExtract={handleExtract}
               runningOperation={runningOperation}
               isSelected={portal.id === selectedPortalId}
