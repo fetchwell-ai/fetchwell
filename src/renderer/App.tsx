@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import Welcome from './pages/Welcome';
 import PortalList from './pages/PortalList';
 import PortalDetail from './pages/PortalDetail';
 import Settings from './pages/Settings';
@@ -9,10 +8,7 @@ import AppSkeleton from './components/AppSkeleton';
 import MotionPage from './components/MotionPage';
 
 export default function App() {
-  // null = still loading; 'welcome' = show wizard; otherwise show sidebar layout
-  const [rootPage, setRootPage] = useState<'loading' | 'welcome' | 'main'>(
-    'loading',
-  );
+  const [rootPage, setRootPage] = useState<'loading' | 'main'>('loading');
 
   // v2 nav model: only one of these can be non-null at a time
   const [activePortalId, setActivePortalId] = useState<string | null>(null);
@@ -50,13 +46,13 @@ export default function App() {
     window.electronAPI
       .getSettings()
       .then((settings) => {
-        setRootPage(settings.apiKeyConfigured ? 'main' : 'welcome');
+        setRootPage('main');
         if (settings.downloadFolder) {
           setDownloadFolder(settings.downloadFolder);
         }
       })
       .catch(() => {
-        setRootPage('welcome');
+        setRootPage('main');
       });
   }, []);
 
@@ -72,12 +68,13 @@ export default function App() {
     prevIsPortalsView.current = isPortalsView;
   }, [rootPage, isPortalsView, loadPortals]);
 
+  const handleNavigateToApiKey = () => {
+    setActivePortalId(null);
+    setActiveSettingsKey('key');
+  };
+
   if (rootPage === 'loading') {
     return <AppSkeleton />;
-  }
-
-  if (rootPage === 'welcome') {
-    return <Welcome onComplete={() => setRootPage('main')} />;
   }
 
   // ── Sidebar layout ────────────────────────────────────────────────────────
@@ -137,6 +134,7 @@ export default function App() {
               <PortalList
                 key={portalListKey}
                 onOpenSettings={() => handleSelectSettings('appearance')}
+                onNavigateToApiKey={handleNavigateToApiKey}
                 selectedPortalId={activePortalId}
               />
             </MotionPage>
