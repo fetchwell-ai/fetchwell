@@ -184,7 +184,7 @@ export async function extractProvider(
     emit({ type: 'status-message', phase: 'extract', message: 'Opening lab results...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'labs', current: 0, message: 'Extracting labs...' });
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    const labsCount = await extractLabsDocs(browser, homeUrl, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
+    const labsCount = await extractLabsDocs(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
     if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
     emit({ type: 'status-message', phase: 'extract', message: `Labs complete — ${labsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'labs', count: labsCount, status: 'complete' });
@@ -194,7 +194,7 @@ export async function extractProvider(
     emit({ type: 'status-message', phase: 'extract', message: 'Opening visits...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'visits', current: 0, message: 'Extracting visits...' });
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    const visitsCount = await extractVisits(browser, homeUrl, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
+    const visitsCount = await extractVisits(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
     if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
     emit({ type: 'status-message', phase: 'extract', message: `Visits complete — ${visitsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'visits', count: visitsCount, status: 'complete' });
@@ -203,7 +203,7 @@ export async function extractProvider(
     // Medications
     emit({ type: 'status-message', phase: 'extract', message: 'Opening medications...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'medications', current: 0, message: 'Extracting medications...' });
-    const medsCount = await extractMedications(browser, homeUrl, providerCredentials, outputDir, provider.id, incremental, provider.authenticatedSelectors, emitProgress);
+    const medsCount = await extractMedications(browser, portalUrl, providerCredentials, outputDir, provider.id, incremental, provider.authenticatedSelectors, emitProgress);
     if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
     emit({ type: 'status-message', phase: 'extract', message: `Medications complete — ${medsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'medications', count: medsCount, status: 'complete' });
@@ -213,7 +213,7 @@ export async function extractProvider(
     emit({ type: 'status-message', phase: 'extract', message: 'Opening messages...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'messages', current: 0, message: 'Extracting messages...' });
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    const msgsCount = await extractMessages(browser, homeUrl, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
+    const msgsCount = await extractMessages(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental, provider.authenticatedSelectors, emitProgress);
     if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
     emit({ type: 'status-message', phase: 'extract', message: `Messages complete — ${msgsCount} records fetched` });
     emit({ type: 'category-complete', phase: 'extract', category: 'messages', count: msgsCount, status: 'complete' });
