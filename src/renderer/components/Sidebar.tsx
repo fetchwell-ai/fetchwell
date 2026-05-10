@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Moon, Key, Folder, Shield, Info, Plus, ChevronRight } from 'lucide-react';
+import { Moon, Key, Folder, Shield, Info, Plus, ChevronRight, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 import fetchWellMarkSvg from '../assets/fetchwell-mark.svg?raw';
 
-export type SettingsKey = 'appearance' | 'key' | 'storage' | 'privacy' | 'about';
+export type SettingsKey = 'appearance' | 'key' | 'storage' | 'privacy' | 'about' | 'browser';
 
 interface SidebarProps {
   portals: PortalEntry[];
@@ -17,6 +17,7 @@ interface SidebarProps {
 const SETTINGS_ITEMS: { key: SettingsKey; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
   { key: 'appearance', label: 'Appearance',       Icon: Moon },
   { key: 'key',        label: 'Anthropic API key', Icon: Key },
+  { key: 'browser',    label: 'Browser',           Icon: Globe },
   { key: 'storage',    label: 'Storage location',  Icon: Folder },
   { key: 'privacy',    label: 'Privacy & data',    Icon: Shield },
   { key: 'about',      label: 'About Fetchwell',   Icon: Info },

@@ -263,7 +263,6 @@ function ApiKeyPage() {
 
 function StoragePage() {
   const [downloadFolder, setDownloadFolder] = useState('');
-  const [showBrowser, setShowBrowser] = useState(false);
   const [savedVisible, setSavedVisible] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -272,7 +271,6 @@ function StoragePage() {
       .getSettings()
       .then((settings) => {
         setDownloadFolder(settings.downloadFolder);
-        setShowBrowser(settings.showBrowser);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -289,15 +287,6 @@ function StoragePage() {
       setDownloadFolder(chosen);
       await window.electronAPI.updateSettings({ downloadFolder: chosen });
       showSaved();
-    }
-  };
-
-  const handleShowBrowserChange = async (checked: boolean) => {
-    setShowBrowser(checked);
-    try {
-      await window.electronAPI.updateSettings({ showBrowser: checked });
-    } catch {
-      // Best-effort — UI already updated
     }
   };
 
@@ -328,8 +317,43 @@ function StoragePage() {
           Each portal gets its own subfolder.
         </p>
       </Card>
+    </PageLayout>
+  );
+}
 
-      <Card className="mt-4 max-w-[560px] px-6 py-5">
+// ── (c2) Browser ──────────────────────────────────────────────────────────────
+
+function BrowserPage() {
+  const [showBrowser, setShowBrowser] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    window.electronAPI
+      .getSettings()
+      .then((settings) => {
+        setShowBrowser(settings.showBrowser);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleShowBrowserChange = async (checked: boolean) => {
+    setShowBrowser(checked);
+    try {
+      await window.electronAPI.updateSettings({ showBrowser: checked });
+    } catch {
+      // Best-effort — UI already updated
+    }
+  };
+
+  if (loading) return null;
+
+  return (
+    <PageLayout
+      title="Browser"
+      lede="Control how the browser behaves during record fetching."
+    >
+      <Card className="max-w-[560px] px-6 py-5">
         <label
           htmlFor="show-browser-toggle"
           className="flex cursor-pointer items-start gap-3"
@@ -404,6 +428,8 @@ export default function Settings({ onBack: _onBack, activeKey }: SettingsProps) 
       return <AppearancePage />;
     case 'key':
       return <ApiKeyPage />;
+    case 'browser':
+      return <BrowserPage />;
     case 'storage':
       return <StoragePage />;
     case 'privacy':
