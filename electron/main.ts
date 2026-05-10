@@ -19,6 +19,8 @@ function createWindow(): void {
   win.loadFile(path.join(__dirname, '..', 'dist-renderer', 'index.html'));
 }
 
+app.setName('FetchWell');
+
 app.whenReady().then(() => {
   // Set dock icon for dev mode (macOS ignores BrowserWindow `icon`)
   if (process.platform === 'darwin' && app.dock) {
