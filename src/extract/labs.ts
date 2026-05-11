@@ -135,10 +135,16 @@ export async function extractLabsDocs(browser: BrowserProvider, portalUrl: strin
       // Wait for async content (imaging reports load via AJAX after page ready)
       try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
-      const cleanDesc = link.description
+      // Get a descriptive name from the detail page (handles shadow DOM elements
+      // where observe() returns "an element inside a shadow DOM" instead of the real name)
+      let itemLabel = link.description
         .replace(/^Lab\/test result entry:\s*/i, "")
         .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
-      const filename = makeItemFilename(i, cleanDesc || link.description, ".pdf", providerId);
+      const pageTitle = await browser.title();
+      if (!itemLabel || itemLabel.toLowerCase().includes("shadow dom")) {
+        itemLabel = pageTitle || `lab-result-${i + 1}`;
+      }
+      const filename = makeItemFilename(i, itemLabel, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
         emit({ type: 'status-message', phase: 'extract', message: `Saving ${filename}...` });
