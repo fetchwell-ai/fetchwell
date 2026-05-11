@@ -17,8 +17,9 @@ export default function App() {
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   // Increment this key to force PortalList to re-mount (refreshes its own portal data)
   const [portalListKey, setPortalListKey] = useState(0);
-  // When true, the next PortalList mount will open in add form mode
-  const [openAddPortal, setOpenAddPortal] = useState(false);
+  // When true, the next PortalList mount will open in add form mode.
+  // Uses a ref so the value survives React batching without needing a reset effect.
+  const openAddPortalRef = useRef(false);
   const [downloadFolder, setDownloadFolder] = useState<string>('~/Documents/HealthRecords');
 
   // Track whether we're showing the portal list view vs a portal detail or settings view
@@ -71,12 +72,6 @@ export default function App() {
     prevIsPortalsView.current = isPortalsView;
   }, [rootPage, isPortalsView, loadPortals]);
 
-  // Reset the add-form flag after PortalList has mounted with it
-  useEffect(() => {
-    if (openAddPortal) {
-      setOpenAddPortal(false);
-    }
-  }, [portalListKey, openAddPortal]);
 
   const handleNavigateToApiKey = () => {
     setActivePortalId(null);
@@ -103,7 +98,7 @@ export default function App() {
     // Clear active selections and remount PortalList in add form mode
     setActiveSettingsKey(null);
     setActivePortalId(null);
-    setOpenAddPortal(true);
+    openAddPortalRef.current = true;
     setPortalListKey((k) => k + 1);
   };
 
@@ -148,7 +143,13 @@ export default function App() {
                 onNavigateToApiKey={handleNavigateToApiKey}
                 selectedPortalId={activePortalId}
                 onPortalsChanged={loadPortals}
-                initialView={openAddPortal ? 'add' : 'list'}
+                initialView={(() => {
+                  if (openAddPortalRef.current) {
+                    openAddPortalRef.current = false;
+                    return 'add';
+                  }
+                  return 'list';
+                })()}
               />
             </MotionPage>
           )}
