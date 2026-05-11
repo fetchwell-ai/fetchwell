@@ -139,6 +139,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     let apiKey: string;
     if (settings.apiKeySource === 'bundled') {
       apiKey = getBundledApiKey();
+      if (!apiKey) throw new Error('No bundled API key available. Run scripts/encode-key.ts at build time.');
     } else {
       const customKey = credentialsManager!.getApiKey();
       if (!customKey) throw new Error('API key not configured');
