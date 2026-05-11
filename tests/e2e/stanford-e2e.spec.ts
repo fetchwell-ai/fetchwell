@@ -78,7 +78,6 @@ test('stanford: clean slate → add portal → discover → extract', async ({ p
   await page.fill('#portal-name', stanford!.name);
   await page.fill('#portal-username', stanford!.username);
   await page.fill('#portal-password', stanford!.password);
-  await page.selectOption('#portal-login-type', stanford!.loginForm);
   await page.selectOption('#portal-2fa', stanford!.twoFactor);
 
   await page.click('button[type="submit"]');
