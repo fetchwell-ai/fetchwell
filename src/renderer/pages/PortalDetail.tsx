@@ -223,6 +223,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
   const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
   const [twoFaType, setTwoFaType] = useState<string | undefined>(undefined);
   const [twoFaDeliveryHint, setTwoFaDeliveryHint] = useState<string | undefined>(undefined);
+  const [folderPath, setFolderPath] = useState(`${downloadFolder}/${portalId}`);
 
   // Load portal data
   useEffect(() => {
@@ -303,7 +304,6 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
   }
 
   const portalState = derivePortalState(portal);
-  const [folderPath, setFolderPath] = useState(`${downloadFolder}/${portal.id}`);
   const history = deriveHistory(portal);
   const anyOperationRunning = runningOperation !== null;
 
