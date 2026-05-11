@@ -27,11 +27,19 @@ providers.json
 # Packaged health records — sensitive personal data, never commit
 mychart-*.zip
 
-# Beads / Dolt files (added by bd init)
+# Beads / Dolt files
+.beads/
 .dolt/
 *.db
 .beads-credential-key
 test-results/
+playwright-report/
+
+# Runtime directories
+downloads/
+
+# TypeScript build cache
+*.tsbuildinfo
 
 # electron-builder output
 release/
