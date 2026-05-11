@@ -88,10 +88,14 @@ export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeP
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!code.trim() || verifying) return;
-    setVerifying(true);
     setError(null);
     window.electronAPI.submit2FACode({ portalId, code: code.trim() });
-    // Do NOT dismiss yet — wait for 2fa:result
+    // Dismiss immediately — the pipeline continues in the background.
+    // If the code is wrong, the retry flow will re-open the modal.
+    if (!dismissedRef.current) {
+      dismissedRef.current = true;
+      onDismiss();
+    }
   };
 
   const handleCancel = () => {
