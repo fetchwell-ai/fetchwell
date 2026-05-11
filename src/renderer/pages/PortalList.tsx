@@ -470,7 +470,7 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
     loadPortals();
   }, [loadPortals]);
 
-  useEffect(() => {
+  const loadSettings = useCallback(() => {
     window.electronAPI
       .getSettings()
       .then((settings) => {
@@ -483,6 +483,24 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
         // Use default fallback
       });
   }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  // Refresh API key state when the user navigates back to this page
+  // (e.g., after adding a key in Settings and returning)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadSettings();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [loadSettings]);
 
   useEffect(() => {
     if (runningOperation === null) return;
