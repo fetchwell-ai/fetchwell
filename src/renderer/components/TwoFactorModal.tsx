@@ -6,6 +6,7 @@ import { Label } from './ui/label';
 
 export interface TwoFactorModalProps {
   portalId: string;
+  twoFactorType?: TwoFactorType;
   onDismiss: () => void;
 }
 
@@ -26,17 +27,18 @@ function getTwoFactorHint(twoFactorType: TwoFactorType | null): string {
   }
 }
 
-export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalProps) {
+export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeProp, onDismiss }: TwoFactorModalProps) {
   const [code, setCode] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
-  const [twoFactorType, setTwoFactorType] = useState<TwoFactorType | null>(null);
+  const [twoFactorType, setTwoFactorType] = useState<TwoFactorType | null>(twoFactorTypeProp ?? null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dismissedRef = useRef(false);
 
-  // Look up the portal's twoFactor type on mount
+  // Look up the portal's twoFactor type on mount (skip if provided via prop)
   useEffect(() => {
+    if (twoFactorTypeProp) return;
     window.electronAPI
       .getPortals()
       .then((portals) => {
@@ -48,7 +50,7 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
       .catch(() => {
         // Fall back to generic hint
       });
-  }, [portalId]);
+  }, [portalId, twoFactorTypeProp]);
 
   // Auto-focus input on mount (and re-focus after verifying state clears)
   useEffect(() => {
