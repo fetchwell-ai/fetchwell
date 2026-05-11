@@ -16,8 +16,37 @@
 import dotenv from 'dotenv';
 dotenv.config({ override: true });
 
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { setOtpCallback } from './auth/strategies/two-factor.js';
 import { type ProviderConfig } from './config.js';
+
+// ---------------------------------------------------------------------------
+// Log file — tee all stdout/stderr to output/<provider>/latest.log
+// ---------------------------------------------------------------------------
+
+let logStream: fs.WriteStream | null = null;
+
+function initLogFile(downloadFolder: string, portalId: string): void {
+  const outputDir = path.join(downloadFolder, portalId);
+  fs.mkdirSync(outputDir, { recursive: true });
+  const logPath = path.join(outputDir, 'latest.log');
+  logStream = fs.createWriteStream(logPath, { flags: 'w' });
+  logStream.write(`[fetchwell] Log started: ${new Date().toISOString()}\n`);
+
+  const origStdoutWrite = process.stdout.write.bind(process.stdout);
+  const origStderrWrite = process.stderr.write.bind(process.stderr);
+
+  process.stdout.write = (chunk: string | Uint8Array, ...args: unknown[]): boolean => {
+    logStream?.write(chunk);
+    return origStdoutWrite(chunk, ...(args as [BufferEncoding?, ((err?: Error | null) => void)?]));
+  };
+
+  process.stderr.write = (chunk: string | Uint8Array, ...args: unknown[]): boolean => {
+    logStream?.write(chunk);
+    return origStderrWrite(chunk, ...(args as [BufferEncoding?, ((err?: Error | null) => void)?]));
+  };
+}
 import { type StructuredProgressEvent } from './progress-events.js';
 
 // ---------------------------------------------------------------------------
@@ -190,6 +219,11 @@ async function main(): Promise<void> {
   });
 
   const provider = buildProviderConfig(cmd);
+
+  // Tee all console output to a log file for debugging
+  if (cmd.downloadFolder) {
+    initLogFile(cmd.downloadFolder, provider.id);
+  }
 
   if (cmd.command === 'extract') {
     // Dynamically import to avoid top-level side effects (dotenv, arg parsing, run())
