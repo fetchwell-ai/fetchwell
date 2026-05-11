@@ -12,7 +12,7 @@ import { z } from "zod";
 const PROJECT_ROOT = path.join(import.meta.dirname, "..");
 
 const AuthSchema = z.object({
-  loginForm: z.enum(["two-step", "single-page"]).default("two-step"),
+  loginForm: z.enum(["two-step", "single-page", "auto"]).default("auto"),
   twoFactor: z.enum(["none", "email", "manual", "ui"]).default("manual"),
 });
 
@@ -25,7 +25,7 @@ const ProviderConfigSchema = z.object({
   url: z.string().url("Provider url must be a valid URL"),
   username: z.string().optional(),
   password: z.string().optional(),
-  auth: AuthSchema.default({ loginForm: "two-step", twoFactor: "manual" }),
+  auth: AuthSchema.default({ loginForm: "auto", twoFactor: "manual" }),
   authenticatedSelectors: z.array(z.string()).optional(),
 });
 

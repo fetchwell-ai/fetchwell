@@ -27,7 +27,7 @@ import { getTwoFactorHandler } from "./strategies/two-factor.js";
  * @returns A composed AuthModule that handles login and session verification.
  */
 export function getAuthModule(authSettings: AuthSettings, providerId?: string): AuthModule {
-  const loginHandler = getLoginFormHandler(authSettings.loginForm);
+  const loginHandler = getLoginFormHandler(authSettings.loginForm, providerId);
   const twoFactorHandler = getTwoFactorHandler(authSettings.twoFactor);
 
   /**

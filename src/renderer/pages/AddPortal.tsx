@@ -32,9 +32,6 @@ export default function AddPortal({
   const [name, setName] = useState(editPortal?.name ?? '');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [loginForm, setLoginForm] = useState<'two-step' | 'single-page'>(
-    editPortal?.loginForm ?? 'two-step',
-  );
   const [twoFactor, setTwoFactor] = useState<
     'none' | 'email' | 'manual' | 'ui'
   >(editPortal?.twoFactor ?? 'manual');
@@ -85,7 +82,6 @@ export default function AddPortal({
       const input: PortalInput = {
         name: name.trim(),
         url: url.trim(),
-        loginForm,
         twoFactor,
         ...(username ? { username: username.trim() } : {}),
         ...(password ? { password } : {}),
@@ -174,38 +170,22 @@ export default function AddPortal({
             />
           </div>
 
-          <div className="mb-5 flex gap-4">
-            <div className="flex-1">
-              <Label htmlFor="portal-login-type" className="mb-1.5">Login type</Label>
-              <Select
-                id="portal-login-type"
-                value={loginForm}
-                onChange={(e) =>
-                  setLoginForm(e.target.value as 'two-step' | 'single-page')
-                }
-              >
-                <option value="two-step">Two-step (default)</option>
-                <option value="single-page">Single page</option>
-              </Select>
-            </div>
-
-            <div className="flex-1">
-              <Label htmlFor="portal-2fa" className="mb-1.5">2FA method</Label>
-              <Select
-                id="portal-2fa"
-                value={twoFactor}
-                onChange={(e) =>
-                  setTwoFactor(
-                    e.target.value as 'none' | 'email' | 'manual' | 'ui',
-                  )
-                }
-              >
-                <option value="manual">Manual (default)</option>
-                <option value="email">Email</option>
-                <option value="ui">UI</option>
-                <option value="none">None</option>
-              </Select>
-            </div>
+          <div className="mb-5">
+            <Label htmlFor="portal-2fa" className="mb-1.5">2FA method</Label>
+            <Select
+              id="portal-2fa"
+              value={twoFactor}
+              onChange={(e) =>
+                setTwoFactor(
+                  e.target.value as 'none' | 'email' | 'manual' | 'ui',
+                )
+              }
+            >
+              <option value="manual">Manual (default)</option>
+              <option value="email">Email</option>
+              <option value="ui">UI</option>
+              <option value="none">None</option>
+            </Select>
           </div>
 
           {error && <p className="form-error mb-2 text-xs text-[var(--color-fw-crimson-600)]">{error}</p>}

@@ -8,6 +8,11 @@
 
 import { type BrowserProvider } from "../../browser/interface.js";
 import { prompt } from "../shared.js";
+import {
+  detectLoginFormType,
+  loadDetectedLoginFormType,
+  saveDetectedLoginFormType,
+} from "../detect-login-form.js";
 
 /**
  * A login form handler fills credentials into the browser.
@@ -84,14 +89,59 @@ export const loginFormRegistry: Record<string, LoginFormHandler> = {
 };
 
 /**
- * Look up a login form handler by strategy name.
+ * Build an auto-detecting login form handler for a given provider.
+ *
+ * On first login, uses browser.observe() to detect whether the form is
+ * single-page or two-step, saves the result to the provider's output
+ * directory, and delegates to the appropriate concrete handler.
+ *
+ * On subsequent calls (within the same session or after a cache hit), the
+ * cached value from the output directory is used so detection is skipped.
  */
-export function getLoginFormHandler(strategy: string): LoginFormHandler {
+function buildAutoHandler(providerId?: string): LoginFormHandler {
+  return async (browser, credentials) => {
+    // Check file-based cache first (written on previous runs)
+    if (providerId) {
+      const cached = loadDetectedLoginFormType(providerId);
+      if (cached) {
+        console.log(`   Login form: using cached detection result — ${cached}`);
+        const cachedHandler = loginFormRegistry[cached];
+        if (cachedHandler) {
+          return cachedHandler(browser, credentials);
+        }
+      }
+    }
+
+    // No cache — detect from the current page
+    console.log("   Login form: auto-detecting form type...");
+    const detected = await detectLoginFormType(browser);
+
+    // Persist for future runs
+    if (providerId) {
+      saveDetectedLoginFormType(providerId, detected);
+      console.log(`   Login form: saved detected type '${detected}' to cache`);
+    }
+
+    const handler = loginFormRegistry[detected];
+    return handler(browser, credentials);
+  };
+}
+
+/**
+ * Look up a login form handler by strategy name.
+ *
+ * Pass `providerId` when strategy is 'auto' so the detected type can be
+ * cached and reused across runs.
+ */
+export function getLoginFormHandler(strategy: string, providerId?: string): LoginFormHandler {
+  if (strategy === "auto") {
+    return buildAutoHandler(providerId);
+  }
   const handler = loginFormRegistry[strategy];
   if (!handler) {
     throw new Error(
       `No login form strategy "${strategy}". ` +
-      `Available: ${Object.keys(loginFormRegistry).join(", ")}`,
+      `Available: ${Object.keys(loginFormRegistry).join(", ")}, auto`,
     );
   }
   return handler;

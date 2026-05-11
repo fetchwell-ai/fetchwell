@@ -6,7 +6,7 @@ export interface PortalEntry {
   id: string;
   name: string;
   url: string;
-  loginForm: 'two-step' | 'single-page';
+  loginForm: 'two-step' | 'single-page' | 'auto';
   twoFactor: 'none' | 'email' | 'manual' | 'ui';
   hasCredentials: boolean;
   discoveredAt: string | null;
@@ -84,7 +84,7 @@ export class ConfigManager {
     return this.config.portals.find((p) => p.id === id);
   }
 
-  addPortal(input: Omit<PortalEntry, 'id' | 'hasCredentials' | 'discoveredAt' | 'lastExtractedAt'>): PortalEntry {
+  addPortal(input: Omit<PortalEntry, 'id' | 'hasCredentials' | 'discoveredAt' | 'lastExtractedAt'> & { loginForm?: 'two-step' | 'single-page' | 'auto' }): PortalEntry {
     const id = slugify(input.name);
     if (!id) {
       throw new Error('Portal name must produce a valid slug');
@@ -96,7 +96,7 @@ export class ConfigManager {
       id,
       name: input.name,
       url: input.url,
-      loginForm: input.loginForm,
+      loginForm: input.loginForm ?? 'auto',
       twoFactor: input.twoFactor,
       hasCredentials: false,
       discoveredAt: null,
