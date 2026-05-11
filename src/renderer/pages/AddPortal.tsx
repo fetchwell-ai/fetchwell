@@ -143,7 +143,7 @@ export default function AddPortal({
           </div>
 
           <div className="mb-5">
-            <Label htmlFor="portal-username" className="mb-1.5">Username (optional)</Label>
+            <Label htmlFor="portal-username" className="mb-1.5">Username</Label>
             <Input
               id="portal-username"
               type="text"
@@ -156,7 +156,7 @@ export default function AddPortal({
           </div>
 
           <div className="mb-5">
-            <Label htmlFor="portal-password" className="mb-1.5">Password (optional)</Label>
+            <Label htmlFor="portal-password" className="mb-1.5">Password</Label>
             <Input
               id="portal-password"
               type="password"
