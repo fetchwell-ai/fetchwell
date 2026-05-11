@@ -123,7 +123,7 @@ export async function extractVisits(browser: BrowserProvider, portalUrl: string,
       continue;
     }
 
-    emit({ type: 'status-message', phase: 'extract', message: `Fetching ${link.description.slice(0, 60)}...` });
+    emit({ type: 'status-message', phase: 'extract', message: `Downloading visit ${i + 1} of ${maxVisits}...` });
     console.log(`   Visit ${i + 1}/${maxVisits}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
@@ -137,7 +137,7 @@ export async function extractVisits(browser: BrowserProvider, portalUrl: string,
       const filename = makeVisitFilename(i, desc, pageTitle || desc, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
-        emit({ type: 'status-message', phase: 'extract', message: `Saving ${filename}...` });
+        emit({ type: 'status-message', phase: 'extract', message: `Downloading ${desc.slice(0, 60)}...` });
         fs.writeFileSync(path.join(visitsDir, filename), pdfBuf);
         extracted++;
       }
