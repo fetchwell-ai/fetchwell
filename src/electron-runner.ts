@@ -43,11 +43,18 @@ interface RunnerCommand {
 interface TwoFARequest {
   type: '2fa:request';
   message: string;
+  error?: string;
 }
 
 interface TwoFAResponse {
   type: '2fa:response';
   code: string | null;
+}
+
+interface TwoFAResult {
+  type: '2fa:result';
+  success: boolean;
+  error?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,35 +77,62 @@ export function sendProgressEvent(event: StructuredProgressEvent): void {
 // ---------------------------------------------------------------------------
 
 /**
+ * Send a 2fa:result IPC event to the parent indicating whether the code was accepted.
+ */
+function sendTwoFAResult(success: boolean, error?: string): void {
+  if (process.send) {
+    const result: TwoFAResult = { type: '2fa:result', success, error };
+    process.send(result);
+  }
+}
+
+/**
+ * Request a 2FA code from the renderer via IPC.
+ * Sends a 2fa:request and waits for a 2fa:response.
+ * @param error - Optional error message to show in the modal (for retries).
+ */
+function requestOtpFromRenderer(error?: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    const request: TwoFARequest = {
+      type: '2fa:request',
+      message: 'Enter your two-factor authentication code',
+      ...(error !== undefined ? { error } : {}),
+    };
+
+    if (!process.send) {
+      console.error('[electron-runner] No IPC channel — cannot request 2FA code');
+      resolve(null);
+      return;
+    }
+
+    process.send(request);
+
+    const handler = (msg: unknown) => {
+      const response = msg as TwoFAResponse;
+      if (response && response.type === '2fa:response') {
+        process.off('message', handler);
+        resolve(response.code);
+      }
+    };
+
+    process.on('message', handler);
+  });
+}
+
+/**
+ * Whether a 2FA code was requested during this run.
+ * Used to send 2fa:result { success: true } when the pipeline completes.
+ */
+let twoFAWasRequested = false;
+
+/**
  * Install the OTP callback that sends a 2fa:request IPC message to the parent
  * and resolves when the parent responds with a 2fa:response.
  */
 function installOtpCallback(): void {
-  setOtpCallback((): Promise<string | null> => {
-    return new Promise((resolve) => {
-      const request: TwoFARequest = {
-        type: '2fa:request',
-        message: 'Enter your two-factor authentication code',
-      };
-
-      if (!process.send) {
-        console.error('[electron-runner] No IPC channel — cannot request 2FA code');
-        resolve(null);
-        return;
-      }
-
-      process.send(request);
-
-      const handler = (msg: unknown) => {
-        const response = msg as TwoFAResponse;
-        if (response && response.type === '2fa:response') {
-          process.off('message', handler);
-          resolve(response.code);
-        }
-      };
-
-      process.on('message', handler);
-    });
+  setOtpCallback(async (): Promise<string | null> => {
+    twoFAWasRequested = true;
+    return requestOtpFromRenderer();
   });
 }
 
@@ -158,10 +192,63 @@ async function main(): Promise<void> {
   if (cmd.command === 'extract') {
     // Dynamically import to avoid top-level side effects (dotenv, arg parsing, run())
     const { extractProvider } = await import('./extract/runner.js');
-    await extractProvider(provider, cmd.incremental, cmd.downloadFolder, sendProgressEvent);
+    await runWithTwoFARetry(() =>
+      extractProvider(provider, cmd.incremental, cmd.downloadFolder, sendProgressEvent),
+    );
   } else if (cmd.command === 'discover') {
     const { discoverProviderById } = await import('./discover/runner.js');
-    await discoverProviderById(provider, cmd.downloadFolder, sendProgressEvent);
+    await runWithTwoFARetry(() =>
+      discoverProviderById(provider, cmd.downloadFolder, sendProgressEvent),
+    );
+  }
+}
+
+/**
+ * Run a pipeline operation with automatic 2FA retry.
+ *
+ * If the operation fails with a 2FA-related error, we notify the renderer
+ * (so it can re-show the modal with an error message) and re-run the operation
+ * up to MAX_2FA_RETRIES times. On each retry the OTP callback will be invoked
+ * again, giving the user a fresh chance to enter the correct code.
+ */
+const MAX_2FA_RETRIES = 2;
+
+async function runWithTwoFARetry(operation: () => Promise<void>): Promise<void> {
+  let attempt = 0;
+
+  while (true) {
+    try {
+      await operation();
+      // Notify the renderer that the 2FA code was accepted (so the modal can dismiss)
+      if (twoFAWasRequested) {
+        sendTwoFAResult(true);
+      }
+      return;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      const is2FAError =
+        message.toLowerCase().includes('2fa') ||
+        message.toLowerCase().includes('verification') ||
+        message.toLowerCase().includes('otp') ||
+        message.toLowerCase().includes('code not provided') ||
+        message.toLowerCase().includes('cancelled');
+
+      if (is2FAError && attempt < MAX_2FA_RETRIES) {
+        attempt++;
+        twoFAWasRequested = false; // Reset so the next attempt can track a fresh request
+        // Notify renderer: code failed, re-prompt
+        sendTwoFAResult(false, 'Code not accepted — try again');
+        // Update the OTP callback to send an error field on the next request
+        setOtpCallback(async (): Promise<string | null> => {
+          twoFAWasRequested = true;
+          return requestOtpFromRenderer('Code not accepted — try again');
+        });
+        continue;
+      }
+
+      // Not a 2FA error or max retries reached — propagate
+      throw err;
+    }
   }
 }
 

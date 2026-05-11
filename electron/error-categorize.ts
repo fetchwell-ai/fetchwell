@@ -13,10 +13,10 @@ export function categorizeError(message: string): { category: string; suggestion
     };
   }
 
-  if (lower.includes('2fa') || lower.includes('timed out')) {
+  if (lower.includes('2fa') || lower.includes('timed out') || lower.includes('cancelled') || lower.includes('canceled')) {
     return {
       category: '2fa_timeout',
-      suggestion: 'Try again — enter the code within 5 minutes',
+      suggestion: 'Verification timed out — try again',
     };
   }
 

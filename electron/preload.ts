@@ -49,8 +49,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // --- 2FA ---
-  on2FARequest: (callback: (payload: { portalId: string }) => void) => {
-    ipcRenderer.on('2fa:request', (_event, data: { portalId: string }) => callback(data));
+  on2FARequest: (callback: (payload: { portalId: string; twoFactorType: 'none' | 'email' | 'manual' | 'ui'; error?: string }) => void) => {
+    ipcRenderer.on('2fa:request', (_event, data: { portalId: string; twoFactorType: 'none' | 'email' | 'manual' | 'ui'; error?: string }) => callback(data));
+  },
+  on2FAResult: (callback: (payload: { portalId: string; success: boolean; error?: string }) => void) => {
+    ipcRenderer.on('2fa:result', (_event, data: { portalId: string; success: boolean; error?: string }) => callback(data));
   },
   submit2FACode: (payload: { portalId: string; code: string | null }) => {
     ipcRenderer.send('2fa:submit', payload);

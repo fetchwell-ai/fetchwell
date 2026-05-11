@@ -85,9 +85,13 @@ export default function ErrorSummary({
         <span className="text-[13px] font-semibold text-[var(--color-fw-fg)]">{getCategoryLabel(category)}</span>
       </div>
 
-      <p className="m-0 mb-1.5 text-[14px] leading-[1.5] text-[var(--color-fw-fg)]">{message}</p>
+      <p className="m-0 mb-1.5 text-[14px] leading-[1.5] text-[var(--color-fw-fg)]">
+        {category === '2fa_timeout'
+          ? 'Verification timed out — try again'
+          : message}
+      </p>
 
-      {suggestion && (
+      {suggestion && category !== '2fa_timeout' && (
         <p className="m-0 mb-1.5 text-[13px] leading-[1.5] text-[var(--color-fw-fg-muted)]">{suggestion}</p>
       )}
 

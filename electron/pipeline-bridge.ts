@@ -66,11 +66,18 @@ interface ErrorEvent {
 interface TwoFARequest {
   type: '2fa:request';
   message: string;
+  error?: string;
 }
 
 interface TwoFAResponse {
   type: '2fa:response';
   code: string | null;
+}
+
+interface TwoFAResult {
+  type: '2fa:result';
+  success: boolean;
+  error?: string;
 }
 
 interface RunnerCommand {
@@ -215,14 +222,19 @@ function runSubprocess(
       });
     }
 
-    // Handle IPC messages from child (2FA requests and structured progress events)
+    // Handle IPC messages from child (2FA requests, 2FA results, and structured progress events)
     child.on('message', (msg: unknown) => {
-      const message = msg as TwoFARequest | StructuredProgressEvent;
+      const message = msg as TwoFARequest | TwoFAResult | StructuredProgressEvent;
 
       if (message && message.type === '2fa:request') {
-        // Forward 2FA request to renderer
+        const twoFaMsg = message as TwoFARequest;
+        // Forward 2FA request to renderer (include twoFactor type and optional error for retries)
         if (!win.isDestroyed()) {
-          win.webContents.send('2fa:request', { portalId: config.portalId });
+          win.webContents.send('2fa:request', {
+            portalId: config.portalId,
+            twoFactorType: config.twoFactor,
+            error: twoFaMsg.error,
+          });
         }
 
         // Wait for renderer to call 2fa:submit
@@ -230,6 +242,19 @@ function runSubprocess(
           const response: TwoFAResponse = { type: '2fa:response', code };
           child.send(response);
         });
+        return;
+      }
+
+      if (message && message.type === '2fa:result') {
+        const resultMsg = message as TwoFAResult;
+        // Forward 2FA result to renderer so the modal can update its state
+        if (!win.isDestroyed()) {
+          win.webContents.send('2fa:result', {
+            portalId: config.portalId,
+            success: resultMsg.success,
+            error: resultMsg.error,
+          });
+        }
         return;
       }
 
