@@ -19,11 +19,14 @@ export interface PortalEntry {
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
+export type ApiKeySource = 'bundled' | 'custom';
+
 export interface AppConfig {
   downloadFolder: string;
   showBrowser: boolean;
   incrementalExtraction: boolean;
   theme: ThemePreference;
+  apiKeySource: ApiKeySource;
   portals: PortalEntry[];
 }
 
@@ -32,6 +35,7 @@ const DEFAULT_CONFIG: AppConfig = {
   showBrowser: false,
   incrementalExtraction: true,
   theme: 'system',
+  apiKeySource: 'bundled',
   portals: [],
 };
 
@@ -126,16 +130,17 @@ export class ConfigManager {
     this.save();
   }
 
-  getSettings(): Pick<AppConfig, 'downloadFolder' | 'showBrowser' | 'incrementalExtraction' | 'theme'> {
+  getSettings(): Pick<AppConfig, 'downloadFolder' | 'showBrowser' | 'incrementalExtraction' | 'theme' | 'apiKeySource'> {
     return {
       downloadFolder: this.config.downloadFolder,
       showBrowser: this.config.showBrowser,
       incrementalExtraction: this.config.incrementalExtraction,
       theme: this.config.theme ?? 'system',
+      apiKeySource: this.config.apiKeySource ?? 'bundled',
     };
   }
 
-  updateSettings(updates: Partial<Pick<AppConfig, 'downloadFolder' | 'showBrowser' | 'incrementalExtraction' | 'theme'>>): void {
+  updateSettings(updates: Partial<Pick<AppConfig, 'downloadFolder' | 'showBrowser' | 'incrementalExtraction' | 'theme' | 'apiKeySource'>>): void {
     if (updates.downloadFolder !== undefined) {
       this.config.downloadFolder = updates.downloadFolder;
     }
@@ -147,6 +152,9 @@ export class ConfigManager {
     }
     if (updates.theme !== undefined) {
       this.config.theme = updates.theme;
+    }
+    if (updates.apiKeySource !== undefined) {
+      this.config.apiKeySource = updates.apiKeySource;
     }
     this.save();
   }

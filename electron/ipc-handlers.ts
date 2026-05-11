@@ -1,7 +1,8 @@
 import { ipcMain, safeStorage, app, BrowserWindow, dialog, shell } from 'electron';
-import { ConfigManager, PortalEntry, ThemePreference } from './config';
+import { ConfigManager, PortalEntry, ThemePreference, ApiKeySource } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
 import { runExtraction, cancelOperation, CategoryCounts } from './pipeline-bridge';
+import { getBundledApiKey, hasBundledApiKey } from './bundled-key';
 
 /** Input shape for adding/updating a portal (id is derived from name). */
 interface PortalInput {
@@ -89,9 +90,14 @@ export function registerIpcHandlers(userDataPath?: string): void {
 
   ipcMain.handle('getSettings', () => {
     const settings = configManager!.getSettings();
+    const apiKeySource = settings.apiKeySource;
+    const apiKeyConfigured =
+      apiKeySource === 'bundled'
+        ? hasBundledApiKey()
+        : credentialsManager!.hasApiKey();
     return {
       ...settings,
-      apiKeyConfigured: credentialsManager!.hasApiKey(),
+      apiKeyConfigured,
     };
   });
 
@@ -100,6 +106,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     showBrowser?: boolean;
     incrementalExtraction?: boolean;
     theme?: ThemePreference;
+    apiKeySource?: ApiKeySource;
     apiKey?: string;
   }): void => {
     const { apiKey, ...configUpdates } = updates;
@@ -129,8 +136,14 @@ export function registerIpcHandlers(userDataPath?: string): void {
     if (!portal) throw new Error(`Portal not found: ${portalId}`);
 
     const settings = configManager!.getSettings();
-    const apiKey = credentialsManager!.getApiKey();
-    if (!apiKey) throw new Error('API key not configured');
+    let apiKey: string;
+    if (settings.apiKeySource === 'bundled') {
+      apiKey = getBundledApiKey();
+    } else {
+      const customKey = credentialsManager!.getApiKey();
+      if (!customKey) throw new Error('API key not configured');
+      apiKey = customKey;
+    }
 
     const creds = credentialsManager!.getPortalCredentials(portalId);
     if (!creds) throw new Error(`No credentials stored for portal: ${portalId}`);
