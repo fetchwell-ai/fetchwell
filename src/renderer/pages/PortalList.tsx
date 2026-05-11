@@ -454,6 +454,7 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
   const [twoFaType, setTwoFaType] = useState<string | undefined>(undefined);
   const [downloadFolder, setDownloadFolder] = useState<string>('~/Documents/HealthRecords');
   const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
+  const [apiKeySource, setApiKeySource] = useState<ApiKeySource>('bundled');
   const [quickstartDismissed, setQuickstartDismissed] = useState<boolean>(
     () => localStorage.getItem(QUICKSTART_DISMISSED_KEY) === 'true',
   );
@@ -483,7 +484,8 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
         if (settings.downloadFolder) {
           setDownloadFolder(settings.downloadFolder);
         }
-        setApiKeyConfigured(!!settings.anthropicApiKey);
+        setApiKeyConfigured(settings.apiKeyConfigured);
+        setApiKeySource(settings.apiKeySource);
       })
       .catch(() => {
         // Use default fallback
@@ -598,7 +600,7 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
 
       {!loading && !quickstartDismissed && (
         <QuickStart
-          steps={deriveQuickStartSteps(portals, apiKeyConfigured)}
+          steps={deriveQuickStartSteps(portals, apiKeyConfigured, apiKeySource)}
           onStepClick={(key) => {
             if (key === 'api-key') {
               onNavigateToApiKey();

@@ -104,7 +104,15 @@ function AppearancePage() {
 
 // ── (b) Anthropic API key ─────────────────────────────────────────────────────
 
+type ApiKeySourceOption = ApiKeySource;
+
+const API_KEY_SEGMENTS: { value: ApiKeySourceOption; label: string }[] = [
+  { value: 'bundled', label: "FetchWell's key" },
+  { value: 'custom',  label: 'Your own key' },
+];
+
 function ApiKeyPage() {
+  const [apiKeySource, setApiKeySource] = useState<ApiKeySourceOption>('bundled');
   const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
   const [editingApiKey, setEditingApiKey] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -117,11 +125,24 @@ function ApiKeyPage() {
     window.electronAPI
       .getSettings()
       .then((settings) => {
+        setApiKeySource(settings.apiKeySource);
         setApiKeyConfigured(settings.apiKeyConfigured);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const handleSourceChange = async (newSource: ApiKeySourceOption) => {
+    setApiKeySource(newSource);
+    setEditingApiKey(false);
+    setApiKeyInput('');
+    setApiKeyError(null);
+    try {
+      await window.electronAPI.updateSettings({ apiKeySource: newSource });
+    } catch {
+      // Best-effort — UI already updated
+    }
+  };
 
   const showSaved = () => {
     setSavedVisible(true);
@@ -175,84 +196,121 @@ function ApiKeyPage() {
   return (
     <PageLayout
       title="Anthropic API key"
-      lede="Used to power navigation. Billed against your own account."
+      lede="Powers the AI that navigates your portal."
     >
-      <Card className="max-w-[560px] px-6 py-5">
-        {!editingApiKey && apiKeyConfigured && (
-          <div className="flex items-center gap-3">
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-[14px] text-[var(--color-fw-fg)]">API key configured</span>
-              <span className="text-[13px] tracking-[0.06em] text-[var(--color-fw-fg-muted)]">
-                *****************
-              </span>
-            </div>
-            <div className="flex flex-shrink-0 items-center gap-2">
-              {savedVisible && (
-                <span className="text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
+      <Card className="max-w-[560px] px-6 py-5 flex flex-col gap-5">
+        {/* Source selector */}
+        <div
+          className="grid gap-2 p-1 rounded-[var(--radius-md)] border border-[var(--color-fw-border)]"
+          style={{
+            gridTemplateColumns: 'repeat(2, 1fr)',
+            background: 'var(--color-fw-bg-deep)',
+          }}
+        >
+          {API_KEY_SEGMENTS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => handleSourceChange(value)}
+              className={cn(
+                'inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-[6px] text-[13px] font-medium border cursor-pointer transition-colors duration-[var(--fw-dur-fast,120ms)]',
+                apiKeySource === value
+                  ? 'bg-[var(--color-fw-sage-100)] border-[var(--color-fw-border-focus)] text-[var(--color-fw-ink-900)]'
+                  : 'bg-transparent border-transparent text-[var(--color-fw-ink-700)] hover:text-[var(--color-fw-ink-900)] hover:bg-[var(--color-fw-card-bg)]',
               )}
-              <Button type="button" variant="secondary" size="sm" onClick={handleStartEdit}>
-                Change
-              </Button>
-            </div>
-          </div>
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Bundled key confirmation */}
+        {apiKeySource === 'bundled' && (
+          <p className="m-0 text-[14px] text-[var(--color-fw-fg-muted)]">
+            Included — no setup required.
+          </p>
         )}
 
-        {(editingApiKey || !apiKeyConfigured) && (
-          <div>
-            <div className="mb-5">
-              <Label htmlFor="settings-api-key" className="mb-1.5">
-                {apiKeyConfigured ? 'New API key' : 'API key'}
-              </Label>
-              <Input
-                id="settings-api-key"
-                type="password"
-                value={apiKeyInput}
-                onChange={(e) => {
-                  setApiKeyInput(e.target.value);
-                  setApiKeyError(null);
-                }}
-                placeholder="sk-ant-..."
-                autoComplete="off"
-                spellCheck={false}
-              />
-              <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
-                Starts with sk-ant-. Get one at <strong>console.anthropic.com</strong>
-              </p>
-              {apiKeyError && (
-                <p className="mt-1 text-xs text-[var(--color-fw-crimson-600)]">{apiKeyError}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleSave}
-                disabled={apiKeyValidating}
-              >
-                {apiKeyValidating ? 'Validating...' : 'Save'}
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleGetKey}
-              >
-                Get a key
-              </Button>
-              {apiKeyConfigured && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleCancelEdit}
-                  disabled={apiKeyValidating}
-                  className="ml-auto"
-                >
-                  Cancel
-                </Button>
-              )}
-            </div>
-          </div>
+        {/* Custom key form */}
+        {apiKeySource === 'custom' && (
+          <>
+            {!editingApiKey && apiKeyConfigured && (
+              <div className="flex items-center gap-3">
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-[14px] text-[var(--color-fw-fg)]">API key configured</span>
+                  <span className="text-[13px] tracking-[0.06em] text-[var(--color-fw-fg-muted)]">
+                    *****************
+                  </span>
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  {savedVisible && (
+                    <span className="text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
+                  )}
+                  <Button type="button" variant="secondary" size="sm" onClick={handleStartEdit}>
+                    Change
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {(editingApiKey || !apiKeyConfigured) && (
+              <div>
+                <div className="mb-5">
+                  <Label htmlFor="settings-api-key" className="mb-1.5">
+                    {apiKeyConfigured ? 'New API key' : 'API key'}
+                  </Label>
+                  <Input
+                    id="settings-api-key"
+                    type="password"
+                    value={apiKeyInput}
+                    onChange={(e) => {
+                      setApiKeyInput(e.target.value);
+                      setApiKeyError(null);
+                    }}
+                    placeholder="sk-ant-..."
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                  <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
+                    Starts with sk-ant-. Get one at <strong>console.anthropic.com</strong>
+                  </p>
+                  {apiKeyError && (
+                    <p className="mt-1 text-xs text-[var(--color-fw-crimson-600)]">{apiKeyError}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSave}
+                    disabled={apiKeyValidating}
+                  >
+                    {apiKeyValidating ? 'Validating...' : 'Save'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleGetKey}
+                  >
+                    Get a key
+                  </Button>
+                  {apiKeyConfigured && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={handleCancelEdit}
+                      disabled={apiKeyValidating}
+                      className="ml-auto"
+                    >
+                      Cancel
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </Card>
     </PageLayout>
@@ -386,9 +444,10 @@ function PrivacyPage() {
     >
       <Card className="max-w-[560px] px-6 py-5">
         <p className="m-0 text-[14px] leading-[22px] text-[var(--color-fw-ink-700)]">
-          Your records never leave this Mac. The only thing sent off-device is
-          anonymized navigation requests to Anthropic's API, billed against your
-          key. Logs are stored locally and you can wipe them at any time.
+          Your records never leave this Mac. Navigation requests are sent to
+          Anthropic's API — by default using FetchWell's key, or your own if
+          you've added one. Logs are stored locally and you can wipe them at any
+          time.
         </p>
       </Card>
     </PageLayout>
