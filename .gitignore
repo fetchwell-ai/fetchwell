@@ -41,6 +41,9 @@ downloads/
 # TypeScript build cache
 *.tsbuildinfo
 
+# Generated bundled API key (produced by scripts/encode-key.ts — never commit)
+electron/bundled-key.generated.ts
+
 # electron-builder output
 release/
 *.bak

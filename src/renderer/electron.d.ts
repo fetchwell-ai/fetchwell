@@ -24,11 +24,14 @@ interface PortalInput {
 
 type ThemePreference = 'system' | 'light' | 'dark';
 
+type ApiKeySource = 'bundled' | 'custom';
+
 interface Settings {
   downloadFolder: string;
   showBrowser: boolean;
   incrementalExtraction: boolean;
   apiKeyConfigured: boolean;
+  apiKeySource: ApiKeySource;
   theme: ThemePreference;
 }
 
