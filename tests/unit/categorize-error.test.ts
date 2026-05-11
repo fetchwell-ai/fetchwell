@@ -31,10 +31,20 @@ describe('categorizeError', () => {
       expect(result.category).toBe('2fa_timeout');
     });
 
+    it('matches "cancelled" keyword (user dismissed 2FA modal)', () => {
+      const result = categorizeError('2FA code not provided — user may have timed out or cancelled');
+      expect(result.category).toBe('2fa_timeout');
+    });
+
     it('is case-insensitive for 2fa', () => {
       const result = categorizeError('2FA REQUIRED');
       expect(result.category).toBe('2fa_timeout');
       expect(result.suggestion).toContain('try again');
+    });
+
+    it('suggestion is Verification timed out message', () => {
+      const result = categorizeError('2FA verification failed');
+      expect(result.suggestion).toBe('Verification timed out — try again');
     });
   });
 

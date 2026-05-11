@@ -83,10 +83,11 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
     };
   }, [portalId, onDismiss]);
 
-  // 5-minute timeout
+  // 5-minute timeout — fires once on mount, regardless of verifying state
+  const verifyingRef = useRef(false);
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!dismissedRef.current && !verifying) {
+      if (!dismissedRef.current && !verifyingRef.current) {
         setTimedOut(true);
         window.electronAPI.submit2FACode({ portalId, code: null });
         dismissedRef.current = true;
@@ -97,7 +98,12 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
     return () => {
       clearTimeout(timer);
     };
-  }, [portalId, onDismiss, verifying]);
+  }, [portalId, onDismiss]);
+
+  // Keep verifyingRef in sync
+  useEffect(() => {
+    verifyingRef.current = verifying;
+  }, [verifying]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
