@@ -36,18 +36,19 @@ const twoStep: LoginFormHandler = async (browser, credentials) => {
   console.log();
 
   console.log("Step 4: Filling in login form...");
+  console.log(`[login] URL: ${await browser.url()}`);
   await browser.act(`Type "${username}" into the username or email input field`);
   console.log("   Username entered.");
 
   await browser.act("Click the Next or Continue button to proceed to the password page");
-  console.log("   Clicked Next.");
+  console.log(`[login] After Next. URL: ${await browser.url()}`);
   await new Promise((r) => setTimeout(r, 2000));
 
   await browser.act(`Type "${password}" into the password input field`);
   console.log("   Password entered.");
 
   await browser.act("Click the Sign In or Log In button to submit the login form");
-  console.log("   Login form submitted.");
+  console.log(`[login] Form submitted. URL: ${await browser.url()}`);
   console.log();
 };
 
