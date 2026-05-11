@@ -145,8 +145,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
         downloadFolder: settings.downloadFolder,
         showBrowser: settings.showBrowser,
         incremental: settings.incrementalExtraction,
-        // Cast to satisfy bridge types; 'auto' is handled at runtime by the auth system
-        loginForm: portal.loginForm as 'two-step' | 'single-page',
+        loginForm: portal.loginForm,
         twoFactor: portal.twoFactor,
       });
       const countUpdate: Partial<PortalEntry> = {

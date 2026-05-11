@@ -35,7 +35,7 @@ interface RunnerCommand {
     url: string;
     username: string;
     password: string;
-    loginForm: 'two-step' | 'single-page';
+    loginForm: 'two-step' | 'single-page' | 'auto';
     twoFactor: 'none' | 'email' | 'manual' | 'ui';
   };
 }
