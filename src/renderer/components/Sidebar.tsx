@@ -44,15 +44,14 @@ export default function Sidebar({
       style={{ width: 240, minWidth: 240, maxWidth: 240 }}
     >
       {/* Title bar — drag region for traffic lights (hiddenInset).
-          With hiddenInset, traffic lights sit at ~x=12, y=8 (14px diameter).
-          We use a taller drag region (height 52) and align the logo at
-          paddingLeft 16px (matching menu items below) with enough paddingTop
-          (16px) so the logo center sits at ~26px — traffic lights are fully
-          above at y=8–22px, giving a clean clearance. */}
+          With hiddenInset, traffic lights sit at ~x=12, y=12 (~13px tall).
+          We use a tall drag region (height 64) and align the logo at
+          the bottom via items-end, giving clear vertical separation
+          between the traffic lights (~y=25 bottom) and logo (~y=34 top). */}
       <div
         className="flex-shrink-0 flex items-end pb-[10px] pr-3.5 gap-2"
         style={{
-          height: 52,
+          height: 80,
           paddingLeft: 16,
           WebkitAppRegion: 'drag',
         } as React.CSSProperties}
