@@ -573,6 +573,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
             portalId={runningOperation.portalId}
             operation={runningOperation.operation}
             onClose={handleProgressPanelClose}
+            portalCounts={portal ?? undefined}
           />
         )}
       </AnimatePresence>
