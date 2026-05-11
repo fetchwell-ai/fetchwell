@@ -116,7 +116,7 @@ export async function extractMessages(browser: BrowserProvider, portalUrl: strin
       continue;
     }
 
-    emit({ type: 'status-message', phase: 'extract', message: `Fetching ${link.description.slice(0, 60)}...` });
+    emit({ type: 'status-message', phase: 'extract', message: `Downloading message ${i + 1} of ${maxThreads}...` });
     console.log(`   Thread ${i + 1}/${maxThreads}: ${link.description}`);
     try {
       const urlBefore = await browser.url();
@@ -134,7 +134,8 @@ export async function extractMessages(browser: BrowserProvider, portalUrl: strin
       const filename = makeItemFilename(i, pageTitle || link.description, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
-        emit({ type: 'status-message', phase: 'extract', message: `Saving ${filename}...` });
+        const msgLabel = pageTitle || link.description;
+        emit({ type: 'status-message', phase: 'extract', message: `Downloading ${msgLabel.slice(0, 60)}...` });
         fs.writeFileSync(path.join(msgsDir, filename), pdfBuf);
         extracted++;
       }

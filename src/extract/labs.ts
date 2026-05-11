@@ -126,8 +126,7 @@ export async function extractLabsDocs(browser: BrowserProvider, portalUrl: strin
       continue;
     }
 
-    const shortDesc = link.description.replace(/^Lab\/test result entry:\s*/i, "").slice(0, 60);
-    emit({ type: 'status-message', phase: 'extract', message: `Fetching ${shortDesc}...` });
+    emit({ type: 'status-message', phase: 'extract', message: `Downloading lab result ${i + 1} of ${maxPanels}...` });
     console.log(`   Doc ${i + 1}/${maxPanels}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
@@ -147,7 +146,7 @@ export async function extractLabsDocs(browser: BrowserProvider, portalUrl: strin
       const filename = makeItemFilename(i, itemLabel, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
-        emit({ type: 'status-message', phase: 'extract', message: `Saving ${filename}...` });
+        emit({ type: 'status-message', phase: 'extract', message: `Downloading ${itemLabel.slice(0, 60)}...` });
         fs.writeFileSync(path.join(labsDir, filename), pdfBuf);
         extracted++;
       }
