@@ -6,6 +6,7 @@ import { Label } from '../components/ui/label';
 import { Card } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
 import { cn } from '../lib/utils';
+import { strings } from '../strings';
 
 interface SettingsProps {
   onBack: () => void;
@@ -44,6 +45,8 @@ function PageLayout({ title, lede, children }: PageLayoutProps) {
 
 // ── (a) Appearance ────────────────────────────────────────────────────────────
 
+const s_appearance = strings.settings.appearance;
+
 function AppearancePage() {
   const [theme, setTheme] = useState<ThemeOption>(() => {
     return (localStorage.getItem('fw-theme') as ThemeOption) ?? 'system';
@@ -62,13 +65,13 @@ function AppearancePage() {
   };
 
   const SEGMENTS: { value: ThemeOption; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
-    { value: 'system', label: 'System', Icon: Monitor },
-    { value: 'light',  label: 'Light',  Icon: Sun },
-    { value: 'dark',   label: 'Dark',   Icon: Moon },
+    { value: 'system', label: s_appearance.system, Icon: Monitor },
+    { value: 'light',  label: s_appearance.light,  Icon: Sun },
+    { value: 'dark',   label: s_appearance.dark,   Icon: Moon },
   ];
 
   return (
-    <PageLayout title="Appearance" lede="Match your system, or pick a side.">
+    <PageLayout title={s_appearance.title} lede={s_appearance.lede}>
       <Card className="max-w-[560px] px-6 py-5">
         <div
           className="grid gap-2 p-1 rounded-[var(--radius-md)] border border-[var(--color-fw-border)]"
@@ -95,7 +98,7 @@ function AppearancePage() {
           ))}
         </div>
         <p className="mt-3 text-[12px] text-[var(--color-fw-fg-muted)]">
-          System follows your macOS appearance.
+          {s_appearance.hint}
         </p>
       </Card>
     </PageLayout>
@@ -106,9 +109,11 @@ function AppearancePage() {
 
 type ApiKeySourceOption = ApiKeySource;
 
+const s_apiKey = strings.settings.apiKey;
+
 const API_KEY_SEGMENTS: { value: ApiKeySourceOption; label: string }[] = [
-  { value: 'bundled', label: "FetchWell's key" },
-  { value: 'custom',  label: 'Your own key' },
+  { value: 'bundled', label: s_apiKey.sourceBundled },
+  { value: 'custom',  label: s_apiKey.sourceCustom },
 ];
 
 function ApiKeyPage() {
@@ -164,7 +169,7 @@ function ApiKeyPage() {
   const handleSave = async () => {
     const trimmed = apiKeyInput.trim();
     if (!trimmed) {
-      setApiKeyError('API key is required');
+      setApiKeyError(s_apiKey.errorRequired);
       return;
     }
     setApiKeyError(null);
@@ -172,7 +177,7 @@ function ApiKeyPage() {
     try {
       const valid = await window.electronAPI.validateApiKey(trimmed);
       if (!valid) {
-        setApiKeyError('Invalid API key format. Make sure it starts with sk-ant-');
+        setApiKeyError(s_apiKey.errorInvalid);
         return;
       }
       await window.electronAPI.updateSettings({ apiKey: trimmed });
@@ -181,7 +186,7 @@ function ApiKeyPage() {
       setApiKeyInput('');
       showSaved();
     } catch {
-      setApiKeyError('An error occurred while saving. Try again.');
+      setApiKeyError(s_apiKey.errorSaving);
     } finally {
       setApiKeyValidating(false);
     }
@@ -195,8 +200,8 @@ function ApiKeyPage() {
 
   return (
     <PageLayout
-      title="Anthropic API key"
-      lede="Powers the AI that navigates your portal."
+      title={s_apiKey.title}
+      lede={s_apiKey.lede}
     >
       <Card className="max-w-[560px] px-6 py-5 flex flex-col gap-5">
         {/* Source selector */}
@@ -227,7 +232,7 @@ function ApiKeyPage() {
         {/* Bundled key confirmation */}
         {apiKeySource === 'bundled' && (
           <p className="m-0 text-[14px] text-[var(--color-fw-fg-muted)]">
-            Included — no setup required.
+            {s_apiKey.bundledConfirmation}
           </p>
         )}
 
@@ -237,17 +242,17 @@ function ApiKeyPage() {
             {!editingApiKey && apiKeyConfigured && (
               <div className="flex items-center gap-3">
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <span className="text-[14px] text-[var(--color-fw-fg)]">API key configured</span>
+                  <span className="text-[14px] text-[var(--color-fw-fg)]">{s_apiKey.configured}</span>
                   <span className="text-[13px] tracking-[0.06em] text-[var(--color-fw-fg-muted)]">
-                    *****************
+                    {s_apiKey.mask}
                   </span>
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-2">
                   {savedVisible && (
-                    <span className="text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
+                    <span className="text-xs font-medium text-[var(--color-fw-moss-600)]">{s_apiKey.buttonSaved}</span>
                   )}
                   <Button type="button" variant="secondary" size="sm" onClick={handleStartEdit}>
-                    Change
+                    {s_apiKey.buttonChange}
                   </Button>
                 </div>
               </div>
@@ -257,7 +262,7 @@ function ApiKeyPage() {
               <div>
                 <div className="mb-5">
                   <Label htmlFor="settings-api-key" className="mb-1.5">
-                    {apiKeyConfigured ? 'New API key' : 'API key'}
+                    {apiKeyConfigured ? s_apiKey.labelNew : s_apiKey.labelDefault}
                   </Label>
                   <Input
                     id="settings-api-key"
@@ -267,12 +272,12 @@ function ApiKeyPage() {
                       setApiKeyInput(e.target.value);
                       setApiKeyError(null);
                     }}
-                    placeholder="sk-ant-..."
+                    placeholder={s_apiKey.placeholder}
                     autoComplete="off"
                     spellCheck={false}
                   />
                   <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
-                    Starts with sk-ant-. Get one at <strong>console.anthropic.com</strong>
+                    {s_apiKey.hint} <strong>{s_apiKey.hintDomain}</strong>
                   </p>
                   {apiKeyError && (
                     <p className="mt-1 text-xs text-[var(--color-fw-crimson-600)]">{apiKeyError}</p>
@@ -285,7 +290,7 @@ function ApiKeyPage() {
                     onClick={handleSave}
                     disabled={apiKeyValidating}
                   >
-                    {apiKeyValidating ? 'Validating...' : 'Save'}
+                    {apiKeyValidating ? s_apiKey.buttonValidating : s_apiKey.buttonSave}
                   </Button>
                   <Button
                     type="button"
@@ -293,7 +298,7 @@ function ApiKeyPage() {
                     size="sm"
                     onClick={handleGetKey}
                   >
-                    Get a key
+                    {s_apiKey.buttonGetKey}
                   </Button>
                   {apiKeyConfigured && (
                     <Button
@@ -304,7 +309,7 @@ function ApiKeyPage() {
                       disabled={apiKeyValidating}
                       className="ml-auto"
                     >
-                      Cancel
+                      {s_apiKey.buttonCancel}
                     </Button>
                   )}
                 </div>
@@ -318,6 +323,8 @@ function ApiKeyPage() {
 }
 
 // ── (c) Storage location ──────────────────────────────────────────────────────
+
+const s_storage = strings.settings.storage;
 
 function StoragePage() {
   const [downloadFolder, setDownloadFolder] = useState('');
@@ -352,27 +359,27 @@ function StoragePage() {
 
   return (
     <PageLayout
-      title="Storage location"
-      lede="Where downloaded PDFs are saved on this Mac."
+      title={s_storage.title}
+      lede={s_storage.lede}
     >
       <Card className="max-w-[560px] px-6 py-5">
         <div className="flex items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-sm)] bg-[var(--color-fw-bg)] px-3 py-2.5">
             <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-mono text-[var(--color-fw-fg-muted)]">
-              {downloadFolder || 'No folder selected'}
+              {downloadFolder || s_storage.noFolder}
             </span>
           </div>
           <div className="flex flex-shrink-0 items-center gap-2">
             {savedVisible && (
-              <span className="text-xs font-medium text-[var(--color-fw-moss-600)]">Saved</span>
+              <span className="text-xs font-medium text-[var(--color-fw-moss-600)]">{s_storage.saved}</span>
             )}
             <Button type="button" variant="secondary" size="sm" onClick={handleChooseFolder}>
-              Choose...
+              {s_storage.buttonChoose}
             </Button>
           </div>
         </div>
         <p className="mt-3 text-[12px] text-[var(--color-fw-fg-muted)]">
-          Each portal gets its own subfolder.
+          {s_storage.hint}
         </p>
       </Card>
     </PageLayout>
@@ -380,6 +387,8 @@ function StoragePage() {
 }
 
 // ── (c2) Browser ──────────────────────────────────────────────────────────────
+
+const s_browser = strings.settings.browser;
 
 function BrowserPage() {
   const [showBrowser, setShowBrowser] = useState(false);
@@ -408,8 +417,8 @@ function BrowserPage() {
 
   return (
     <PageLayout
-      title="Browser"
-      lede="Control how the browser behaves during record fetching."
+      title={s_browser.title}
+      lede={s_browser.lede}
     >
       <Card className="max-w-[560px] px-6 py-5">
         <label
@@ -423,9 +432,9 @@ function BrowserPage() {
             className="mt-0.5"
           />
           <div className="flex flex-col gap-0.5">
-            <span className="text-[14px] text-[var(--color-fw-fg)]">Show browser window</span>
+            <span className="text-[14px] text-[var(--color-fw-fg)]">{s_browser.showBrowserLabel}</span>
             <span className="text-[12px] text-[var(--color-fw-fg-muted)]">
-              Display the browser window during record fetching. Useful for debugging.
+              {s_browser.showBrowserDescription}
             </span>
           </div>
         </label>
@@ -436,18 +445,17 @@ function BrowserPage() {
 
 // ── (d) Privacy & data ────────────────────────────────────────────────────────
 
+const s_privacy = strings.settings.privacy;
+
 function PrivacyPage() {
   return (
     <PageLayout
-      title="Privacy & data"
-      lede="What leaves your machine, and what stays."
+      title={s_privacy.title}
+      lede={s_privacy.lede}
     >
       <Card className="max-w-[560px] px-6 py-5">
         <p className="m-0 text-[14px] leading-[22px] text-[var(--color-fw-ink-700)]">
-          Your records never leave this Mac. Navigation requests are sent to
-          Anthropic's API — by default using FetchWell's key, or your own if
-          you've added one. Logs are stored locally and you can wipe them at any
-          time.
+          {s_privacy.body}
         </p>
       </Card>
     </PageLayout>
@@ -456,11 +464,13 @@ function PrivacyPage() {
 
 // ── (e) About Fetchwell ───────────────────────────────────────────────────────
 
+const s_about = strings.settings.about;
+
 function AboutPage() {
   return (
     <PageLayout
-      title="About Fetchwell"
-      lede="Version, licenses, acknowledgements."
+      title={s_about.title}
+      lede={s_about.lede}
     >
       <Card className="max-w-[560px] px-6 py-5">
         <div className="flex flex-col gap-3">
@@ -468,10 +478,10 @@ function AboutPage() {
             className="text-[13px] text-[var(--color-fw-ink-900)]"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
-            fetchwell 0.1.0 · build 2026.05.08
+            {strings.brand.buildVersion}
           </div>
           <div className="text-[13px] text-[var(--color-fw-fg-muted)]">
-            An app that fetches your medical records, locally. Made with care.
+            {strings.brand.tagline}
           </div>
         </div>
       </Card>
