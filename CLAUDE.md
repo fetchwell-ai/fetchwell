@@ -49,30 +49,30 @@ pnpm lint                             # ESLint (src/)
 ## Testing
 
 ```bash
-pnpm test:unit                        # Vitest — 96 unit tests, <1s
+pnpm test:unit                        # Vitest — 119 unit tests, <1s
 pnpm test:e2e                         # Playwright Electron — 16 tests, ~15s
 ```
 
-E2E tests launch the Electron app via Playwright and cover Welcome wizard, portal CRUD, settings, and the pipeline integration chain.
+E2E tests launch the Electron app via Playwright and cover portal CRUD, settings, and the pipeline integration chain.
 
 - **NEVER run `ucsf-discovery.spec.ts` or `integration.spec.ts`** unless the user explicitly asks. UCSF requires email 2FA that will fail and risk locking out the account.
 - **Use Stanford portal** (no 2FA) for all portal testing.
 - Electron app steals window focus during E2E tests — avoid launching during automated builds.
 - **Default to `pnpm test:unit` and `pnpm typecheck` only.** No E2E tests that launch the Electron app unless explicitly requested.
-- **Stanford E2E test:** `E2E_STANFORD=1 npx playwright test tests/e2e/stanford-e2e.spec.ts` — full pipeline test: wizard → add Stanford portal → discover → extract. Requires `ANTHROPIC_API_KEY` in `.env` and Stanford creds in `providers.json`. Takes ~2-4 min, steals focus. Skipped unless `E2E_STANFORD=1`.
+- **Stanford E2E test:** `E2E_STANFORD=1 npx playwright test tests/e2e/stanford-e2e.spec.ts` — full pipeline test: add Stanford portal → extract. Requires `ANTHROPIC_API_KEY` in `.env` and Stanford creds in `providers.json`. Takes ~2-4 min, steals focus. Skipped unless `E2E_STANFORD=1`.
 
 ## Key constraints
 
 - **PDF-only output.** `page.pdf()` captures full page height and waits for async content.
 - **Two browser providers.** `stagehand-local` (default, AI-powered) and `local` (plain Playwright). Set via `BROWSER_PROVIDER` env var.
-- **Auth is composable.** Two axes: `loginForm` (two-step | single-page) and `twoFactor` (none | email | manual | ui). Configured per provider.
+- **Auth is composable.** Two axes: `loginForm` (auto | two-step | single-page) and `twoFactor` (none | email | manual | ui). Login form type is auto-detected at runtime by default; detected value is cached for future runs.
 - **Nav-map is a cache, not a contract.** Agentic discovery builds nav-map.json with cached URLs and act() instructions. Extraction uses a 3-tier fallback: cached URL → replay steps → fresh agentic search. Discovery is not a required user-facing step — extraction discovers on-the-fly if no nav-map exists.
 - **Session persistence.** Cookies in `output/<provider-id>/session.json` (12h TTL). Skips login + 2FA when valid.
 - **Electron ↔ Pipeline bridge.** Electron forks `src/electron-runner.ts` as a subprocess (ESM via tsx). IPC for progress events, 2FA relay, and error reporting. One operation per portal at a time.
 - **Three TypeScript configs.** `tsconfig.json` (src/, ESM), `electron/tsconfig.json` (electron/, CJS), `src/renderer/tsconfig.json` (renderer/, Vite/bundler).
 - **CJS fix for Electron.** `dist-electron/package.json` with `{"type":"commonjs"}` is generated at build time (root package.json is `"type": "module"`).
 - **Dark mode.** System preference matching + manual Light/Dark/System toggle. Uses Tailwind `dark:` variant with class-based toggling via `nativeTheme`.
-- **Structured progress events.** Subprocess sends typed IPC events (`src/progress-events.ts`). ProgressPanel renders phased step indicator instead of raw terminal output.
+- **Structured progress events.** Subprocess sends typed IPC events (`src/progress-events.ts`). ProgressPanel renders progress bar, category rows, and status messages. Noisy Stagehand warnings are filtered from the detailed log.
 
 ## Environment variables
 
