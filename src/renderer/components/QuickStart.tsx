@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { ArrowRight, Check, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -72,11 +72,18 @@ export default function QuickStart({ steps, onStepClick, onDismiss }: QuickStart
   const total = steps.length;
   const allDone = doneCount === total;
 
+  // Auto-dismiss when all steps are complete
+  useEffect(() => {
+    if (allDone) {
+      onDismiss();
+    }
+  }, [allDone, onDismiss]);
+
   // First incomplete step is "current"
   const firstPendingIndex = steps.findIndex((s) => !s.done);
 
   if (allDone) {
-    // Collapsed success bar
+    // Collapsed success bar — shown briefly before auto-dismiss fires
     return (
       <div
         className={cn(
