@@ -7,9 +7,60 @@
  *
  * Defaults to 'two-step' on detection failure — this is the most common
  * pattern for Epic MyChart portals.
+ *
+ * Detected values are cached in output/<providerId>/login-form-type.json so
+ * that subsequent runs skip detection entirely.
  */
 
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { type BrowserProvider } from "../browser/interface.js";
+
+const OUTPUT_BASE = path.join(import.meta.dirname, "..", "..", "output");
+
+/**
+ * Return the path to the login form type cache file for a provider.
+ */
+function cacheFilePath(providerId: string): string {
+  return path.join(OUTPUT_BASE, providerId, "login-form-type.json");
+}
+
+/**
+ * Load the previously detected login form type from the cache file.
+ * Returns null if no cache exists or the file cannot be read.
+ */
+export function loadDetectedLoginFormType(providerId: string): "two-step" | "single-page" | null {
+  try {
+    const filePath = cacheFilePath(providerId);
+    if (!fs.existsSync(filePath)) return null;
+    const raw = fs.readFileSync(filePath, "utf-8");
+    const parsed = JSON.parse(raw) as { loginForm?: string };
+    if (parsed.loginForm === "two-step" || parsed.loginForm === "single-page") {
+      return parsed.loginForm;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Save a detected login form type to the cache file so future runs skip detection.
+ */
+export function saveDetectedLoginFormType(
+  providerId: string,
+  loginForm: "two-step" | "single-page",
+): void {
+  try {
+    const filePath = cacheFilePath(providerId);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, JSON.stringify({ loginForm }, null, 2), "utf-8");
+  } catch (err) {
+    console.log(
+      `   Warning: could not save login form type cache: ${(err as Error).message}`,
+    );
+  }
+}
 
 /**
  * Detect whether a portal's login form is single-page or two-step.
