@@ -98,15 +98,12 @@ export async function extractProvider(
     emit({ type: 'phase-change', phase: 'login', status: 'running', message: 'Logging in...' });
     emit({ type: 'status-message', phase: 'login', message: 'Getting ready to fetch records...' });
 
-    emit({ type: 'status-message', phase: 'login', message: 'Navigating to sign-in page...' });
-    console.log(`Step 2: Navigating to ${portalUrl}...`);
-    await browser.navigate(portalUrl);
-    console.log("Page loaded.");
-    console.log();
-
     // Step 3: Login or restore session
     // homeUrl = the authenticated dashboard URL (NOT the login page).
     // This is passed to extractors for agentic navigation fallback.
+    // IMPORTANT: Do NOT navigate to portalUrl (the login URL) before checking
+    // for a saved session — MyChart triggers ?action=logout when you visit the
+    // login URL while already authenticated, destroying the session.
     let homeUrl: string = portalUrl;
 
     if (savedSession && browser.loadSession) {
@@ -149,6 +146,11 @@ export async function extractProvider(
         }
       }
     } else {
+      emit({ type: 'status-message', phase: 'login', message: 'Navigating to sign-in page...' });
+      console.log(`Step 2: Navigating to ${portalUrl}...`);
+      await browser.navigate(portalUrl);
+      await new Promise((r) => setTimeout(r, 2000));
+      console.log("Page loaded.");
       emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
       console.log("Step 3: Login");
       await authModule.login(browser, authConfig, debugUrl);
