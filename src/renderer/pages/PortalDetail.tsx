@@ -130,7 +130,7 @@ function CredentialsSection({
         </div>
         <div className="flex gap-2">
           <Button type="button" size="sm" onClick={handleSave} disabled={saving}>
-            {saving ? 'Saving...' : 'Save'}
+            {saving ? 'Saving...' : credentials ? 'Update' : 'Save'}
           </Button>
           <Button type="button" variant="secondary" size="sm" onClick={handleCancel} disabled={saving}>
             Cancel
@@ -222,6 +222,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
   const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
   const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
   const [twoFaType, setTwoFaType] = useState<string | undefined>(undefined);
+  const [twoFaDeliveryHint, setTwoFaDeliveryHint] = useState<string | undefined>(undefined);
 
   // Load portal data
   useEffect(() => {
@@ -241,11 +242,12 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
   // 2FA listener
   useEffect(() => {
     if (runningOperation === null) return;
-    const handle2FARequest = (payload: { portalId: string; twoFactorType?: string }) => {
+    const handle2FARequest = (payload: { portalId: string; twoFactorType?: string; deliveryHint?: string }) => {
       setTwoFaPortalId(payload.portalId);
       if (payload.twoFactorType) {
         setTwoFaType(payload.twoFactorType);
       }
+      setTwoFaDeliveryHint(payload.deliveryHint);
     };
     window.electronAPI.on2FARequest(handle2FARequest);
     return () => {
@@ -540,7 +542,8 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
             key="2fa-modal"
             portalId={twoFaPortalId}
             twoFactorType={twoFaType as 'none' | 'email' | 'manual' | 'ui' | undefined}
-            onDismiss={() => { setTwoFaPortalId(null); setTwoFaType(undefined); }}
+            deliveryHint={twoFaDeliveryHint}
+            onDismiss={() => { setTwoFaPortalId(null); setTwoFaType(undefined); setTwoFaDeliveryHint(undefined); }}
           />
         )}
       </AnimatePresence>

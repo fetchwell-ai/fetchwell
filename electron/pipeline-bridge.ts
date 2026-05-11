@@ -66,6 +66,7 @@ interface ErrorEvent {
 interface TwoFARequest {
   type: '2fa:request';
   message: string;
+  deliveryHint?: string;
   error?: string;
 }
 
@@ -233,6 +234,7 @@ function runSubprocess(
           win.webContents.send('2fa:request', {
             portalId: config.portalId,
             twoFactorType: config.twoFactor,
+            deliveryHint: twoFaMsg.deliveryHint,
             error: twoFaMsg.error,
           });
         }

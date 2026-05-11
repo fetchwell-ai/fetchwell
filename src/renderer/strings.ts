@@ -29,6 +29,18 @@ export const strings = {
     },
   },
 
+  // ── Get Started (empty state — no portals) ────────────────────────────────
+  getStarted: {
+    label: 'Get started',
+    title: 'Add your first health portal',
+    description: 'Click here to configure your first health portal and start downloading your data.',
+  },
+
+  // ── Add Portal form ───────────────────────────────────────────────────────
+  addPortal: {
+    twoFactorNote: 'If your portal requires two-factor authentication, we\u2019ll prompt you to enter the code during sign-in.',
+  },
+
   // ── Settings pages ───────────────────────────────────────────────────────
   settings: {
     appearance: {
@@ -83,7 +95,7 @@ export const strings = {
     privacy: {
       title: 'Privacy & data',
       lede: 'What happens to your health data.',
-      body: "Fetchwell never sees your data. We don't have servers, we don't have a cloud. Your data is downloaded directly to your computer as PDFs. Your passwords are stored locally and encrypted by Electron using base64-encoded ciphertext. Your data is fetched by Claude, an AI assistant (built by Anthropic) that uses a web browser to navigate your health portal. That assistant will 'see' your health data when it processes your requests and is hosted in the cloud by Anthropic. Fetchwell is not affiliated with Anthropic. ",
+      body: "Fetchwell never sees your data. We don't have servers, we don't have a cloud. Your data is downloaded directly to your computer as PDFs. Your passwords are stored locally and encrypted by Electron using base64-encoded ciphertext. Your data is fetched by Claude, an AI assistant built by Anthropic that runs in their cloud and uses a web browser to navigate your health portal. That assistant  will 'see' your health data when it processes your requests. Fetchwell is not affiliated with Anthropic. ",
     },
 
     about: {
