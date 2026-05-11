@@ -245,6 +245,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
   const [scheduleEnabled, setScheduleEnabled] = useState(true);
   const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
   const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
+  const [twoFaType, setTwoFaType] = useState<string | undefined>(undefined);
 
   // Load portal data
   useEffect(() => {
@@ -264,8 +265,11 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
   // 2FA listener
   useEffect(() => {
     if (runningOperation === null) return;
-    const handle2FARequest = (payload: { portalId: string }) => {
+    const handle2FARequest = (payload: { portalId: string; twoFactorType?: string }) => {
       setTwoFaPortalId(payload.portalId);
+      if (payload.twoFactorType) {
+        setTwoFaType(payload.twoFactorType);
+      }
     };
     window.electronAPI.on2FARequest(handle2FARequest);
     return () => {
@@ -579,7 +583,8 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
           <TwoFactorModal
             key="2fa-modal"
             portalId={twoFaPortalId}
-            onDismiss={() => setTwoFaPortalId(null)}
+            twoFactorType={twoFaType as 'none' | 'email' | 'manual' | 'ui' | undefined}
+            onDismiss={() => { setTwoFaPortalId(null); setTwoFaType(undefined); }}
           />
         )}
       </AnimatePresence>

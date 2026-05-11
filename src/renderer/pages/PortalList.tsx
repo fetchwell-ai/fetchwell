@@ -446,6 +446,7 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
   const [loading, setLoading] = useState(true);
   const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
   const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
+  const [twoFaType, setTwoFaType] = useState<string | undefined>(undefined);
   const [downloadFolder, setDownloadFolder] = useState<string>('~/Documents/HealthRecords');
   const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
   const [quickstartDismissed, setQuickstartDismissed] = useState<boolean>(
@@ -505,8 +506,11 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
   useEffect(() => {
     if (runningOperation === null) return;
 
-    const handle2FARequest = (payload: { portalId: string }) => {
+    const handle2FARequest = (payload: { portalId: string; twoFactorType?: string }) => {
       setTwoFaPortalId(payload.portalId);
+      if (payload.twoFactorType) {
+        setTwoFaType(payload.twoFactorType);
+      }
     };
 
     window.electronAPI.on2FARequest(handle2FARequest);
@@ -653,7 +657,8 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
           <TwoFactorModal
             key="2fa-modal"
             portalId={twoFaPortalId}
-            onDismiss={() => setTwoFaPortalId(null)}
+            twoFactorType={twoFaType as 'none' | 'email' | 'manual' | 'ui' | undefined}
+            onDismiss={() => { setTwoFaPortalId(null); setTwoFaType(undefined); }}
           />
         )}
       </AnimatePresence>
