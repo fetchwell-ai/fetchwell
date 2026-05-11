@@ -7,7 +7,7 @@ import { runExtraction, cancelOperation, CategoryCounts } from './pipeline-bridg
 interface PortalInput {
   name: string;
   url: string;
-  loginForm: 'two-step' | 'single-page';
+  loginForm?: 'two-step' | 'single-page' | 'auto';
   twoFactor: 'none' | 'email' | 'manual' | 'ui';
   username?: string;
   password?: string;
@@ -45,7 +45,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     const entry = configManager!.addPortal({
       name: input.name,
       url: input.url,
-      loginForm: input.loginForm,
+      loginForm: input.loginForm ?? 'auto',
       twoFactor: input.twoFactor,
     });
 
@@ -66,7 +66,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
 
     if (updates.name !== undefined) configUpdates.name = updates.name;
     if (updates.url !== undefined) configUpdates.url = updates.url;
-    if (updates.loginForm !== undefined) configUpdates.loginForm = updates.loginForm;
+    if (updates.loginForm !== undefined) configUpdates.loginForm = updates.loginForm ?? 'auto';
     if (updates.twoFactor !== undefined) configUpdates.twoFactor = updates.twoFactor;
 
     if (updates.username !== undefined && updates.password !== undefined) {
@@ -145,7 +145,8 @@ export function registerIpcHandlers(userDataPath?: string): void {
         downloadFolder: settings.downloadFolder,
         showBrowser: settings.showBrowser,
         incremental: settings.incrementalExtraction,
-        loginForm: portal.loginForm,
+        // Cast to satisfy bridge types; 'auto' is handled at runtime by the auth system
+        loginForm: portal.loginForm as 'two-step' | 'single-page',
         twoFactor: portal.twoFactor,
       });
       const countUpdate: Partial<PortalEntry> = {

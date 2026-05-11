@@ -2,7 +2,7 @@ interface PortalEntry {
   id: string;
   name: string;
   url: string;
-  loginForm: 'two-step' | 'single-page';
+  loginForm: 'two-step' | 'single-page' | 'auto';
   twoFactor: 'none' | 'email' | 'manual' | 'ui';
   hasCredentials: boolean;
   discoveredAt: string | null;
@@ -16,7 +16,7 @@ interface PortalEntry {
 interface PortalInput {
   name: string;
   url: string;
-  loginForm: 'two-step' | 'single-page';
+  loginForm?: 'two-step' | 'single-page' | 'auto';
   twoFactor: 'none' | 'email' | 'manual' | 'ui';
   username?: string;
   password?: string;
@@ -90,7 +90,8 @@ interface ElectronAPI {
   onComplete(callback: (operation: string, data: { portalId: string }) => void): void;
   onError(callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void): void;
   onStructuredProgress(callback: (operation: string, event: StructuredProgressEvent) => void): void;
-  on2FARequest(callback: (payload: { portalId: string }) => void): void;
+  on2FARequest(callback: (payload: { portalId: string; twoFactorType: 'none' | 'email' | 'manual' | 'ui'; error?: string }) => void): void;
+  on2FAResult(callback: (payload: { portalId: string; success: boolean; error?: string }) => void): void;
   submit2FACode(payload: { portalId: string; code: string | null }): void;
   removeAllListeners(channel: string): void;
 

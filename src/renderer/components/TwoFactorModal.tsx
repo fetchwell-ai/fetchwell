@@ -11,33 +11,107 @@ export interface TwoFactorModalProps {
 
 const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
+type TwoFactorType = 'none' | 'email' | 'manual' | 'ui';
+
+function getTwoFactorHint(twoFactorType: TwoFactorType | null): string {
+  switch (twoFactorType) {
+    case 'email':
+      return 'Check your email for the verification code.';
+    case 'manual':
+      return 'Check your phone or authenticator app for the code.';
+    case 'ui':
+      return 'Enter the code your portal just sent.';
+    default:
+      return 'Enter the code your portal just sent.';
+  }
+}
+
 export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalProps) {
   const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
+  const [twoFactorType, setTwoFactorType] = useState<TwoFactorType | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dismissedRef = useRef(false);
 
-  // Auto-focus input on mount
+  // Look up the portal's twoFactor type on mount
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    window.electronAPI
+      .getPortals()
+      .then((portals) => {
+        const portal = portals.find((p) => p.id === portalId);
+        if (portal) {
+          setTwoFactorType(portal.twoFactor);
+        }
+      })
+      .catch(() => {
+        // Fall back to generic hint
+      });
+  }, [portalId]);
+
+  // Auto-focus input on mount (and re-focus after verifying state clears)
+  useEffect(() => {
+    if (!verifying) {
+      inputRef.current?.focus();
+    }
+  }, [verifying]);
+
+  // Listen for 2fa:result events — keep modal open until the subprocess confirms the code
+  useEffect(() => {
+    const handle2FAResult = (payload: { portalId: string; success: boolean; error?: string }) => {
+      if (payload.portalId !== portalId) return;
+
+      if (payload.success) {
+        // Code accepted — close the modal
+        if (!dismissedRef.current) {
+          dismissedRef.current = true;
+          onDismiss();
+        }
+      } else {
+        // Code rejected — re-show input with error message
+        setVerifying(false);
+        setCode('');
+        setError(payload.error ?? 'Code not accepted — try again');
+      }
+    };
+
+    window.electronAPI.on2FAResult(handle2FAResult);
+
+    return () => {
+      window.electronAPI.removeAllListeners('2fa:result');
+    };
+  }, [portalId, onDismiss]);
 
   // 5-minute timeout
   useEffect(() => {
     const timer = setTimeout(() => {
-      setTimedOut(true);
-      window.electronAPI.submit2FACode({ portalId, code: null });
-      onDismiss();
+      if (!dismissedRef.current && !verifying) {
+        setTimedOut(true);
+        window.electronAPI.submit2FACode({ portalId, code: null });
+        dismissedRef.current = true;
+        onDismiss();
+      }
     }, TIMEOUT_MS);
 
     return () => {
       clearTimeout(timer);
     };
-  }, [portalId, onDismiss]);
+  }, [portalId, onDismiss, verifying]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim()) return;
+    if (!code.trim() || verifying) return;
+    setVerifying(true);
+    setError(null);
     window.electronAPI.submit2FACode({ portalId, code: code.trim() });
+    // Do NOT dismiss yet — wait for 2fa:result
+  };
+
+  const handleCancel = () => {
+    if (dismissedRef.current) return;
+    dismissedRef.current = true;
+    window.electronAPI.submit2FACode({ portalId, code: null });
     onDismiss();
   };
 
@@ -50,6 +124,8 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
   const shouldReduce = useReducedMotion();
   // --fw-ease-out: cubic-bezier(0.16, 1, 0.3, 1)
   const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
+
+  const hint = getTwoFactorHint(twoFactorType);
 
   return (
     <motion.div
@@ -83,8 +159,18 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
           ) : (
             <>
               <p className="m-0 mb-5 text-[14px] leading-relaxed text-[var(--color-fw-fg-muted)]">
-                Enter the code your portal just sent.
+                {hint}
               </p>
+
+              {error && (
+                <p
+                  role="alert"
+                  className="mb-4 rounded-[var(--radius-sm)] bg-[var(--color-fw-crimson-100)] px-3 py-2 text-[13px] text-[var(--color-fw-crimson-700)]"
+                >
+                  {error}
+                </p>
+              )}
+
               <form onSubmit={handleSubmit}>
                 <div className="mb-4">
                   <Label htmlFor="twofa-code-input" className="mb-1.5">
@@ -100,16 +186,46 @@ export default function TwoFactorModal({ portalId, onDismiss }: TwoFactorModalPr
                     placeholder="Enter code..."
                     autoComplete="one-time-code"
                     autoFocus
+                    disabled={verifying}
                     className="text-base tracking-[0.1em]"
+                    aria-invalid={error !== null}
                   />
                 </div>
 
-                <div className="mt-4 flex justify-end">
+                <div className="mt-4 flex items-center justify-between gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleCancel}
+                    disabled={verifying}
+                  >
+                    Cancel
+                  </Button>
+
                   <Button
                     type="submit"
-                    disabled={!code.trim()}
+                    disabled={!code.trim() || verifying}
                   >
-                    Submit
+                    {verifying ? (
+                      <span className="flex items-center gap-2">
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            display: 'inline-block',
+                            width: 13,
+                            height: 13,
+                            border: '2px solid currentColor',
+                            borderTopColor: 'transparent',
+                            borderRadius: '50%',
+                            animation: 'progress-spin 0.8s linear infinite',
+                            flexShrink: 0,
+                          }}
+                        />
+                        Verifying...
+                      </span>
+                    ) : (
+                      'Submit'
+                    )}
                   </Button>
                 </div>
               </form>

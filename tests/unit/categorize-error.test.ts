@@ -34,7 +34,7 @@ describe('categorizeError', () => {
     it('is case-insensitive for 2fa', () => {
       const result = categorizeError('2FA REQUIRED');
       expect(result.category).toBe('2fa_timeout');
-      expect(result.suggestion).toContain('5 minutes');
+      expect(result.suggestion).toContain('try again');
     });
   });
 
