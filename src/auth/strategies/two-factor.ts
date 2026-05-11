@@ -174,51 +174,29 @@ const ui: TwoFactorHandler = async (browser) => {
             "Then click any 'Send', 'Send code', 'Continue', or similar button if present.",
           );
           deliveryHint = "text message";
-          console.log(`[2fa:ui] Selected SMS/text. URL now: ${await browser.url()}`);
+          console.log(`[2fa:ui] Selected SMS/text.`);
         } else if (deliveryChoice.hasEmail) {
           await browser.act(
             "Click the option to receive the verification code via email. " +
             "Then click any 'Send', 'Send code', 'Continue', or similar button if present.",
           );
           deliveryHint = "email";
-          console.log(`[2fa:ui] Selected email. URL now: ${await browser.url()}`);
+          console.log(`[2fa:ui] Selected email.`);
         } else {
           await browser.act(
             "Select any available option to receive the verification code, then click 'Send', 'Continue', or similar.",
           );
-          console.log(`[2fa:ui] Selected fallback option. URL now: ${await browser.url()}`);
+          console.log(`[2fa:ui] Selected fallback option.`);
         }
-        await new Promise((r) => setTimeout(r, 3000));
-        console.log(`[2fa:ui] After delivery wait. URL: ${await browser.url()}`);
       } else {
         // No choice but might need to click a send button
         await browser.act(
           "If there is a 'Send code', 'Send', 'Continue', or similar button to trigger sending the verification code, click it.",
         );
-        console.log(`[2fa:ui] Triggered send. URL now: ${await browser.url()}`);
-        await new Promise((r) => setTimeout(r, 3000));
+        console.log(`[2fa:ui] Triggered send.`);
       }
     } catch (err) {
       console.log(`[2fa:ui] Delivery selection failed: ${err instanceof Error ? err.message : err}`);
-      console.log(`[2fa:ui] URL after failure: ${await browser.url()}`);
-    }
-
-    // Try to extract more specific delivery info from the confirmation text
-    try {
-      const extracted = await browser.extract(
-        z.object({ deliveryHint: z.string() }),
-        "Find any text on this page that says where a verification code was sent — " +
-        "for example an email address, phone number, or delivery method (email, SMS, text). " +
-        "Return ONLY the relevant phrase like 'email to c***@gmail.com' or 'text to (***) ***-1234' " +
-        "or 'email' or 'SMS'. If nothing found, return empty string.",
-      );
-      const hint = (extracted?.deliveryHint ?? '').trim();
-      if (hint && hint.length > 0 && hint.length < 200) {
-        deliveryHint = hint;
-        console.log(`   2FA delivery hint: ${deliveryHint}`);
-      }
-    } catch {
-      // Best-effort — keep whatever deliveryHint we already have
     }
 
     console.log(`[2fa:ui] Requesting code from user (hint: ${deliveryHint ?? 'none'})`);
