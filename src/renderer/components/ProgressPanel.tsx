@@ -3,11 +3,19 @@ import { motion, useReducedMotion } from 'framer-motion';
 import ErrorSummary, { resetFailureCount } from './ErrorSummary';
 import { Button } from './ui/button';
 
+export interface PortalCounts {
+  labCount?: number;
+  visitCount?: number;
+  medicationCount?: number;
+  messageCount?: number;
+}
+
 export interface ProgressPanelProps {
   portalId: string;
   operation: 'extraction';
   onClose: () => void;
   onReDiscover?: () => void;
+  portalCounts?: PortalCounts;
 }
 
 type PanelState = 'running' | 'complete' | 'error';
@@ -59,6 +67,13 @@ const CATEGORY_LABELS: Record<ProgressCategory, string> = {
   messages: 'Messages',
 };
 
+const CATEGORY_COUNT_KEY: Record<ProgressCategory, keyof PortalCounts> = {
+  labs: 'labCount',
+  visits: 'visitCount',
+  medications: 'medicationCount',
+  messages: 'messageCount',
+};
+
 // -- Sub-components --
 
 function SpinnerIcon({ color = 'var(--color-fw-sage-700)', size = 14 }: { color?: string; size?: number }) {
@@ -75,9 +90,32 @@ function SpinnerIcon({ color = 'var(--color-fw-sage-700)', size = 14 }: { color?
   );
 }
 
-function CategoryRow({ category, state }: { category: ProgressCategory; state: CategoryState | undefined }) {
+export function formatCategoryCount(
+  count: number | undefined,
+  storedCount: number | undefined,
+): string | null {
+  if (count === undefined) return null;
+  if (storedCount !== undefined && storedCount > 0 && count === 0) {
+    return `0 new | ${storedCount} existing`;
+  }
+  if (storedCount !== undefined && storedCount > 0) {
+    return `${count} new ${count === 1 ? 'item' : 'items'}`;
+  }
+  return `${count} ${count === 1 ? 'item' : 'items'}`;
+}
+
+function CategoryRow({
+  category,
+  state,
+  portalCounts,
+}: {
+  category: ProgressCategory;
+  state: CategoryState | undefined;
+  portalCounts?: PortalCounts;
+}) {
   const status = state?.status ?? 'pending';
   const count = state?.count;
+  const storedCount = portalCounts?.[CATEGORY_COUNT_KEY[category]];
 
   return (
     <div style={{
@@ -123,7 +161,7 @@ function CategoryRow({ category, state }: { category: ProgressCategory; state: C
           borderRadius: 99,
           padding: '2px 8px',
         }}>
-          {count} {count === 1 ? 'item' : 'items'}
+          {formatCategoryCount(count, storedCount)}
         </span>
       )}
       {status === 'running' && (
@@ -180,7 +218,7 @@ function isNoisyLogLine(line: string): boolean {
 
 // -- Main component --
 
-export default function ProgressPanel({ portalId, operation, onClose, onReDiscover }: ProgressPanelProps) {
+export default function ProgressPanel({ portalId, operation, onClose, onReDiscover, portalCounts }: ProgressPanelProps) {
   const [logs, setLogs] = useState<string[]>([]);
   const [panelState, setPanelState] = useState<PanelState>('running');
   const [errorData, setErrorData] = useState<ErrorData | null>(null);
@@ -356,6 +394,7 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
                   key={cat}
                   category={cat}
                   state={structured.categories[cat]}
+                  portalCounts={portalCounts}
                 />
               ))}
             </div>

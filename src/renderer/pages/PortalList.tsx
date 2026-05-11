@@ -653,6 +653,7 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
             portalId={runningOperation.portalId}
             operation={runningOperation.operation}
             onClose={handleProgressPanelClose}
+            portalCounts={portals.find((p) => p.id === runningOperation.portalId)}
           />
         )}
       </AnimatePresence>
