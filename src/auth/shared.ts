@@ -55,15 +55,23 @@ export const GMAIL_USER =
 export const GMAIL_APP_PASSWORD = GMAIL_USER ? process.env.GMAIL_APP_PASSWORD : undefined;
 
 export function isAuthPage(url: string): boolean {
-  const u = url.toLowerCase();
+  // Check only the pathname — callback URLs like
+  // app.onemedical.com/?iss=https://login.onemedical.com/ contain "login"
+  // in the query string but are NOT auth pages.
+  let pathname: string;
+  try {
+    pathname = new URL(url).pathname.toLowerCase();
+  } catch {
+    pathname = url.toLowerCase();
+  }
   return (
-    u.includes("authentication") ||
-    u.includes("twofactor") ||
-    u.includes("verif") ||
-    u.includes("login") ||
-    u.includes("/sign-in") ||
-    u.includes("/signin") ||
-    u.includes("/auth")
+    pathname.includes("authentication") ||
+    pathname.includes("twofactor") ||
+    pathname.includes("verif") ||
+    pathname.includes("login") ||
+    pathname.includes("/sign-in") ||
+    pathname.includes("/signin") ||
+    pathname.includes("/auth")
   );
 }
 
