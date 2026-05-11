@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Moon, Key, Folder, Shield, Info, Plus, ChevronRight, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { strings } from '../strings';
 import fetchWellMarkSvg from '../assets/fetchwell-mark.svg?raw';
 
 export type SettingsKey = 'appearance' | 'key' | 'storage' | 'privacy' | 'about' | 'browser';
@@ -14,13 +15,15 @@ interface SidebarProps {
   onAddPortal: () => void;
 }
 
+const s = strings.sidebar;
+
 const SETTINGS_ITEMS: { key: SettingsKey; label: string; Icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
-  { key: 'appearance', label: 'Appearance',       Icon: Moon },
-  { key: 'key',        label: 'Anthropic API key', Icon: Key },
-  { key: 'browser',    label: 'Browser',           Icon: Globe },
-  { key: 'storage',    label: 'Storage location',  Icon: Folder },
-  { key: 'privacy',    label: 'Privacy & data',    Icon: Shield },
-  { key: 'about',      label: 'About Fetchwell',   Icon: Info },
+  { key: 'appearance', label: s.settings.appearance,  Icon: Moon },
+  { key: 'key',        label: s.settings.apiKey,      Icon: Key },
+  { key: 'browser',    label: s.settings.browser,     Icon: Globe },
+  { key: 'storage',    label: s.settings.storage,     Icon: Folder },
+  { key: 'privacy',    label: s.settings.privacy,     Icon: Shield },
+  { key: 'about',      label: s.settings.about,       Icon: Info },
 ];
 
 function getPortalStatusColor(portal: PortalEntry): string {
@@ -68,14 +71,14 @@ export default function Sidebar({
           className="text-[17px] font-medium leading-none tracking-[-0.01em] text-[var(--color-fw-ink-900)] select-none"
           style={{ fontFamily: 'var(--fw-font-display, inherit)' }}
         >
-          fetchwell
+          {strings.brand.name}
         </span>
       </div>
 
       {/* PORTALS section label — left edge at 16px to match titlebar and item rows */}
       <div className="px-2 pt-2.5 pb-1.5 flex-shrink-0">
         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)] select-none" style={{ paddingLeft: 8 }}>
-          Portals
+          {s.portalsLabel}
         </span>
       </div>
 
@@ -83,7 +86,7 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto px-2 pb-2 flex flex-col gap-0.5">
         {portals.length === 0 ? (
           <p className="py-1 text-[12px] text-[var(--color-fw-fg-muted)] select-none" style={{ paddingLeft: 8 }}>
-            No portals yet
+            {s.noPortals}
           </p>
         ) : (
           portals.map((portal) => {
@@ -123,7 +126,7 @@ export default function Sidebar({
           style={{ paddingLeft: 8, paddingRight: 10 }}
         >
           <Plus size={14} className="flex-shrink-0" />
-          <span>Add portal</span>
+          <span>{s.addPortal}</span>
         </button>
       </div>
 
@@ -140,7 +143,7 @@ export default function Sidebar({
           style={{ transform: settingsOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
         />
         <span className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--color-fw-fg-muted)] pl-0.5">
-          Settings
+          {s.settingsLabel}
         </span>
       </button>
 
@@ -174,12 +177,12 @@ export default function Sidebar({
       {/* Version footer */}
       <div className="flex-shrink-0 border-t border-[var(--color-fw-border)] px-2.5 py-2">
         <div className="flex justify-between items-center px-1 py-0.5">
-          <span className="text-[11px] text-[var(--color-fw-fg-muted)] select-none">v0.1.0</span>
+          <span className="text-[11px] text-[var(--color-fw-fg-muted)] select-none">{strings.brand.version}</span>
           <span
             className="text-[11px] text-[var(--color-fw-fg-muted)] select-none"
             style={{ fontFamily: 'var(--fw-font-mono, monospace)' }}
           >
-            local-only
+            {strings.brand.badge}
           </span>
         </div>
       </div>

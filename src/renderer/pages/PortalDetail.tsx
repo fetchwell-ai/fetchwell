@@ -141,29 +141,6 @@ function CredentialsSection({
   );
 }
 
-// ── Toggle switch ──────────────────────────────────────────────────────────────
-
-function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
-  return (
-    <div
-      className={cn(
-        'w-9 h-5 rounded-full relative cursor-pointer transition-colors',
-        enabled ? 'bg-[var(--color-fw-sage-700)]' : 'bg-[var(--color-fw-ink-200)]',
-      )}
-      onClick={onToggle}
-      role="switch"
-      aria-checked={enabled}
-    >
-      <span
-        className={cn(
-          'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-[var(--color-fw-paper-light)] shadow transition-transform',
-          enabled && 'translate-x-4',
-        )}
-      />
-    </div>
-  );
-}
-
 // ── Record breakdown tile ──────────────────────────────────────────────────────
 
 interface RecordTileProps {
@@ -218,7 +195,7 @@ function deriveHistory(portal: PortalEntry): HistoryItem[] {
   const items: HistoryItem[] = [];
   if (portal.lastExtractedAt) {
     items.push({
-      what: 'First extraction',
+      what: 'Last extraction',
       when: new Date(portal.lastExtractedAt).toLocaleDateString(undefined, {
         month: 'short', day: 'numeric', year: 'numeric',
       }),
@@ -242,7 +219,6 @@ function deriveHistory(portal: PortalEntry): HistoryItem[] {
 export default function PortalDetail({ portalId, onBack, downloadFolder }: PortalDetailProps) {
   const [portal, setPortal] = useState<PortalEntry | null>(null);
   const [credentials, setCredentials] = useState<{ username: string; password: string } | null>(null);
-  const [scheduleEnabled, setScheduleEnabled] = useState(true);
   const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
   const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
   const [twoFaType, setTwoFaType] = useState<string | undefined>(undefined);
@@ -511,27 +487,6 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
         </section>
       )}
 
-      {/* Schedule (mapped or fetched) */}
-      {portalState === 'fetched' && (
-        <section className="mb-8">
-          <SectionHeader>Schedule</SectionHeader>
-          <Card className="px-6 py-5 flex items-center justify-between gap-4">
-            <div>
-              <div className="text-[14px] font-medium text-[var(--color-fw-ink-900)] mb-0.5">
-                Auto-fetch every week
-              </div>
-              <div className="text-[13px] text-[var(--color-fw-fg-muted)]">
-                Next run: Friday, May 14 · 09:00
-              </div>
-            </div>
-            <ToggleSwitch
-              enabled={scheduleEnabled}
-              onToggle={() => setScheduleEnabled((v) => !v)}
-            />
-          </Card>
-        </section>
-      )}
-
       {/* Credentials */}
       <CredentialsSection
         portalId={portalId}
@@ -551,7 +506,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
               Remove this portal
             </div>
             <div className="text-[13px] text-[var(--color-fw-fg-muted)]">
-              Stops auto-fetch and forgets the mapping. Downloaded files stay on disk.
+              Removes this portal and its credentials. Downloaded files stay on disk.
             </div>
           </div>
           <Button

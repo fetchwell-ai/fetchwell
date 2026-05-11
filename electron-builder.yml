@@ -31,14 +31,8 @@ mac:
   # Set to null to allow unsigned builds during development.
   # When CSC_LINK and CSC_KEY_PASSWORD env vars are set,
   # electron-builder will sign automatically.
-  identity: null
-  # Notarization is disabled by default.
-  # To enable, set the following env vars:
-  #   APPLE_ID            — your Apple ID email
-  #   APPLE_APP_SPECIFIC_PASSWORD — app-specific password from appleid.apple.com
-  #   APPLE_TEAM_ID       — your 10-char Apple Developer Team ID
-  # Then set notarize to true here (or pass --mac.notarize at CLI).
-  notarize: false
+  identity: "Chad Allen (SDWTXTZJ3F)"
+  notarize: true
 
 dmg:
   title: "${productName} ${version}"
