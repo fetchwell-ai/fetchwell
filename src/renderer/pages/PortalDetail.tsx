@@ -279,8 +279,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
   };
 
   const handleRevealInFinder = () => {
-    const path = `${downloadFolder}/${portalId}`;
-    window.electronAPI.revealInFinder(path).catch(() => {});
+    window.electronAPI.revealInFinder(folderPath).catch(() => {});
   };
 
   const handleProgressPanelClose = () => {
@@ -304,7 +303,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
   }
 
   const portalState = derivePortalState(portal);
-  const folderPath = `${downloadFolder}/${portal.id}`;
+  const [folderPath, setFolderPath] = useState(`${downloadFolder}/${portal.id}`);
   const history = deriveHistory(portal);
   const anyOperationRunning = runningOperation !== null;
 
@@ -404,6 +403,20 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
             <span className="flex-1 font-mono text-[12px] overflow-hidden text-ellipsis whitespace-nowrap">
               {folderPath}
             </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                const chosen = await window.electronAPI.chooseFolder();
+                if (chosen !== null) {
+                  await window.electronAPI.updateSettings({ downloadFolder: chosen });
+                  setFolderPath(`${chosen}/${portal.id}`);
+                }
+              }}
+            >
+              Change
+            </Button>
             <Button
               type="button"
               variant="ghost"
