@@ -22,23 +22,25 @@ export interface QuickStartProps {
 /**
  * Derive QuickStart steps from real app state.
  * Steps:
- *   0: API key set (apiKeyConfigured)
+ *   0: API key set (apiKeyConfigured or apiKeySource === 'bundled')
  *   1: Any portal added (portals.length > 0)
  *   2: First fetch run (any portal has lastExtractedAt)
  */
 export function deriveQuickStartSteps(
   portals: PortalEntry[],
   apiKeyConfigured: boolean,
+  apiKeySource: ApiKeySource = 'bundled',
 ): QuickStartStep[] {
   const hasPortal = portals.length > 0;
   const extractedPortal = portals.find((p) => p.lastExtractedAt !== null);
 
-  const apiKeyDone = apiKeyConfigured;
+  const isBundled = apiKeySource === 'bundled';
+  const apiKeyDone = isBundled || apiKeyConfigured;
   const portalDone = hasPortal;
   const extractedDone = extractedPortal !== undefined;
 
   // Meta: contextual info for each step
-  const apiKeyMeta = apiKeyDone ? 'Validated' : undefined;
+  const apiKeyMeta = isBundled ? 'Included' : apiKeyDone ? 'Validated' : undefined;
   const portalMeta = portalDone
     ? portals.length === 1
       ? '1 added'
@@ -49,7 +51,7 @@ export function deriveQuickStartSteps(
     : undefined;
 
   return [
-    { key: 'api-key', label: 'Add your Anthropic API key', done: apiKeyDone, meta: apiKeyMeta },
+    { key: 'api-key', label: 'API key', done: apiKeyDone, meta: apiKeyMeta },
     { key: 'portal', label: 'Add a patient portal', done: portalDone, meta: portalMeta },
     { key: 'extract', label: 'Fetch your records', done: extractedDone, meta: extractedMeta },
   ];
