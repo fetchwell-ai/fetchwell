@@ -217,10 +217,15 @@ function MetaStrip({ portal, downloadFolder }: MetaStripProps) {
           </span>
         </span>
       </div>
-      <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        className="flex items-center gap-1.5 cursor-pointer border-none bg-transparent p-0 text-xs text-[var(--color-fw-fg-muted)] hover:underline"
+        onClick={() => window.electronAPI.revealInFinder(folderPath).catch(() => {})}
+        title="Open in Finder"
+      >
         <Folder size={14} className="text-[var(--color-fw-fg-subtle)] flex-shrink-0" />
         <span className="font-mono text-[11px]">{folderPath}</span>
-      </div>
+      </button>
     </div>
   );
 }
