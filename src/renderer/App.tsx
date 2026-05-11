@@ -71,12 +71,12 @@ export default function App() {
     prevIsPortalsView.current = isPortalsView;
   }, [rootPage, isPortalsView, loadPortals]);
 
-  // Reset the add-form flag after PortalList has mounted with it (one render cycle later)
+  // Reset the add-form flag after PortalList has mounted with it
   useEffect(() => {
     if (openAddPortal) {
       setOpenAddPortal(false);
     }
-  }, [portalListKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [portalListKey, openAddPortal]);
 
   const handleNavigateToApiKey = () => {
     setActivePortalId(null);
