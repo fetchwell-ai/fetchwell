@@ -7,6 +7,7 @@ import { Label } from './ui/label';
 export interface TwoFactorModalProps {
   portalId: string;
   twoFactorType?: TwoFactorType;
+  deliveryHint?: string;
   onDismiss: () => void;
 }
 
@@ -14,43 +15,20 @@ const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
 type TwoFactorType = 'none' | 'email' | 'manual' | 'ui';
 
-function getTwoFactorHint(twoFactorType: TwoFactorType | null): string {
-  switch (twoFactorType) {
-    case 'email':
-      return 'Check your email for the verification code.';
-    case 'manual':
-      return 'Check your phone or authenticator app for the code.';
-    case 'ui':
-      return 'Enter the code your portal just sent.';
-    default:
-      return 'Enter the code your portal just sent.';
+function getTwoFactorHint(deliveryHint?: string): string {
+  if (deliveryHint) {
+    return `Your portal sent a verification code via ${deliveryHint}.`;
   }
+  return 'Your portal sent a verification code. Check your email or phone.';
 }
 
-export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeProp, onDismiss }: TwoFactorModalProps) {
+export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeProp, deliveryHint, onDismiss }: TwoFactorModalProps) {
   const [code, setCode] = useState('');
   const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
-  const [twoFactorType, setTwoFactorType] = useState<TwoFactorType | null>(twoFactorTypeProp ?? null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dismissedRef = useRef(false);
-
-  // Look up the portal's twoFactor type on mount (skip if provided via prop)
-  useEffect(() => {
-    if (twoFactorTypeProp) return;
-    window.electronAPI
-      .getPortals()
-      .then((portals) => {
-        const portal = portals.find((p) => p.id === portalId);
-        if (portal) {
-          setTwoFactorType(portal.twoFactor);
-        }
-      })
-      .catch(() => {
-        // Fall back to generic hint
-      });
-  }, [portalId, twoFactorTypeProp]);
 
   // Auto-focus input on mount (and re-focus after verifying state clears)
   useEffect(() => {
@@ -133,7 +111,7 @@ export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeP
   // --fw-ease-out: cubic-bezier(0.16, 1, 0.3, 1)
   const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
-  const hint = getTwoFactorHint(twoFactorType);
+  const hint = getTwoFactorHint(deliveryHint);
 
   return (
     <motion.div

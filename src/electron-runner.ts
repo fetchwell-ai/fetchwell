@@ -43,6 +43,7 @@ interface RunnerCommand {
 interface TwoFARequest {
   type: '2fa:request';
   message: string;
+  deliveryHint?: string;
   error?: string;
 }
 
@@ -91,12 +92,13 @@ function sendTwoFAResult(success: boolean, error?: string): void {
  * Sends a 2fa:request and waits for a 2fa:response.
  * @param error - Optional error message to show in the modal (for retries).
  */
-function requestOtpFromRenderer(error?: string): Promise<string | null> {
+function requestOtpFromRenderer(opts?: { deliveryHint?: string; error?: string }): Promise<string | null> {
   return new Promise((resolve) => {
     const request: TwoFARequest = {
       type: '2fa:request',
       message: 'Enter your two-factor authentication code',
-      ...(error !== undefined ? { error } : {}),
+      ...(opts?.deliveryHint !== undefined ? { deliveryHint: opts.deliveryHint } : {}),
+      ...(opts?.error !== undefined ? { error: opts.error } : {}),
     };
 
     if (!process.send) {
@@ -130,9 +132,9 @@ let twoFAWasRequested = false;
  * and resolves when the parent responds with a 2fa:response.
  */
 function installOtpCallback(): void {
-  setOtpCallback(async (): Promise<string | null> => {
+  setOtpCallback(async (deliveryHint?: string): Promise<string | null> => {
     twoFAWasRequested = true;
-    return requestOtpFromRenderer();
+    return requestOtpFromRenderer({ deliveryHint });
   });
 }
 
@@ -239,9 +241,9 @@ async function runWithTwoFARetry(operation: () => Promise<void>): Promise<void> 
         // Notify renderer: code failed, re-prompt
         sendTwoFAResult(false, 'Code not accepted — try again');
         // Update the OTP callback to send an error field on the next request
-        setOtpCallback(async (): Promise<string | null> => {
+        setOtpCallback(async (deliveryHint?: string): Promise<string | null> => {
           twoFAWasRequested = true;
-          return requestOtpFromRenderer('Code not accepted — try again');
+          return requestOtpFromRenderer({ deliveryHint, error: 'Code not accepted — try again' });
         });
         continue;
       }

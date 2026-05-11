@@ -5,6 +5,7 @@
  * The registry is extensible: add a new key+function to support a new 2FA method.
  */
 
+import { z } from "zod";
 import { type BrowserProvider } from "../../browser/interface.js";
 import {
   detect2FA,
@@ -115,12 +116,12 @@ const manual: TwoFactorHandler = async (browser, providerId) => {
  * Module-level OTP callback for the "ui" 2FA strategy.
  * Injected at runtime by the pipeline bridge (e.g. Electron IPC).
  */
-let otpCallback: (() => Promise<string | null>) | null = null;
+let otpCallback: ((deliveryHint?: string) => Promise<string | null>) | null = null;
 
 /**
  * Set (or clear) the OTP callback used by the "ui" 2FA strategy.
  */
-export function setOtpCallback(cb: (() => Promise<string | null>) | null): void {
+export function setOtpCallback(cb: ((deliveryHint?: string) => Promise<string | null>) | null): void {
   otpCallback = cb;
 }
 
@@ -141,7 +142,26 @@ const ui: TwoFactorHandler = async (browser) => {
       throw new Error("No OTP callback registered for ui 2FA strategy");
     }
 
-    const code = await otpCallback();
+    // Try to extract where the code was sent (e.g. "We sent a code to c***@gmail.com")
+    let deliveryHint: string | undefined;
+    try {
+      const extracted = await browser.extract(
+        z.object({ deliveryHint: z.string() }),
+        "Find any text on this page that says where a verification code was sent — " +
+        "for example an email address, phone number, or delivery method (email, SMS, text). " +
+        "Return ONLY the relevant phrase like 'email to c***@gmail.com' or 'text to (***) ***-1234' " +
+        "or 'email' or 'SMS'. If nothing found, return empty string.",
+      );
+      const hint = (extracted?.deliveryHint ?? '').trim();
+      if (hint && hint.length > 0 && hint.length < 200) {
+        deliveryHint = hint;
+        console.log(`   2FA delivery hint: ${deliveryHint}`);
+      }
+    } catch {
+      // Best-effort — proceed without hint
+    }
+
+    const code = await otpCallback(deliveryHint);
     if (code === null) {
       throw new Error("2FA code not provided — user may have timed out or cancelled");
     }

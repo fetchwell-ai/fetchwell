@@ -14,10 +14,10 @@ import {
 import AddPortal from './AddPortal';
 import ProgressPanel from '../components/ProgressPanel';
 import TwoFactorModal from '../components/TwoFactorModal';
-import QuickStart, { deriveQuickStartSteps } from '../components/QuickStart';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { cn } from '../lib/utils';
+import { strings } from '../strings';
 
 interface PortalListProps {
   onOpenSettings: () => void;
@@ -443,8 +443,6 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
   );
 }
 
-const QUICKSTART_DISMISSED_KEY = 'quickstartDismissed';
-
 export default function PortalList({ onOpenSettings, onNavigateToApiKey, selectedPortalId, onPortalsChanged, initialView }: PortalListProps) {
   const [view, setView] = useState<View>(initialView === 'add' ? { type: 'add' } : { type: 'list' });
   const [portals, setPortals] = useState<PortalEntry[]>([]);
@@ -452,12 +450,8 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
   const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
   const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
   const [twoFaType, setTwoFaType] = useState<string | undefined>(undefined);
+  const [twoFaDeliveryHint, setTwoFaDeliveryHint] = useState<string | undefined>(undefined);
   const [downloadFolder, setDownloadFolder] = useState<string>('~/Documents/HealthRecords');
-  const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
-  const [apiKeySource, setApiKeySource] = useState<ApiKeySource>('bundled');
-  const [quickstartDismissed, setQuickstartDismissed] = useState<boolean>(
-    () => localStorage.getItem(QUICKSTART_DISMISSED_KEY) === 'true',
-  );
 
   const loadPortals = useCallback(() => {
     window.electronAPI
@@ -484,8 +478,6 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
         if (settings.downloadFolder) {
           setDownloadFolder(settings.downloadFolder);
         }
-        setApiKeyConfigured(settings.apiKeyConfigured);
-        setApiKeySource(settings.apiKeySource);
       })
       .catch(() => {
         // Use default fallback
@@ -513,11 +505,12 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
   useEffect(() => {
     if (runningOperation === null) return;
 
-    const handle2FARequest = (payload: { portalId: string; twoFactorType?: string }) => {
+    const handle2FARequest = (payload: { portalId: string; twoFactorType?: string; deliveryHint?: string }) => {
       setTwoFaPortalId(payload.portalId);
       if (payload.twoFactorType) {
         setTwoFaType(payload.twoFactorType);
       }
+      setTwoFaDeliveryHint(payload.deliveryHint);
     };
 
     window.electronAPI.on2FARequest(handle2FARequest);
@@ -598,39 +591,39 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
         </div>
       </div>
 
-      {!loading && !quickstartDismissed && (
-        <QuickStart
-          steps={deriveQuickStartSteps(portals, apiKeyConfigured, apiKeySource)}
-          onStepClick={(key) => {
-            if (key === 'api-key') {
-              onNavigateToApiKey();
-            } else if (key === 'portal') {
-              setView({ type: 'add' });
-            } else if (key === 'extract') {
-              if (portals.length > 0) {
-                handleExtract(portals[0].id);
-              }
-            }
-          }}
-          onDismiss={() => {
-            setQuickstartDismissed(true);
-            localStorage.setItem(QUICKSTART_DISMISSED_KEY, 'true');
-          }}
-        />
-      )}
-
       {loading ? (
         <PortalListSkeleton />
       ) : portals.length === 0 ? (
-        <div className="portal-empty-state flex flex-1 flex-col items-center justify-center gap-4 text-[14px] text-[var(--color-fw-fg-muted)]">
-          <p>No portals yet. Add your first health portal to get started.</p>
-          <Button
-            type="button"
-            onClick={() => setView({ type: 'add' })}
+        <button
+          type="button"
+          onClick={() => setView({ type: 'add' })}
+          className={cn(
+            'w-full text-left border-0 cursor-pointer',
+            'bg-[var(--color-fw-card-bg)] rounded-[var(--radius-lg)]',
+            'border border-[var(--color-fw-border)]',
+            'shadow-[var(--shadow-fw-1)]',
+            'px-[22px] pt-5 pb-[18px]',
+            'transition-colors duration-[var(--fw-dur-fast,120ms)]',
+            'hover:bg-[var(--color-fw-bg-deep)]',
+          )}
+        >
+          <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-[var(--color-fw-sage-700)] mb-1.5 m-0">
+            {strings.getStarted.label}
+          </p>
+          <h3
+            className={cn(
+              'm-0 font-serif font-medium',
+              'text-[22px] leading-7 tracking-[-0.01em]',
+              'text-[var(--color-fw-ink-900)]',
+              'mb-1.5',
+            )}
           >
-            + Add portal
-          </Button>
-        </div>
+            {strings.getStarted.title}
+          </h3>
+          <p className="m-0 text-[14px] text-[var(--color-fw-fg-muted)]">
+            {strings.getStarted.description}
+          </p>
+        </button>
       ) : (
         <div className="flex flex-col gap-3">
           {portals.map((portal) => (
@@ -666,7 +659,8 @@ export default function PortalList({ onOpenSettings, onNavigateToApiKey, selecte
             key="2fa-modal"
             portalId={twoFaPortalId}
             twoFactorType={twoFaType as 'none' | 'email' | 'manual' | 'ui' | undefined}
-            onDismiss={() => { setTwoFaPortalId(null); setTwoFaType(undefined); }}
+            deliveryHint={twoFaDeliveryHint}
+            onDismiss={() => { setTwoFaPortalId(null); setTwoFaType(undefined); setTwoFaDeliveryHint(undefined); }}
           />
         )}
       </AnimatePresence>

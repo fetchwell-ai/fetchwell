@@ -2,9 +2,9 @@ import React, { useRef, useState } from 'react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Select } from '../components/ui/select';
 import { Card } from '../components/ui/card';
 import { validatePortalUrl } from '../lib/utils';
+import { strings } from '../strings';
 
 interface AddPortalProps {
   onSave: () => void;
@@ -32,9 +32,6 @@ export default function AddPortal({
   const [name, setName] = useState(editPortal?.name ?? '');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [twoFactor, setTwoFactor] = useState<
-    'none' | 'email' | 'manual' | 'ui'
-  >(editPortal?.twoFactor ?? 'manual');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -82,7 +79,7 @@ export default function AddPortal({
       const input: PortalInput = {
         name: name.trim(),
         url: url.trim(),
-        twoFactor,
+        twoFactor: 'ui',
         ...(username ? { username: username.trim() } : {}),
         ...(password ? { password } : {}),
       };
@@ -170,23 +167,9 @@ export default function AddPortal({
             />
           </div>
 
-          <div className="mb-5">
-            <Label htmlFor="portal-2fa" className="mb-1.5">2FA method</Label>
-            <Select
-              id="portal-2fa"
-              value={twoFactor}
-              onChange={(e) =>
-                setTwoFactor(
-                  e.target.value as 'none' | 'email' | 'manual' | 'ui',
-                )
-              }
-            >
-              <option value="manual">Manual (default)</option>
-              <option value="email">Email</option>
-              <option value="ui">UI</option>
-              <option value="none">None</option>
-            </Select>
-          </div>
+          <p className="mb-5 text-[13px] text-[var(--color-fw-fg-muted)]">
+            {strings.addPortal.twoFactorNote}
+          </p>
 
           {error && <p className="form-error mb-2 text-xs text-[var(--color-fw-crimson-600)]">{error}</p>}
 
