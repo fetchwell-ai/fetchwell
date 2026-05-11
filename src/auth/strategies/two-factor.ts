@@ -142,8 +142,61 @@ const ui: TwoFactorHandler = async (browser) => {
       throw new Error("No OTP callback registered for ui 2FA strategy");
     }
 
-    // Try to extract where the code was sent (e.g. "We sent a code to c***@gmail.com")
+    // Try to select a delivery method and/or click "Send code" if the portal requires it.
+    // Prefer SMS/text/phone over email (faster delivery, fewer spam-filter issues).
     let deliveryHint: string | undefined;
+    try {
+      const deliveryChoice = await browser.extract(
+        z.object({
+          hasDeliveryChoice: z.boolean(),
+          hasSms: z.boolean(),
+          hasEmail: z.boolean(),
+          codeInputAlreadyVisible: z.boolean(),
+        }),
+        "Look at this page and determine: " +
+        "(1) hasDeliveryChoice: is there a choice of how to receive a verification code (e.g. buttons or links for SMS, text, phone, email)? " +
+        "(2) hasSms: is there an option for SMS, text message, or phone? " +
+        "(3) hasEmail: is there an option for email? " +
+        "(4) codeInputAlreadyVisible: is there already a code/OTP input field visible?",
+      );
+
+      if (deliveryChoice.codeInputAlreadyVisible && !deliveryChoice.hasDeliveryChoice) {
+        console.log("   Code input already visible — no delivery button to click.");
+      } else if (deliveryChoice.hasDeliveryChoice) {
+        if (deliveryChoice.hasSms) {
+          await browser.act(
+            "Click the option to receive the verification code via SMS, text message, or phone. " +
+            "Then click any 'Send', 'Send code', 'Continue', or similar button if present.",
+          );
+          deliveryHint = "text message";
+          console.log("   Selected SMS/text delivery.");
+        } else if (deliveryChoice.hasEmail) {
+          await browser.act(
+            "Click the option to receive the verification code via email. " +
+            "Then click any 'Send', 'Send code', 'Continue', or similar button if present.",
+          );
+          deliveryHint = "email";
+          console.log("   Selected email delivery.");
+        } else {
+          await browser.act(
+            "Select any available option to receive the verification code, then click 'Send', 'Continue', or similar.",
+          );
+          console.log("   Selected available delivery option.");
+        }
+        await new Promise((r) => setTimeout(r, 3000));
+      } else {
+        // No choice but might need to click a send button
+        await browser.act(
+          "If there is a 'Send code', 'Send', 'Continue', or similar button to trigger sending the verification code, click it.",
+        );
+        console.log("   Triggered code delivery.");
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+    } catch {
+      // No delivery choice or send button — code may already be on its way
+    }
+
+    // Try to extract more specific delivery info from the confirmation text
     try {
       const extracted = await browser.extract(
         z.object({ deliveryHint: z.string() }),
@@ -158,7 +211,7 @@ const ui: TwoFactorHandler = async (browser) => {
         console.log(`   2FA delivery hint: ${deliveryHint}`);
       }
     } catch {
-      // Best-effort — proceed without hint
+      // Best-effort — keep whatever deliveryHint we already have
     }
 
     const code = await otpCallback(deliveryHint);
