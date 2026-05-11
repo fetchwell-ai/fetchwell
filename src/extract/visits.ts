@@ -131,7 +131,10 @@ export async function extractVisits(browser: BrowserProvider, portalUrl: string,
       try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
       const pageTitle = await browser.title();
-      const filename = makeVisitFilename(i, link.description, pageTitle || link.description, ".pdf", providerId);
+      const desc = link.description.toLowerCase().includes("shadow dom")
+        ? (pageTitle || `visit-${i + 1}`)
+        : link.description;
+      const filename = makeVisitFilename(i, desc, pageTitle || desc, ".pdf", providerId);
       if (browser.pdf) {
         const pdfBuf = await browser.pdf();
         emit({ type: 'status-message', phase: 'extract', message: `Saving ${filename}...` });
