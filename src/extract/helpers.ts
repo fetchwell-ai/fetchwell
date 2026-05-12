@@ -75,7 +75,7 @@ export function formatDateSlug(date: Date): string {
  * Falls back to `makeItemFilename(index, fallbackLabel, ext, providerId)` when
  * neither a date nor useful description can be extracted.
  *
- * Example output: `001_office-visit-dr-keyashian-aug-02-2024-stanford.pdf`
+ * Example output: `001_office-visit-dr-smith-aug-02-2024-stanford.pdf`
  */
 export function makeVisitFilename(
   index: number,

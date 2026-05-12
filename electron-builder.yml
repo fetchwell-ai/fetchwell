@@ -40,7 +40,7 @@ dmg:
 # ── Auto-update via GitHub Releases ────────────────────────────────────────────
 publish:
   provider: github
-  owner: chadallen
+  owner: fetchwell-ai
   repo: fetchwell
 
 # ── Known limitations ──────────────────────────────────────────────────────────

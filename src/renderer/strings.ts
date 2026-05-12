@@ -100,7 +100,7 @@ export const strings = {
 
     about: {
       title: 'About Fetchwell',
-      lede: 'Fetchwell is open source software distributed under the MIT license. The code repository is available at https://github.com/chadallen/fetchwell.',
+      lede: 'Fetchwell is source-available software distributed under the PolyForm Noncommercial License. The code repository is available at https://github.com/fetchwell-ai/fetchwell.',
     },
   },
 } as const;
