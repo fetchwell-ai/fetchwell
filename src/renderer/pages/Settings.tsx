@@ -9,7 +9,6 @@ import { cn } from '../lib/utils';
 import { strings } from '../strings';
 
 interface SettingsProps {
-  onBack: () => void;
   /** Which settings sub-section to show. */
   activeKey?: string | null;
 }
@@ -107,17 +106,16 @@ function AppearancePage() {
 
 // ── (b) Anthropic API key ─────────────────────────────────────────────────────
 
-type ApiKeySourceOption = ApiKeySource;
 
 const s_apiKey = strings.settings.apiKey;
 
-const API_KEY_SEGMENTS: { value: ApiKeySourceOption; label: string }[] = [
+const API_KEY_SEGMENTS: { value: ApiKeySource; label: string }[] = [
   { value: 'bundled', label: s_apiKey.sourceBundled },
   { value: 'custom',  label: s_apiKey.sourceCustom },
 ];
 
 function ApiKeyPage() {
-  const [apiKeySource, setApiKeySource] = useState<ApiKeySourceOption>('bundled');
+  const [apiKeySource, setApiKeySource] = useState<ApiKeySource>('bundled');
   const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
   const [editingApiKey, setEditingApiKey] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -137,7 +135,7 @@ function ApiKeyPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleSourceChange = async (newSource: ApiKeySourceOption) => {
+  const handleSourceChange = async (newSource: ApiKeySource) => {
     setApiKeySource(newSource);
     setEditingApiKey(false);
     setApiKeyInput('');
@@ -491,7 +489,7 @@ function AboutPage() {
 
 // ── Root Settings component ───────────────────────────────────────────────────
 
-export default function Settings({ onBack: _onBack, activeKey }: SettingsProps) {
+export default function Settings({ activeKey }: SettingsProps) {
   switch (activeKey) {
     case 'appearance':
       return <AppearancePage />;

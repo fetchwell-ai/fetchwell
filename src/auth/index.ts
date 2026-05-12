@@ -36,7 +36,6 @@ export function getAuthModule(authSettings: AuthSettings, providerId?: string): 
    */
   async function doLogin(
     browser: Parameters<AuthModule["login"]>[0],
-    debugUrl: string | null,
     credentials?: { username?: string; password?: string },
     pid?: string,
   ): Promise<void> {
@@ -50,8 +49,8 @@ export function getAuthModule(authSettings: AuthSettings, providerId?: string): 
   }
 
   return {
-    async login(browser, config, debugUrl) {
-      await doLogin(browser, debugUrl, config.credentials, config.providerId);
+    async login(browser, config) {
+      await doLogin(browser, config.credentials, config.providerId);
     },
 
     async ensureLoggedIn(browser, config) {

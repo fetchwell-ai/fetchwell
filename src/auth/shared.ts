@@ -21,7 +21,6 @@ const OUTPUT_BASE = path.join(import.meta.dirname, "..", "..", "output");
 
 type LoginFn = (
   browser: BrowserProvider,
-  debugUrl: string | null,
   credentials?: { username?: string; password?: string },
   providerId?: string,
 ) => Promise<void>;
@@ -392,7 +391,7 @@ export async function ensureLoggedIn(
     await new Promise((r) => setTimeout(r, 2000));
     const loginFn = providerId ? loginFnRegistry.get(providerId) : undefined;
     if (loginFn) {
-      await loginFn(browser, null, credentials, providerId);
+      await loginFn(browser, credentials, providerId);
     }
     if (browser.saveSession) {
       const session = await browser.saveSession();
@@ -420,7 +419,7 @@ export async function ensureLoggedIn(
   await new Promise((r) => setTimeout(r, 2000));
   const loginFn = providerId ? loginFnRegistry.get(providerId) : undefined;
   if (loginFn) {
-    await loginFn(browser, null, credentials, providerId);
+    await loginFn(browser, credentials, providerId);
   }
   if (browser.saveSession) {
     const session = await browser.saveSession();

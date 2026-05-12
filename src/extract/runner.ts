@@ -136,7 +136,7 @@ export async function extractProvider(
         console.log("Step 3: Login");
         await browser.navigate(portalUrl);
         await new Promise((r) => setTimeout(r, 2000));
-        await authModule.login(browser, authConfig, debugUrl);
+        await authModule.login(browser, authConfig);
         homeUrl = await browser.url();
         if (browser.saveSession) {
           const session = await browser.saveSession();
@@ -153,7 +153,7 @@ export async function extractProvider(
       console.log("Page loaded.");
       emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
       console.log("Step 3: Login");
-      await authModule.login(browser, authConfig, debugUrl);
+      await authModule.login(browser, authConfig);
       homeUrl = await browser.url();
       if (browser.saveSession) {
         const session = await browser.saveSession();
