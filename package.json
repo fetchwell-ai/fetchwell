@@ -1,6 +1,14 @@
 {
   "name": "fetchwell",
   "version": "0.1.0",
+  "description": "AI agent that extracts health records from patient portals",
+  "author": "Chad Allen",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "homepage": "https://github.com/fetchwell-ai/fetchwell",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fetchwell-ai/fetchwell.git"
+  },
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,8 +22,7 @@
     "predist": "pnpm run build:renderer && pnpm run build:electron",
     "dist": "electron-builder --mac",
     "dist:release": "export $(grep -E '^APPLE_' .env | xargs) && electron-builder --mac",
-    "test:unit": "vitest run",
-    "test:e2e": "playwright test --config playwright.config.ts"
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.12",
@@ -33,6 +40,8 @@
     "ms": "^2.1.3",
     "pdf-lib": "^1.17.1",
     "playwright": "^1.52.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "tailwind-merge": "^3.5.0",
     "zod": "^3.24.0"
   },
@@ -47,8 +56,6 @@
     "electron": "^42.0.0",
     "electron-builder": "^26.8.1",
     "eslint": "^10.3.0",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
     "tailwindcss": "^4.2.4",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",

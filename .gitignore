@@ -1,9 +1,5 @@
-scratch.md
 .DS_Store
 .vscode/
-brainstorm.md
-PRD.md
-AUDIT.md
 
 # Claude Code config — personal dev hooks
 .claude/
@@ -11,12 +7,6 @@ CLAUDE.md
 
 # Internal docs — ADRs, design handoffs, research spikes
 docs/
-
-# Working docs — design notes and research, not for public repo
-docs/electron-app.md
-docs/electron-app-prd.md
-docs/BROWSER_RESEARCH.md
-docs/research-mychart-approaches.md
 
 # Bundled API key — generated file has the actual key, script encodes it
 scripts/
@@ -63,3 +53,9 @@ electron/bundled-key.generated.ts
 release/
 *.bak
 CertificateSigningRequest.certSigningRequest
+
+# Personal / scratch
+scratch.md
+brainstorm.md
+PRD.md
+AUDIT.md

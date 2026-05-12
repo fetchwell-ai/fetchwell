@@ -4,7 +4,9 @@
       "id": "ucsf",
       "name": "UCSF MyChart",
       "type": "mychart",
-      "url": "https://ucsfmychart.ucsfmedicalcenter.org/ucsfmychart/Authentication/Login?",
+      "url": "https://ucsfmychart.ucsfmedicalcenter.org/ucsfmychart/Authentication/Login",
+      "username": "your-username",
+      "password": "your-password",
       "auth": {
         "loginForm": "two-step",
         "twoFactor": "email"
@@ -15,6 +17,8 @@
       "name": "One Medical",
       "type": "onemedical",
       "url": "https://app.onemedical.com/login",
+      "username": "your-username",
+      "password": "your-password",
       "auth": {
         "loginForm": "single-page",
         "twoFactor": "manual"
@@ -25,6 +29,8 @@
       "name": "Stanford MyChart",
       "type": "mychart",
       "url": "https://mystanfordchart.stanfordhealthcare.org/MyChart/Authentication/Login",
+      "username": "your-username",
+      "password": "your-password",
       "auth": {
         "loginForm": "single-page",
         "twoFactor": "none"

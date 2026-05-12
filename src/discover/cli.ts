@@ -48,9 +48,9 @@ function parseCliArgs(): { providerId: string } {
 // Main
 // ---------------------------------------------------------------------------
 
-const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
-
 async function run() {
+  const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
+
   // Validate ANTHROPIC_API_KEY early
   if (providerType !== "local" && !process.env.ANTHROPIC_API_KEY) {
     console.error("Missing required env var: ANTHROPIC_API_KEY");

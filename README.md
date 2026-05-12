@@ -35,7 +35,7 @@ Download the latest `.dmg` from [GitHub Releases](https://github.com/fetchwell-a
 - macOS (Apple Silicon — arm64)
 - A patient portal 
 
-An Anthropic API key is bundled with the app. You can also add your own key in Settings.
+An Anthropic API key is bundled with the app. You can also add your own key in Settings. When building from source, supply your own key via `ANTHROPIC_API_KEY` in `.env`. The bundled key is only included in official releases.
 
 ## Two-factor authentication
 
@@ -62,7 +62,7 @@ Edit `providers.json` with your portal details:
   "providers": [
     {
       "id": "stanford",
-      "name": "Stanford Health",
+      "name": "Stanford MyChart",
       "type": "mychart",
       "url": "https://mystanfordchart.stanfordhealthcare.org/MyChart/Authentication/Login",
       "username": "your-username",
@@ -104,7 +104,7 @@ pnpm install              # Install dependencies
 pnpm electron:dev         # Launch the dev app
 pnpm test:unit            # Run unit tests
 pnpm typecheck            # TypeScript check
-pnpm dist                 # Build a signed DMG
+pnpm dist                 # Build a macOS DMG (signed if CSC_NAME is configured)
 ```
 
 ## License
