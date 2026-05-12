@@ -38,6 +38,9 @@ export interface LoginOrRestoreSessionOptions {
   /** The auth module that handles the full login flow (credentials + 2FA). */
   authModule: AuthModule;
 
+  /** Optional pre-filled credentials. When omitted, the login form strategy prompts stdin. */
+  credentials?: { username?: string; password?: string };
+
   /**
    * Optional CSS selectors for authenticated-only elements.
    * When provided, the helper performs a secondary DOM check after navigating to
@@ -69,9 +72,9 @@ export async function loginOrRestoreSession(
   browser: BrowserProvider,
   opts: LoginOrRestoreSessionOptions,
 ): Promise<string> {
-  const { portalUrl, providerId, basePath, authModule, authenticatedSelectors, emitProgress } = opts;
+  const { portalUrl, providerId, basePath, authModule, credentials, authenticatedSelectors, emitProgress } = opts;
   const emit = (event: StructuredProgressEvent) => { if (emitProgress) emitProgress(event); };
-  const authConfig = { url: portalUrl, providerId };
+  const authConfig = { url: portalUrl, credentials, providerId };
 
   const savedSession = loadSavedSession(providerId, basePath);
 

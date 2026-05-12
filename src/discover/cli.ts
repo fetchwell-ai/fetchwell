@@ -70,6 +70,9 @@ async function run() {
   }
 
   const portalUrl = provider.url;
+  const providerCredentials = provider.username || provider.password
+    ? { username: provider.username, password: provider.password }
+    : undefined;
   const authModule = getAuthModule(provider.auth, provider.id);
 
   console.log("=".repeat(60));
@@ -117,6 +120,7 @@ async function run() {
       portalUrl,
       providerId: provider.id,
       authModule,
+      credentials: providerCredentials,
     });
     console.log();
 
