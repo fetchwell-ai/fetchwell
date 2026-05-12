@@ -134,7 +134,7 @@ async function run() {
         console.log("   Session expired or invalid. Logging in fresh...");
         await browser.navigate(portalUrl);
         await new Promise((r) => setTimeout(r, 2000));
-        await authModule.login(browser, authConfig, debugUrl);
+        await authModule.login(browser, authConfig);
         homeUrl = await browser.url();
         if (browser.saveSession) {
           const session = await browser.saveSession();
@@ -145,7 +145,7 @@ async function run() {
       }
     } else {
       console.log("Step 3: Login");
-      await authModule.login(browser, authConfig, debugUrl);
+      await authModule.login(browser, authConfig);
       homeUrl = await browser.url();
       if (browser.saveSession) {
         const session = await browser.saveSession();

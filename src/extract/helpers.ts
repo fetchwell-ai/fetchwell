@@ -10,11 +10,6 @@ import { SECTION_INSTRUCTIONS, VERIFY_INSTRUCTIONS } from "../discover/index.js"
 /** Default base output directory (parent of all provider-scoped dirs). */
 export const OUTPUT_BASE = path.resolve(import.meta.dirname, "..", "..", "output");
 
-/**
- * @deprecated Use getOutputDir(providerId) for provider-scoped output.
- * Kept temporarily so any transient callers still compile.
- */
-export const OUTPUT_DIR = OUTPUT_BASE;
 
 /**
  * Return the provider-scoped output directory: <basePath>/<providerId>/

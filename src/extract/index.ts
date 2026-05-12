@@ -232,7 +232,7 @@ async function probeProvider(provider: ProviderConfig) {
         clearSession(provider.id);
         await browser.navigate(portalUrl);
         await new Promise((r) => setTimeout(r, 2000));
-        await authModule.login(browser, authConfig, debugUrl);
+        await authModule.login(browser, authConfig);
         if (browser.saveSession) {
           const session = await browser.saveSession();
           session.homeUrl = await browser.url();
@@ -242,7 +242,7 @@ async function probeProvider(provider: ProviderConfig) {
       }
     } else {
       console.log("Step 3: Login");
-      await authModule.login(browser, authConfig, debugUrl);
+      await authModule.login(browser, authConfig);
       if (browser.saveSession) {
         const session = await browser.saveSession();
         session.homeUrl = await browser.url();
@@ -388,7 +388,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
         console.log("Step 3: Login");
         await browser.navigate(portalUrl);
         await new Promise((r) => setTimeout(r, 2000));
-        await authModule.login(browser, authConfig, debugUrl);
+        await authModule.login(browser, authConfig);
         if (browser.saveSession) {
           const session = await browser.saveSession();
           session.homeUrl = await browser.url();
@@ -401,7 +401,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
       console.log("   Your credentials are entered locally and sent directly to the health portal.");
       console.log("   They are NOT stored or logged anywhere.");
       console.log();
-      await authModule.login(browser, authConfig, debugUrl);
+      await authModule.login(browser, authConfig);
       if (browser.saveSession) {
         const session = await browser.saveSession();
         session.homeUrl = await browser.url();

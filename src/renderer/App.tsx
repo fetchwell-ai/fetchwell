@@ -102,9 +102,6 @@ export default function App() {
     setPortalListKey((k) => k + 1);
   };
 
-  const handleBackFromSettings = () => {
-    setActiveSettingsKey(null);
-  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-[var(--color-fw-bg)]">
@@ -124,7 +121,6 @@ export default function App() {
             <MotionPage key={`settings-${activeSettingsKey}`} className="h-full">
               <Settings
                 activeKey={activeSettingsKey}
-                onBack={handleBackFromSettings}
               />
             </MotionPage>
           ) : activePortalId !== null ? (

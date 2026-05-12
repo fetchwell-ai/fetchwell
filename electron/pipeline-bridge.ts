@@ -14,7 +14,7 @@
  *   extraction:log / discovery:log         — progress message string (stdout)
  *   extraction:progress / discovery:progress — StructuredProgressEvent (IPC)
  *   extraction:complete / discovery:complete — success (no payload)
- *   extraction:error / discovery:error     — ErrorEvent payload
+ *   extraction:error / discovery:error     — PipelineErrorEvent payload
  *   2fa:request                             — triggers the OTP modal
  */
 
@@ -51,12 +51,7 @@ export interface CategoryCounts {
 // Internal types (IPC messages)
 // ---------------------------------------------------------------------------
 
-interface ProgressEvent {
-  type: 'log';
-  message: string;
-}
-
-interface ErrorEvent {
+interface PipelineErrorEvent {
   type: 'error';
   category: string;
   message: string;
@@ -206,9 +201,8 @@ function runSubprocess(
         buffer = lines.pop() ?? '';
         for (const line of lines) {
           if (line.trim()) {
-            const event: ProgressEvent = { type: 'log', message: line };
             if (!win.isDestroyed()) {
-              win.webContents.send(logChannel, event.message);
+              win.webContents.send(logChannel, line);
             }
           }
         }
@@ -349,7 +343,7 @@ export async function runExtraction(portalId: string, win: BrowserWindow, config
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const { category, suggestion } = categorizeError(message);
-    const errorEvent: ErrorEvent = { type: 'error', category, message, suggestion };
+    const errorEvent: PipelineErrorEvent = { type: 'error', category, message, suggestion };
     if (!win.isDestroyed()) {
       win.webContents.send('extraction:error', errorEvent);
     }
@@ -385,7 +379,7 @@ export async function runDiscovery(portalId: string, win: BrowserWindow, config:
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     const { category, suggestion } = categorizeError(message);
-    const errorEvent: ErrorEvent = { type: 'error', category, message, suggestion };
+    const errorEvent: PipelineErrorEvent = { type: 'error', category, message, suggestion };
     if (!win.isDestroyed()) {
       win.webContents.send('discovery:error', errorEvent);
     }

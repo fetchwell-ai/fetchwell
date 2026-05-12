@@ -15,7 +15,6 @@ export interface AuthModule {
   login(
     browser: BrowserProvider,
     config: AuthConfig,
-    debugUrl: string | null,
   ): Promise<void>;
 
   /**

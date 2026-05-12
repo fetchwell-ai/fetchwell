@@ -495,7 +495,6 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
                     {item.when}
                   </div>
                 </div>
-                {/* View log — not yet wired */}
               </div>
             ))}
           </div>

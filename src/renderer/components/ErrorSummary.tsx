@@ -6,7 +6,6 @@ export interface ErrorSummaryProps {
   portalId: string;
   error: { category: string; message: string; suggestion: string };
   logs: string[];
-  onRetry?: () => void;
   onReDiscover?: () => void;
 }
 

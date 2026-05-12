@@ -38,7 +38,6 @@ import { getTwoFactorHandler } from "./auth/strategies/two-factor.js";
 
 export async function doLogin(
   browser: BrowserProvider,
-  debugUrl: string | null,
   credentials?: { username?: string; password?: string },
   providerId?: string,
 ): Promise<void> {

@@ -146,8 +146,8 @@ describe('apiKeyConfigured resolution logic', () => {
     expect(resolveApiKeyConfigured('bundled', true, false)).toBe(true);
   });
 
-  it('returns true when apiKeySource is "bundled" even if no custom key stored', () => {
-    expect(resolveApiKeyConfigured('bundled', true, false)).toBe(true);
+  it('returns true when apiKeySource is "bundled" even if custom key is also stored', () => {
+    expect(resolveApiKeyConfigured('bundled', true, true)).toBe(true);
   });
 
   it('returns false when apiKeySource is "bundled" but no bundled key available', () => {

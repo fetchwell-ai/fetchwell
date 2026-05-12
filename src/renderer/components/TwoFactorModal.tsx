@@ -24,18 +24,15 @@ function getTwoFactorHint(deliveryHint?: string): string {
 
 export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeProp, deliveryHint, onDismiss }: TwoFactorModalProps) {
   const [code, setCode] = useState('');
-  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const dismissedRef = useRef(false);
 
-  // Auto-focus input on mount (and re-focus after verifying state clears)
+  // Auto-focus input on mount
   useEffect(() => {
-    if (!verifying) {
-      inputRef.current?.focus();
-    }
-  }, [verifying]);
+    inputRef.current?.focus();
+  }, []);
 
   // Listen for 2fa:result events — keep modal open until the subprocess confirms the code
   useEffect(() => {
@@ -50,7 +47,6 @@ export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeP
         }
       } else {
         // Code rejected — re-show input with error message
-        setVerifying(false);
         setCode('');
         setError(payload.error ?? 'Code not accepted — try again');
       }
@@ -63,11 +59,10 @@ export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeP
     };
   }, [portalId, onDismiss]);
 
-  // 5-minute timeout — fires once on mount, regardless of verifying state
-  const verifyingRef = useRef(false);
+  // 5-minute timeout
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (!dismissedRef.current && !verifyingRef.current) {
+      if (!dismissedRef.current) {
         setTimedOut(true);
         window.electronAPI.submit2FACode({ portalId, code: null });
         dismissedRef.current = true;
@@ -80,14 +75,9 @@ export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeP
     };
   }, [portalId, onDismiss]);
 
-  // Keep verifyingRef in sync
-  useEffect(() => {
-    verifyingRef.current = verifying;
-  }, [verifying]);
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim() || verifying) return;
+    if (!code.trim()) return;
     setError(null);
     window.electronAPI.submit2FACode({ portalId, code: code.trim() });
     // Dismiss immediately — the pipeline continues in the background.
@@ -176,7 +166,6 @@ export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeP
                     placeholder="Enter code..."
                     autoComplete="one-time-code"
                     autoFocus
-                    disabled={verifying}
                     className="text-base tracking-[0.1em]"
                     aria-invalid={error !== null}
                   />
@@ -187,35 +176,15 @@ export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeP
                     type="button"
                     variant="secondary"
                     onClick={handleCancel}
-                    disabled={verifying}
                   >
                     Cancel
                   </Button>
 
                   <Button
                     type="submit"
-                    disabled={!code.trim() || verifying}
+                    disabled={!code.trim()}
                   >
-                    {verifying ? (
-                      <span className="flex items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            display: 'inline-block',
-                            width: 13,
-                            height: 13,
-                            border: '2px solid currentColor',
-                            borderTopColor: 'transparent',
-                            borderRadius: '50%',
-                            animation: 'progress-spin 0.8s linear infinite',
-                            flexShrink: 0,
-                          }}
-                        />
-                        Verifying...
-                      </span>
-                    ) : (
-                      'Submit'
-                    )}
+                    Submit
                   </Button>
                 </div>
               </form>
