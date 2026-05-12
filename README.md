@@ -1,40 +1,14 @@
 # FetchWell
 
-A macOS desktop app that downloads your health records as PDFs from patient portals. No cloud servers, no accounts, no data leaves your Mac.
+FetchWell is a macOS app that downloads your health records from patient portals as PDFs to your computer.
 
-FetchWell runs an AI agent that logs into your portal in a real browser, navigates to your labs, visits, medications, and messages, and saves everything as clean PDFs to a local folder. You can then upload those PDFs to Claude, your doctor, or anywhere else.
+It uses an AI assistant (Anthropic's Claude) to open a browser, log into your portal, navigate to your labs, visits, medications, and messages, and save each record as a PDF. Everything is stored locally in a folder you choose.
 
 ## How it works
 
-1. **Add a portal** — Paste the URL of your provider's patient portal and enter your login credentials. Credentials are stored in macOS Keychain, encrypted and local-only.
-2. **FetchWell learns the portal** — An AI agent opens a hidden browser, explores the portal's navigation, and maps out where your records live. This happens once per portal.
-3. **Records arrive as PDFs** — Click "Fetch records" whenever you want fresh copies. Files land in your chosen folder, organized by date and section.
-
-## Privacy
-
-FetchWell runs entirely on your Mac. There's no FetchWell account, no server we own that touches your data, and no analytics watching what you fetch. The only thing that ever leaves your machine is the back-and-forth with the AI that drives the agent — and you bring your own key.
-
-## Install
-
-### Download
-
-Download the latest `.dmg` from [GitHub Releases](https://github.com/fetchwell-ai/fetchwell/releases/latest), open it, and drag FetchWell to Applications.
-
-### Requirements
-
-- macOS (Apple Silicon or Intel)
-- An [Anthropic API key](https://console.anthropic.com/) — FetchWell uses Claude to power the browser agent
-- A patient portal (tested with Epic-based portals; others may work)
-
-## Setup
-
-1. Launch FetchWell
-2. Enter your Anthropic API key in Settings
-3. Click "Add portal" and paste your provider's patient portal URL
-4. Enter your portal username and password
-5. Click "Fetch records"
-
-On the first run, FetchWell will discover the portal's layout and then extract your records. Subsequent runs are faster — it remembers the portal structure and reuses your session.
+1. **Add a portal** — Paste the URL of your provider's patient portal and enter your login credentials. Credentials are encrypted and stored in your macOS Keychain.
+2. **FetchWell maps the portal** — An AI assistant opens the portal in a browser and learns where your records are. This happens once per portal.
+3. **Records arrive as PDFs** — Click "Fetch records" to download. Files are saved to your chosen folder, organized by category. Run it again anytime to get new records.
 
 ## What it extracts
 
@@ -45,78 +19,52 @@ On the first run, FetchWell will discover the portal's layout and then extract y
 | **Medications** | Current medication list |
 | **Messages** | Patient-provider message threads |
 
-Use `--incremental` (CLI) or enable "Only fetch new records" in Settings to skip records you've already downloaded.
+## Privacy and data
+
+FetchWell has no servers and no cloud. Your records are downloaded directly to your Mac as PDFs, and your passwords are encrypted in your macOS Keychain.
+
+To navigate your portal, FetchWell uses Claude, an AI assistant made by Anthropic. During extraction, page content — including health information visible on screen — is sent to Anthropic's API so Claude can read and interact with the site. As of March 2026, Anthropic does [not use API data](https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training) to train its models.
+
+FetchWell is not affiliated with Anthropic.
+
+## Install
+
+Download the latest `.dmg` from [GitHub Releases](https://github.com/fetchwell-ai/fetchwell/releases/latest), open it, and drag FetchWell to Applications.
+
+### Requirements
+
+- macOS (Apple Silicon)
+- A patient portal (tested with Epic-based portals; others may work)
+
+An Anthropic API key is bundled with the app. You can also use your own key in Settings.
+
+## Two-factor authentication
+
+If your portal requires 2FA, FetchWell will prompt you to enter the verification code during sign-in. It prefers SMS delivery when available.
 
 ## CLI
 
 FetchWell also works from the command line:
 
 ```bash
-# Install globally
 npm install -g fetchwell
 
-# Extract all records for all configured portals
-fetchwell-ai fetch
-
-# Extract for a specific portal
-fetchwell-ai fetch --provider stanford
-
-# Only fetch records newer than last run
-fetchwell-ai fetch --incremental
+fetchwell-ai fetch                       # Extract all records
+fetchwell-ai fetch --provider stanford   # Extract for a specific portal
+fetchwell-ai fetch --incremental         # Only fetch new records
 ```
 
-CLI mode requires a `.env` file with your `ANTHROPIC_API_KEY` and a `providers.json` file. See `.env.example` and `providers.example.json` for the format.
-
-## Two-factor authentication
-
-FetchWell supports several 2FA methods:
-
-| Method | How it works |
-|---|---|
-| **None** | Portal doesn't require 2FA |
-| **UI prompt** | FetchWell pauses and asks you to enter the code in the app |
-| **Email** | Automatically reads the verification code from your Gmail (requires an [app-specific password](https://myaccount.google.com/apppasswords)) |
-
-Configure the 2FA method per portal in the app or in `providers.json`.
+CLI mode requires an `ANTHROPIC_API_KEY` in `.env` and a `providers.json` file. See `.env.example` and `providers.example.json`.
 
 ## Development
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Launch the dev app
-pnpm electron:dev
-
-# Run tests
-pnpm test:unit        # 119 unit tests, <1s
-pnpm typecheck        # TypeScript check
-
-# Build a DMG
-pnpm dist
+pnpm install              # Install dependencies
+pnpm electron:dev         # Launch the dev app
+pnpm test:unit            # Run unit tests
+pnpm typecheck            # TypeScript check
+pnpm dist                 # Build a signed DMG
 ```
-
-### Project structure
-
-```
-src/extract/     Extraction pipeline (labs, visits, medications, messages)
-src/discover/    AI-powered portal discovery engine
-src/auth/        Composable auth system (login form + 2FA strategies)
-src/browser/     Browser provider abstraction (Stagehand or plain Playwright)
-src/renderer/    React UI (Vite, Tailwind CSS v4, shadcn/ui)
-electron/        Electron main process, IPC handlers, config storage
-```
-
-### Environment variables
-
-Copy `.env.example` to `.env` and fill in:
-
-| Variable | Required | Description |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | Yes | Powers the AI browser agent |
-| `BROWSER_PROVIDER` | No | `stagehand-local` (default) or `local` (plain Playwright) |
-| `GMAIL_USER` | No | Gmail address for email-based 2FA |
-| `GMAIL_APP_PASSWORD` | No | Gmail app-specific password for 2FA |
 
 ## License
 
