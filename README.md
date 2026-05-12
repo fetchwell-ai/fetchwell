@@ -1,6 +1,6 @@
 # FetchWell
 
-A macOS desktop app that downloads your health records as PDFs from patient portals like Epic MyChart. No cloud servers, no accounts, no data leaves your Mac.
+A macOS desktop app that downloads your health records as PDFs from patient portals. No cloud servers, no accounts, no data leaves your Mac.
 
 FetchWell runs an AI agent that logs into your portal in a real browser, navigates to your labs, visits, medications, and messages, and saves everything as clean PDFs to a local folder. You can then upload those PDFs to Claude, your doctor, or anywhere else.
 
@@ -24,13 +24,13 @@ Download the latest `.dmg` from [GitHub Releases](https://github.com/fetchwell-a
 
 - macOS (Apple Silicon or Intel)
 - An [Anthropic API key](https://console.anthropic.com/) — FetchWell uses Claude to power the browser agent
-- A patient portal that uses Epic MyChart (other portal types may work but are untested)
+- A patient portal (tested with Epic-based portals; others may work)
 
 ## Setup
 
 1. Launch FetchWell
 2. Enter your Anthropic API key in Settings
-3. Click "Add portal" and paste your provider's MyChart URL (e.g., `https://mychart.stanfordhealthcare.org/MyChart`)
+3. Click "Add portal" and paste your provider's patient portal URL
 4. Enter your portal username and password
 5. Click "Fetch records"
 
@@ -73,7 +73,7 @@ FetchWell supports several 2FA methods:
 
 | Method | How it works |
 |---|---|
-| **None** | Portal doesn't require 2FA (e.g., Stanford MyChart) |
+| **None** | Portal doesn't require 2FA |
 | **UI prompt** | FetchWell pauses and asks you to enter the code in the app |
 | **Email** | Automatically reads the verification code from your Gmail (requires an [app-specific password](https://myaccount.google.com/apppasswords)) |
 
