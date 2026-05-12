@@ -67,26 +67,38 @@ function CredentialsSection({
   onSaved,
 }: {
   portalId: string;
-  credentials: { username: string; password: string } | null;
-  onSaved: (creds: { username: string; password: string }) => void;
+  credentials: { username: string; hasPassword: boolean } | null;
+  onSaved: (creds: { username: string; hasPassword: boolean }) => void;
 }) {
   const [username, setUsername] = useState(credentials?.username ?? '');
-  const [password, setPassword] = useState(credentials?.password ?? '');
+  // Password field: empty string means "not dirty" — only set when the user types
+  const [password, setPassword] = useState('');
+  const [passwordDirty, setPasswordDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Sync local state when credentials load from IPC
+  // Sync username when credentials load from IPC
   React.useEffect(() => {
     if (credentials) {
       setUsername(credentials.username);
-      setPassword(credentials.password);
+      setPassword('');
+      setPasswordDirty(false);
     }
   }, [credentials]);
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    setPasswordDirty(true);
+  };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await window.electronAPI.updatePortal(portalId, { username, password });
-      onSaved({ username, password });
+      const updates: { username: string; password?: string } = { username };
+      if (passwordDirty) {
+        updates.password = password;
+      }
+      await window.electronAPI.updatePortal(portalId, updates);
+      onSaved({ username, hasPassword: passwordDirty ? password.length > 0 : (credentials?.hasPassword ?? false) });
     } catch {
       // silently fail — credentials manager handles errors
     } finally {
@@ -96,7 +108,8 @@ function CredentialsSection({
 
   const handleCancel = () => {
     setUsername(credentials?.username ?? '');
-    setPassword(credentials?.password ?? '');
+    setPassword('');
+    setPasswordDirty(false);
   };
 
   return (
@@ -121,7 +134,8 @@ function CredentialsSection({
             <Input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              placeholder={credentials?.hasPassword ? '••••••••' : ''}
+              onChange={handlePasswordChange}
             />
             <span className="text-[12px] text-[var(--color-fw-fg-muted)]">
               Stored in macOS Keychain — never sent to Anthropic.
@@ -218,7 +232,7 @@ function deriveHistory(portal: PortalEntry): HistoryItem[] {
 
 export default function PortalDetail({ portalId, onBack, downloadFolder }: PortalDetailProps) {
   const [portal, setPortal] = useState<PortalEntry | null>(null);
-  const [credentials, setCredentials] = useState<{ username: string; password: string } | null>(null);
+  const [credentials, setCredentials] = useState<{ username: string; hasPassword: boolean } | null>(null);
   const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
   const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
   const [twoFaType, setTwoFaType] = useState<string | undefined>(undefined);

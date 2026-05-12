@@ -88,7 +88,7 @@ interface ElectronAPI {
   chooseFolder(): Promise<string | null>;
   openInFinder(folderPath: string): Promise<void>;
   revealInFinder(folderPath: string): Promise<void>;
-  getPortalCredentials(portalId: string): Promise<{ username: string; password: string } | null>;
+  getPortalCredentials(portalId: string): Promise<{ username: string; hasPassword: boolean } | null>;
   onProgress(callback: (message: string) => void): void;
   onComplete(callback: (operation: string, data: { portalId: string }) => void): void;
   onError(callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void): void;
