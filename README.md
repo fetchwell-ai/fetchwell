@@ -1,8 +1,10 @@
 # FetchWell
 
-FetchWell is a macOS desktop app that extracts health records from patient portals as PDFs. It uses an AI agent (Anthropic's Claude) to drive a real browser — logging in, navigating portal UI, and saving each record as a full-page PDF to a local folder you choose.
+There is no reliable programmatic way to get your health data. FHIR APIs exist in theory but are rarely exposed to patients in practice — the companies that build EHR systems have no incentive to make data portable. The one place patients *can* access their records is through web portals like Epic MyChart, but these are designed for human use, not automation. Traditional scraping is brittle: portal layouts change, session handling is complex, and every EHR vendor structures their UI differently.
 
-No APIs. No FHIR. No screen scraping. The agent sees the same pages you do and interacts with them the same way you would.
+FetchWell takes a different approach. Instead of scraping DOM elements, it uses an AI agent (Anthropic's Claude) to drive a real browser the same way a human would — reading the page, clicking links, navigating menus, handling 2FA prompts. This makes it resilient to portal redesigns and not tied to any single EHR vendor. If you can log in and see your records, FetchWell can extract them.
+
+It's a macOS desktop app that logs into your patient portals, navigates to your labs, visits, medications, and messages, and saves each record as a full-page PDF to a local folder.
 
 ## Architecture
 
