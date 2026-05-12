@@ -203,6 +203,7 @@ async function probeProvider(provider: ProviderConfig) {
       portalUrl,
       providerId: provider.id,
       authModule,
+      credentials: providerCredentials,
       authenticatedSelectors: provider.authenticatedSelectors,
     });
     console.log();
@@ -311,6 +312,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
       portalUrl,
       providerId: provider.id,
       authModule,
+      credentials: providerCredentials,
       authenticatedSelectors: provider.authenticatedSelectors,
     });
     console.log();

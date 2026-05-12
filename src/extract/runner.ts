@@ -100,6 +100,7 @@ export async function extractProvider(
       providerId: provider.id,
       basePath,
       authModule,
+      credentials: providerCredentials,
       authenticatedSelectors: provider.authenticatedSelectors,
       emitProgress,
     });

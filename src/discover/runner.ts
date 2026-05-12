@@ -36,6 +36,9 @@ export async function discoverProviderById(
   emitProgress?: ProgressEmitter,
 ): Promise<void> {
   const portalUrl = provider.url;
+  const providerCredentials = provider.username || provider.password
+    ? { username: provider.username, password: provider.password }
+    : undefined;
   const authModule = getAuthModule(provider.auth, provider.id);
 
   // Helper: emit if we have a progress emitter (Electron mode)
@@ -111,6 +114,7 @@ export async function discoverProviderById(
       providerId: provider.id,
       basePath,
       authModule,
+      credentials: providerCredentials,
       emitProgress,
     });
     console.log();
