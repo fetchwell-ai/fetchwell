@@ -8,14 +8,15 @@
 
 import * as fs from "node:fs";
 import { createBrowserProvider } from "../browser/index.js";
-import { loadSavedSession, saveSession } from "../session.js";
-import { isAuthPage, getAuthModule } from "../auth.js";
+import { loadSavedSession } from "../session.js";
+import { getAuthModule } from "../auth.js";
 import { type ProviderConfig } from "../config.js";
 import { getOutputDir } from "../extract/helpers.js";
 import { discoverPortal } from "./index.js";
 import { loadNavMap, saveNavMap } from "./nav-map.js";
 import { detectLoginFormType } from "../auth/detect-login-form.js";
 import { type StructuredProgressEvent } from "../progress-events.js";
+import { loginOrRestoreSession } from "../auth/login-session.js";
 
 /** Optional callback for emitting structured progress events to the Electron parent. */
 export type ProgressEmitter = (event: StructuredProgressEvent) => void;
@@ -36,11 +37,7 @@ export async function discoverProviderById(
 ): Promise<void> {
   const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
   const portalUrl = provider.url;
-  const providerCredentials = provider.username || provider.password
-    ? { username: provider.username, password: provider.password }
-    : undefined;
   const authModule = getAuthModule(provider.auth, provider.id);
-  const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
 
   // Helper: emit if we have a progress emitter (Electron mode)
   const emit = (event: StructuredProgressEvent) => {
@@ -110,45 +107,13 @@ export async function discoverProviderById(
       console.log();
     }
 
-    let homeUrl: string;
-
-    if (savedSession && browser.loadSession) {
-      emit({ type: 'status-message', phase: 'login', message: 'Restoring saved session...' });
-      console.log("Step 3: Restoring saved session...");
-      await browser.loadSession(savedSession);
-      const verifyUrl = savedSession.homeUrl ?? portalUrl;
-      await browser.navigate(verifyUrl);
-      await new Promise((r) => setTimeout(r, 2000));
-
-      if (!isAuthPage(await browser.url())) {
-        console.log("   Session restored — skipping login and 2FA.");
-        homeUrl = await browser.url();
-      } else {
-        console.log("   Session expired or invalid. Logging in fresh...");
-        emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
-        await browser.navigate(portalUrl);
-        await new Promise((r) => setTimeout(r, 2000));
-        await authModule.login(browser, authConfig);
-        homeUrl = await browser.url();
-        if (browser.saveSession) {
-          const session = await browser.saveSession();
-          session.homeUrl = homeUrl;
-          saveSession(session, provider.id, basePath);
-          console.log(`   Session saved to output/${provider.id}/session.json.`);
-        }
-      }
-    } else {
-      emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
-      console.log("Step 3: Login");
-      await authModule.login(browser, authConfig);
-      homeUrl = await browser.url();
-      if (browser.saveSession) {
-        const session = await browser.saveSession();
-        session.homeUrl = homeUrl;
-        saveSession(session, provider.id, basePath);
-        console.log(`   Session saved to output/${provider.id}/session.json (login + 2FA skipped next run).`);
-      }
-    }
+    const homeUrl = await loginOrRestoreSession(browser, {
+      portalUrl,
+      providerId: provider.id,
+      basePath,
+      authModule,
+      emitProgress,
+    });
     console.log();
 
     emit({ type: 'phase-change', phase: 'login', status: 'complete', message: 'Logged in' });
