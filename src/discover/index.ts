@@ -128,8 +128,8 @@ export async function discoverPortal(
       console.log(`   Attempt ${attempt + 1}: acting...`);
       try {
         await browser.act(actInstruction);
-      } catch (err: any) {
-        console.log(`   act() failed: ${err?.message?.slice(0, 100)}`);
+      } catch (err: unknown) {
+        console.log(`   act() failed: ${(err instanceof Error ? err.message : String(err)).slice(0, 100)}`);
         continue;
       }
       await new Promise((r) => setTimeout(r, 3000));
@@ -137,8 +137,8 @@ export async function discoverPortal(
       let verification: { isCorrectPage: boolean; description: string };
       try {
         verification = await browser.extract(VerifySchema, VERIFY_INSTRUCTIONS[section]);
-      } catch (err: any) {
-        console.log(`   extract() failed: ${err?.message?.slice(0, 100)}`);
+      } catch (err: unknown) {
+        console.log(`   extract() failed: ${(err instanceof Error ? err.message : String(err)).slice(0, 100)}`);
         continue;
       }
 

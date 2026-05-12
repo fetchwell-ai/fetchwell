@@ -139,8 +139,9 @@ function requestOtpFromRenderer(opts?: { deliveryHint?: string; error?: string }
     process.send(request);
 
     const handler = (msg: unknown) => {
+      if (typeof msg !== 'object' || msg === null || !('type' in msg)) return;
       const response = msg as TwoFAResponse;
-      if (response && response.type === '2fa:response') {
+      if (response.type === '2fa:response') {
         process.off('message', handler);
         resolve(response.code);
       }
@@ -205,8 +206,9 @@ async function main(): Promise<void> {
 
     // The parent sends the command immediately after fork
     const handler = (msg: unknown) => {
+      if (typeof msg !== 'object' || msg === null || !('command' in msg)) return;
       const command = msg as RunnerCommand;
-      if (command && (command.command === 'extract' || command.command === 'discover')) {
+      if (command.command === 'extract' || command.command === 'discover') {
         process.off('message', handler);
         resolve(command);
       }

@@ -132,14 +132,11 @@ export function setOtpCallback(cb: ((deliveryHint?: string) => Promise<string | 
 const ui: TwoFactorHandler = async (browser) => {
   await new Promise((r) => setTimeout(r, 3000));
 
-  const urlBefore2FA = await browser.url();
-  console.log(`[2fa:ui] URL before 2FA check: ${urlBefore2FA}`);
   console.log("Step 5: Checking for 2FA/verification prompt...");
   const twoFaObservations = await detect2FA(browser);
 
   if (twoFaObservations.length > 0) {
-    console.log("2FA/MFA detected!");
-    console.log(`[2fa:ui] Observations: ${JSON.stringify(twoFaObservations.map(o => o.description ?? o))}`);
+    console.log("[2fa:ui] 2FA detected");
 
     if (!otpCallback) {
       throw new Error("No OTP callback registered for ui 2FA strategy");
@@ -163,10 +160,8 @@ const ui: TwoFactorHandler = async (browser) => {
         "(4) codeInputAlreadyVisible: is there already a code/OTP input field visible?",
       );
 
-      console.log(`[2fa:ui] Delivery analysis: ${JSON.stringify(deliveryChoice)}`);
-
       if (deliveryChoice.codeInputAlreadyVisible && !deliveryChoice.hasDeliveryChoice) {
-        console.log("   Code input already visible — no delivery button to click.");
+        // Code input already visible — no delivery button to click.
       } else if (deliveryChoice.hasDeliveryChoice) {
         if (deliveryChoice.hasSms) {
           await browser.act(
@@ -174,26 +169,22 @@ const ui: TwoFactorHandler = async (browser) => {
             "Then click any 'Send', 'Send code', 'Continue', or similar button if present.",
           );
           deliveryHint = "text message";
-          console.log(`[2fa:ui] Selected SMS/text.`);
         } else if (deliveryChoice.hasEmail) {
           await browser.act(
             "Click the option to receive the verification code via email. " +
             "Then click any 'Send', 'Send code', 'Continue', or similar button if present.",
           );
           deliveryHint = "email";
-          console.log(`[2fa:ui] Selected email.`);
         } else {
           await browser.act(
             "Select any available option to receive the verification code, then click 'Send', 'Continue', or similar.",
           );
-          console.log(`[2fa:ui] Selected fallback option.`);
         }
       } else {
         // No choice but might need to click a send button
         await browser.act(
           "If there is a 'Send code', 'Send', 'Continue', or similar button to trigger sending the verification code, click it.",
         );
-        console.log(`[2fa:ui] Triggered send.`);
       }
     } catch (err) {
       console.log(`[2fa:ui] Delivery selection failed: ${err instanceof Error ? err.message : err}`);
@@ -205,15 +196,11 @@ const ui: TwoFactorHandler = async (browser) => {
       throw new Error("2FA code not provided — user may have timed out or cancelled");
     }
 
-    console.log(`[2fa:ui] Got code, entering in browser. URL: ${await browser.url()}`);
     await enterCodeInBrowser(browser, code);
-    console.log(`[2fa:ui] Code entered, waiting for post-login navigation...`);
     await waitForPostLoginNavigation(browser);
-    console.log(`[2fa:ui] Post-login complete. URL: ${await browser.url()}`);
+    console.log("[2fa:ui] Code entered, post-login complete");
   } else {
-    console.log(`[2fa:ui] No 2FA detected. URL: ${urlBefore2FA}`);
     await verifyLoginSuccess(browser);
-    console.log(`[2fa:ui] Login verified. URL: ${await browser.url()}`);
   }
 };
 

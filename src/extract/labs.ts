@@ -151,8 +151,8 @@ export async function extractLabsDocs(browser: BrowserProvider, portalUrl: strin
         extracted++;
       }
       console.log(`      → saved ${filename}`);
-    } catch (err: any) {
-      console.log(`      → error: ${err?.message ?? err}`);
+    } catch (err: unknown) {
+      console.log(`      → error: ${err instanceof Error ? err.message : String(err)}`);
       try {
         const ss = await browser.screenshot();
         fs.writeFileSync(

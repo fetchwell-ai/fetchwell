@@ -1,4 +1,4 @@
-import { app, BrowserWindow, nativeTheme, ipcMain } from 'electron';
+import { app, BrowserWindow, nativeTheme, ipcMain, nativeImage } from 'electron';
 import * as path from 'path';
 import { autoUpdater } from 'electron-updater';
 import { registerIpcHandlers } from './ipc-handlers';
@@ -24,7 +24,6 @@ app.setName('FetchWell');
 app.whenReady().then(() => {
   // Set dock icon for dev mode (macOS ignores BrowserWindow `icon`)
   if (process.platform === 'darwin' && app.dock) {
-    const { nativeImage } = require('electron');
     const iconPath = path.join(__dirname, '..', 'build', 'icon.png');
     const img = nativeImage.createFromPath(iconPath);
     if (!img.isEmpty()) app.dock.setIcon(img);

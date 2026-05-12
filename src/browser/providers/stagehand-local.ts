@@ -32,7 +32,8 @@ export class StagehandLocalProvider implements BrowserProvider {
     });
     // Wrap the model to inject maxTokens — Stagehand's AISdkClient does not
     // pass maxTokens to generateObject, causing a 4096-token truncation.
-    const baseModel = anthropic("claude-sonnet-4-6");
+    const modelId = process.env.STAGEHAND_MODEL ?? "claude-sonnet-4-6";
+    const baseModel = anthropic(modelId);
     const model = new Proxy(baseModel, {
       get(target, prop) {
         if (prop === "doGenerate" || prop === "doStream") {

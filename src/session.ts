@@ -22,14 +22,18 @@ function sessionPath(providerId?: string, basePath?: string): string {
 export function loadSavedSession(providerId?: string, basePath?: string): SerializedSession | null {
   const filePath = sessionPath(providerId, basePath);
   try {
-    const data = JSON.parse(fs.readFileSync(filePath, "utf8")) as SerializedSession;
-    const ageMs = Date.now() - new Date(data.savedAt).getTime();
+    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    if (!data || typeof data !== 'object' || !('savedAt' in data) || !('cookies' in data)) {
+      return null;
+    }
+    const session = data as SerializedSession;
+    const ageMs = Date.now() - new Date(session.savedAt).getTime();
     if (ageMs > 12 * 60 * 60 * 1000) {
       console.log("   Saved session expired (>12h). Will log in fresh.");
       fs.unlinkSync(filePath);
       return null;
     }
-    return data;
+    return session;
   } catch {
     return null;
   }

@@ -140,8 +140,8 @@ export async function extractMessages(browser: BrowserProvider, portalUrl: strin
         extracted++;
       }
       console.log(`      → saved ${filename}`);
-    } catch (err: any) {
-      console.log(`      → error: ${err?.message ?? err}`);
+    } catch (err: unknown) {
+      console.log(`      → error: ${err instanceof Error ? err.message : String(err)}`);
       try {
         const ss = await browser.screenshot();
         fs.writeFileSync(path.join(msgsDir, `thread-${i + 1}-error.png`), Buffer.from(ss, "base64"));

@@ -68,7 +68,7 @@ export class ConfigManager {
     return { ...DEFAULT_CONFIG, portals: [] };
   }
 
-  save(): void {
+  private save(): void {
     const dir = path.dirname(this.configPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
