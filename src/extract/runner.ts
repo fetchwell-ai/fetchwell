@@ -8,7 +8,6 @@
 
 import * as fs from "node:fs";
 import { createBrowserProvider } from "../browser/index.js";
-import { loadSavedSession } from "../session.js";
 import { getAuthModule } from "../auth.js";
 import { type ProviderConfig } from "../config.js";
 import { loginOrRestoreSession } from "../auth/login-session.js";
