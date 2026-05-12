@@ -33,13 +33,37 @@ Download the latest `.dmg` from [GitHub Releases](https://github.com/fetchwell-a
 ### Requirements
 
 - macOS (Apple Silicon — arm64)
-- A patient portal (tested with Epic-based portals; others may work)
+- A patient portal 
 
-An Anthropic API key is bundled with the app. You can also use your own key in Settings.
+An Anthropic API key is bundled with the app. You can also add your own key in Settings.
 
 ## Two-factor authentication
 
-If your portal requires two-factor authentication, FetchWell will detect it and prompt you to enter the verification code in the app. When both SMS and email delivery are available, it selects SMS.
+If your portal requires two-factor authentication, FetchWell will detect it and prompt you to enter the verification code in the app. 
+
+## CLI usage
+
+If you prefer the command line, you can run FetchWell without the Electron app. Clone the repo and set up a `.env` file and `providers.json` (see `.env.example` and `providers.example.json`).
+
+```bash
+pnpm install
+
+# Add your Anthropic API key to .env
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
+
+# Configure your portals in providers.json (see providers.example.json)
+
+# Extract all records for all configured portals
+pnpm extract
+
+# Extract for a specific portal
+pnpm extract --provider stanford
+
+# Only fetch records newer than last run
+pnpm extract --incremental
+```
+
+The CLI handles 2FA via a file-based relay — when a code is needed, it prompts in the terminal.
 
 ## Development
 
