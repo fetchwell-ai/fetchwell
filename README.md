@@ -74,7 +74,9 @@ FetchWell is not affiliated with Anthropic.
 
 ## Install
 
-Download the latest `.dmg` from [GitHub Releases](https://github.com/fetchwell-ai/fetchwell/releases/latest), open it, and drag FetchWell to Applications.
+**[Download FetchWell for macOS](https://github.com/fetchwell-ai/fetchwell/releases/latest/download/FetchWell-0.1.0-arm64.dmg)** (arm64, ~350 MB)
+
+Or browse all releases on [GitHub Releases](https://github.com/fetchwell-ai/fetchwell/releases/latest). Open the `.dmg` and drag FetchWell to Applications.
 
 ### Requirements
 
