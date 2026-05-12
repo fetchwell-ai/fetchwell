@@ -32,7 +32,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { createBrowserProvider } from "../browser/index.js";
 import { loadSavedSession } from "../session.js";
-import { GMAIL_USER, prompt, getAuthModule } from "../auth.js";
+import { prompt, getAuthModule } from "../auth.js";
 import { loginOrRestoreSession } from "../auth/login-session.js";
 import { loadProviders, findProvider, type ProviderConfig } from "../config.js";
 import {
@@ -142,11 +142,6 @@ async function selectProviders(
 }
 
 // ---------------------------------------------------------------------------
-// Env validation
-// ---------------------------------------------------------------------------
-const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
-
-// ---------------------------------------------------------------------------
 // Probe mode (per provider)
 // ---------------------------------------------------------------------------
 /**
@@ -166,7 +161,6 @@ async function probeProvider(provider: ProviderConfig) {
   console.log("=".repeat(60));
   console.log("  FetchWell — Probe Mode");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
-  console.log(`  Mode: ${providerType}`);
   console.log("  (navigation smoke test — no PDFs will be written)");
   console.log("=".repeat(60));
   console.log();
@@ -272,14 +266,8 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
   console.log("=".repeat(60));
   console.log("  FetchWell — Record Extraction");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
-  console.log(`  Mode: ${providerType}`);
   if (incremental) {
     console.log("  Incremental: ON (skipping items already extracted)");
-  }
-  if (GMAIL_USER) {
-    console.log(`  2FA: auto via Gmail (${GMAIL_USER})`);
-  } else {
-    console.log("  2FA: manual (set GMAIL_USER + GMAIL_APP_PASSWORD to automate)");
   }
   console.log("=".repeat(60));
   console.log();
@@ -294,7 +282,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
 
   fs.mkdirSync(outputDir, { recursive: true });
 
-  console.log(`Step 1: Creating ${providerType} browser session...`);
+  console.log("Step 1: Creating browser session...");
   const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
   console.log("Browser session created!");
 
@@ -396,7 +384,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
 
 async function run() {
   // Validate ANTHROPIC_API_KEY early (before provider selection)
-  if (providerType !== "local" && !process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     console.error("Missing required env var: ANTHROPIC_API_KEY");
     process.exit(1);
   }

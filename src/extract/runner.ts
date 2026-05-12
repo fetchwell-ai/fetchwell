@@ -44,7 +44,6 @@ export async function extractProvider(
   basePath?: string,
   emitProgress?: ProgressEmitter,
 ): Promise<void> {
-  const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
   const portalUrl = provider.url;
   const providerCredentials = provider.username || provider.password
     ? { username: provider.username, password: provider.password }
@@ -59,7 +58,7 @@ export async function extractProvider(
   console.log("=".repeat(60));
   console.log("  FetchWell — Record Extraction");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
-  console.log(`  Mode: ${providerType}`);
+  console.log("  Mode: stagehand-local");
   if (incremental) {
     console.log("  Incremental: ON (skipping items already extracted)");
   }
@@ -69,7 +68,7 @@ export async function extractProvider(
   const outputDir = getOutputDir(provider.id, basePath);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  console.log(`Step 1: Creating ${providerType} browser session...`);
+  console.log("Step 1: Creating browser session...");
   const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
   console.log("Browser session created!");
 

@@ -17,10 +17,7 @@ export {
   checkAuthenticatedElement,
   prompt,
   waitForObservation,
-  fetchGmailVerificationCode,
   ensureLoggedIn,
-  GMAIL_USER,
-  GMAIL_APP_PASSWORD,
 } from "./auth/shared.js";
 
 // Also re-export the new pluggable interface and factory for consumers

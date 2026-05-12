@@ -85,7 +85,7 @@ Edit `providers.json` with your portal details:
 | `username` | Your portal username or email |
 | `password` | Your portal password |
 | `auth.loginForm` | `auto` (detect at runtime), `two-step` (username then password), or `single-page` (both on one form) |
-| `auth.twoFactor` | `none`, `manual` (prompted in terminal), or `email` (auto-reads from Gmail — requires `GMAIL_USER` and `GMAIL_APP_PASSWORD` in `.env`) |
+| `auth.twoFactor` | `none`, `manual` (prompted in terminal), or `email` (selects email delivery then prompts via file relay) |
 
 Then run:
 

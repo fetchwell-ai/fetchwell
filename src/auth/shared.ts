@@ -9,9 +9,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { ImapFlow } from "imapflow";
 import { type BrowserProvider, type ObserveResult } from "../browser/interface.js";
-import { extractVerificationCode } from "../imap.js";
 import { clearSession, saveSession, loadSavedSession } from "../session.js";
 const OUTPUT_BASE = path.join(import.meta.dirname, "..", "..", "output");
 
@@ -45,13 +43,6 @@ export function registerLoginFn(providerId: string, fn: LoginFn): void {
 export function resolveOutputDir(providerId?: string): string {
   return providerId ? path.join(OUTPUT_BASE, providerId) : OUTPUT_BASE;
 }
-
-// Only use Gmail if credentials look real (not the example placeholder)
-export const GMAIL_USER =
-  process.env.GMAIL_USER?.includes("@") && process.env.GMAIL_USER !== "you@gmail.com"
-    ? process.env.GMAIL_USER
-    : undefined;
-export const GMAIL_APP_PASSWORD = GMAIL_USER ? process.env.GMAIL_APP_PASSWORD : undefined;
 
 export function isAuthPage(url: string): boolean {
   // Check only the pathname — callback URLs like
@@ -120,97 +111,6 @@ export async function waitForObservation(
     await new Promise((r) => setTimeout(r, delayMs));
   }
   return false;
-}
-
-export async function fetchGmailVerificationCode(timeoutMs = 5 * 60 * 1000): Promise<string | null> {
-  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) return null;
-
-  const client = new ImapFlow({
-    host: "imap.gmail.com",
-    port: 993,
-    secure: true,
-    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
-    logger: false,
-  });
-
-  const deadline = Date.now() + timeoutMs;
-
-  try {
-    await client.connect();
-
-    // Search INBOX first, then Gmail spam folder as fallback
-    const mailboxes = ["INBOX", "[Gmail]/Spam", "[Gmail]/All Mail"];
-    let openedMailbox = "";
-
-    for (const mailbox of mailboxes) {
-      try {
-        await client.mailboxOpen(mailbox);
-        openedMailbox = mailbox;
-        break;
-      } catch {
-        // Mailbox might not exist -- try next
-      }
-    }
-
-    if (!openedMailbox) {
-      console.log("   Gmail: could not open any mailbox.");
-      await client.logout();
-      return null;
-    }
-
-    // Track which UIDs we've already checked to avoid re-reading the same messages
-    const checkedUids = new Set<number>();
-    let pollCount = 0;
-
-    while (Date.now() < deadline) {
-      pollCount++;
-
-      // Search without a `since` filter -- IMAP `since` uses date-only and timezone
-      // semantics that can exclude today's emails near midnight UTC. Instead, we
-      // fetch the last N emails and filter by recency ourselves.
-      for (const searchOpts of [
-        { subject: "verification" },
-        { subject: "MyChart" },
-        { from: "ucsf" },
-        { from: "mychart" },
-        { from: "epic" },
-      ] as const) {
-        const uids = await client.search(searchOpts as any);
-        const list = (Array.isArray(uids) ? uids : []) as number[];
-        // Only look at emails we haven't checked yet, newest first
-        const newUids = list.filter((u) => !checkedUids.has(u)).reverse();
-
-        for (const uid of newUids) {
-          checkedUids.add(uid);
-          const msg = await client.fetchOne(String(uid), { source: true, envelope: true }) as any;
-          if (!msg?.source) continue;
-
-          // Only consider emails from the last 30 minutes
-          const emailDate = msg.envelope?.date ? new Date(msg.envelope.date) : null;
-          if (emailDate && Date.now() - emailDate.getTime() > 30 * 60_000) continue;
-
-          const code = extractVerificationCode((msg.source as Buffer).toString("utf8"));
-          if (code) {
-            console.log(`   Gmail: found code ${code} (email: ${msg.envelope?.subject})`);
-            await client.logout();
-            return code;
-          }
-        }
-      }
-
-      if (pollCount === 1) {
-        console.log(`   Gmail: no code yet in ${openedMailbox}, polling every 5s...`);
-      }
-      await new Promise((r) => setTimeout(r, 5000));
-    }
-
-    await client.logout();
-    return null;
-  } catch (err) {
-    try { await client.logout(); } catch {}
-    console.error("   Gmail IMAP error:", (err as Error).message);
-    return null;
-  }
 }
 
 /**

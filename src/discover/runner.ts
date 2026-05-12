@@ -35,7 +35,6 @@ export async function discoverProviderById(
   basePath?: string,
   emitProgress?: ProgressEmitter,
 ): Promise<void> {
-  const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
   const portalUrl = provider.url;
   const authModule = getAuthModule(provider.auth, provider.id);
 
@@ -47,7 +46,7 @@ export async function discoverProviderById(
   console.log("=".repeat(60));
   console.log("  FetchWell — Portal Discovery");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
-  console.log(`  Mode: ${providerType}`);
+  console.log("  Mode: stagehand-local");
   console.log("=".repeat(60));
   console.log();
 

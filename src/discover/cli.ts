@@ -50,10 +50,8 @@ function parseCliArgs(): { providerId: string } {
 // ---------------------------------------------------------------------------
 
 async function run() {
-  const providerType = process.env.BROWSER_PROVIDER ?? "stagehand-local";
-
   // Validate ANTHROPIC_API_KEY early
-  if (providerType !== "local" && !process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.ANTHROPIC_API_KEY) {
     console.error("Missing required env var: ANTHROPIC_API_KEY");
     process.exit(1);
   }
@@ -77,7 +75,7 @@ async function run() {
   console.log("=".repeat(60));
   console.log("  FetchWell — Portal Discovery");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
-  console.log(`  Mode: ${providerType}`);
+  console.log("  Mode: stagehand-local");
   console.log("=".repeat(60));
   console.log();
 
