@@ -333,8 +333,8 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
 
   const shouldReduce = useReducedMotion();
 
-  // --fw-ease-out: cubic-bezier(0.16, 1, 0.3, 1)
-  const easeOut: [number, number, number, number] = [0.16, 1, 0.3, 1];
+  // Matches --fw-ease-out in styles.css
+  const easeOut: [number, number, number, number] = [0.2, 0.7, 0.2, 1];
 
   return (
     <motion.div

@@ -236,14 +236,22 @@ export async function waitForFileBasedCode(providerId?: string): Promise<string 
   console.log("+=======================================================+");
 
   const code = await new Promise<string | null>((resolve) => {
+    let poll: ReturnType<typeof setInterval> | undefined;
+
+    const cleanup = () => {
+      clearTimeout(timeout);
+      if (poll) clearInterval(poll);
+    };
+
     const timeout = setTimeout(() => {
+      cleanup();
       watcher.close();
       resolve(null);
     }, 5 * 60 * 1000);
 
     // Check immediately -- the code may have been pre-placed
     if (fs.existsSync(codeFile)) {
-      clearTimeout(timeout);
+      cleanup();
       resolve(fs.readFileSync(codeFile, "utf8").trim());
       return;
     }
@@ -254,17 +262,16 @@ export async function waitForFileBasedCode(providerId?: string): Promise<string 
 
     const watcher = fs.watch(outputDir, (_event, filename) => {
       if (filename === "2fa.code" && fs.existsSync(codeFile)) {
-        clearTimeout(timeout);
+        cleanup();
         watcher.close();
         resolve(fs.readFileSync(codeFile, "utf8").trim());
       }
     });
 
     // Also poll every 10s as a fallback (fs.watch can be unreliable on some systems)
-    const poll = setInterval(() => {
+    poll = setInterval(() => {
       if (fs.existsSync(codeFile)) {
-        clearTimeout(timeout);
-        clearInterval(poll);
+        cleanup();
         watcher.close();
         resolve(fs.readFileSync(codeFile, "utf8").trim());
       }
@@ -284,7 +291,7 @@ export async function waitForFileBasedCode(providerId?: string): Promise<string 
  * input field structure (e.g. OneMedical's single-box OTP input).
  */
 export async function enterCodeInBrowser(browser: BrowserProvider, code: string): Promise<void> {
-  console.log(`   Got code: ${code}`);
+  console.log("   Got 2FA code, entering in browser...");
   const fields = await browser.observe(
     "the verification code, security code, or one-time password input field",
   );
