@@ -75,7 +75,7 @@ function SkeletonBar({
     <div
       className={`bg-[var(--color-fw-bg-deep)] animate-pulse ${rounded}`}
       style={{
-        width: typeof width === 'number' ? width : width,
+        width: typeof width === 'number' ? `${width}px` : width,
         height,
         animationDuration: '1.4s',
         animationTimingFunction: 'ease-in-out',

@@ -10,7 +10,7 @@ export const strings = {
     version: 'v0.1.0',
     buildVersion: 'fetchwell 0.1.0 \u00B7 build 2026.05.08',
     badge: 'local-only',
-    //tagline: 'An app that uses an AI assistant to fetch your medical records from all your patient portals and store them locally on your computer.',
+    tagline: 'An app that uses an AI assistant to fetch your medical records from all your patient portals and store them locally on your computer.',
   },
 
   // ── Sidebar ──────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ export const strings = {
     privacy: {
       title: 'Privacy & data',
       lede: 'What happens to your health data.',
-      body: "Fetchwell never sees your data. We don't have servers, we don't have a cloud. Your data is downloaded directly to your computer as PDFs. Your passwords are stored locally and encrypted by Electron using base64-encoded ciphertext. Your data is fetched by Claude, an AI assistant built by Anthropic that runs in their cloud and uses a web browser to navigate your health portal. That assistant  will 'see' your health data when it processes your requests. Fetchwell is not affiliated with Anthropic. ",
+      body: "Fetchwell never sees your data. We don't have servers, we don't have a cloud. Your data is downloaded directly to your computer as PDFs. Your passwords are stored locally and encrypted by Electron using base64-encoded ciphertext. Your data is fetched by Claude, an AI assistant built by Anthropic that runs in their cloud and uses a web browser to navigate your health portal. That assistant will 'see' your health data when it processes your requests. Fetchwell is not affiliated with Anthropic.",
     },
 
     about: {

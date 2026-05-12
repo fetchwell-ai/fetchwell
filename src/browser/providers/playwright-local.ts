@@ -31,14 +31,14 @@ export class PlaywrightLocalProvider implements BrowserProvider {
   async act(_instruction: string): Promise<void> {
     throw new Error(
       "PlaywrightLocalProvider does not support AI-powered act(). " +
-        "Use fill() and direct selectors, or switch to browserbase provider.",
+        "Use fill() and direct selectors, or switch to stagehand-local provider.",
     );
   }
 
   async extract<T>(_schema: ZodSchema<T>, _instruction: string): Promise<T> {
     throw new Error(
       "PlaywrightLocalProvider does not support AI-powered extract(). " +
-        "Switch to browserbase provider for production use.",
+        "Switch to stagehand-local provider for AI-powered extraction.",
     );
   }
 
