@@ -31,8 +31,9 @@ dotenv.config({ override: true });
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { createBrowserProvider } from "../browser/index.js";
-import { loadSavedSession, saveSession, clearSession } from "../session.js";
-import { isAuthPage, checkAuthenticatedElement, GMAIL_USER, prompt, getAuthModule } from "../auth.js";
+import { loadSavedSession } from "../session.js";
+import { GMAIL_USER, prompt, getAuthModule } from "../auth.js";
+import { loginOrRestoreSession } from "../auth/login-session.js";
 import { loadProviders, findProvider, type ProviderConfig } from "../config.js";
 import {
   getOutputDir,
@@ -161,7 +162,6 @@ async function probeProvider(provider: ProviderConfig) {
     ? { username: provider.username, password: provider.password }
     : undefined;
   const authModule = getAuthModule(provider.auth, provider.id);
-  const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
   console.log("  FetchWell — Probe Mode");
@@ -205,51 +205,12 @@ async function probeProvider(provider: ProviderConfig) {
     console.log();
 
     // Login or restore session
-    if (savedSession && browser.loadSession) {
-      console.log("Step 3: Restoring saved session...");
-      await browser.loadSession(savedSession);
-      // Navigate to the saved home URL (e.g. /UCSFMyChart/Home/) — NOT the login URL.
-      // Navigating to the login URL while already authenticated triggers ?action=logout.
-      const verifyUrl = savedSession.homeUrl ?? portalUrl;
-      await browser.navigate(verifyUrl);
-      await new Promise((r) => setTimeout(r, 2000));
-
-      const currentUrl = await browser.url();
-      const onAuthPage = isAuthPage(currentUrl);
-      const selectors = provider.authenticatedSelectors ?? [];
-      const hasAuthElement = onAuthPage || selectors.length === 0 ? false : await checkAuthenticatedElement(browser, selectors);
-
-      if (!onAuthPage && (selectors.length === 0 || hasAuthElement)) {
-        console.log("   Session restored — skipping login and 2FA.");
-        console.log();
-      } else {
-        if (onAuthPage) {
-          console.log(`   Session expired — redirected to auth page: ${currentUrl}`);
-        } else {
-          console.log(`   Session validation failed — no authenticated elements found at ${currentUrl}`);
-        }
-        console.log("   Logging in fresh...");
-        clearSession(provider.id);
-        await browser.navigate(portalUrl);
-        await new Promise((r) => setTimeout(r, 2000));
-        await authModule.login(browser, authConfig);
-        if (browser.saveSession) {
-          const session = await browser.saveSession();
-          session.homeUrl = await browser.url();
-          saveSession(session, provider.id);
-          console.log(`   Session saved to output/${provider.id}/session.json.`);
-        }
-      }
-    } else {
-      console.log("Step 3: Login");
-      await authModule.login(browser, authConfig);
-      if (browser.saveSession) {
-        const session = await browser.saveSession();
-        session.homeUrl = await browser.url();
-        saveSession(session, provider.id);
-        console.log(`   Session saved to output/${provider.id}/session.json (login + 2FA skipped next run).`);
-      }
-    }
+    await loginOrRestoreSession(browser, {
+      portalUrl,
+      providerId: provider.id,
+      authModule,
+      authenticatedSelectors: provider.authenticatedSelectors,
+    });
     console.log();
 
     const navNotes = readNavNotes(outputDir);
@@ -307,7 +268,6 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     ? { username: provider.username, password: provider.password }
     : undefined;
   const authModule = getAuthModule(provider.auth, provider.id);
-  const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
   console.log("  FetchWell — Record Extraction");
@@ -359,56 +319,12 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     console.log();
 
     // Step 3: Login or restore session
-    if (savedSession && browser.loadSession) {
-      console.log("Step 3: Restoring saved session...");
-      await browser.loadSession(savedSession);
-      // Navigate to the saved home URL (e.g. /UCSFMyChart/Home/) — NOT the login URL.
-      // Navigating to the login URL while already authenticated triggers ?action=logout.
-      const verifyUrl = savedSession.homeUrl ?? portalUrl;
-      await browser.navigate(verifyUrl);
-      await new Promise((r) => setTimeout(r, 2000));
-
-      const currentUrl = await browser.url();
-      const onAuthPage = isAuthPage(currentUrl);
-      const selectors = provider.authenticatedSelectors ?? [];
-      const hasAuthElement = onAuthPage || selectors.length === 0 ? false : await checkAuthenticatedElement(browser, selectors);
-
-      if (!onAuthPage && (selectors.length === 0 || hasAuthElement)) {
-        console.log("   Session restored — skipping login and 2FA.");
-        console.log();
-      } else {
-        if (onAuthPage) {
-          console.log(`   Session expired — redirected to auth page: ${currentUrl}`);
-        } else {
-          console.log(`   Session validation failed — no authenticated elements found at ${currentUrl}`);
-        }
-        console.log("   Logging in fresh...");
-        clearSession(provider.id);
-        console.log();
-        console.log("Step 3: Login");
-        await browser.navigate(portalUrl);
-        await new Promise((r) => setTimeout(r, 2000));
-        await authModule.login(browser, authConfig);
-        if (browser.saveSession) {
-          const session = await browser.saveSession();
-          session.homeUrl = await browser.url();
-          saveSession(session, provider.id);
-          console.log(`   Session saved to output/${provider.id}/session.json.`);
-        }
-      }
-    } else {
-      console.log("Step 3: Login");
-      console.log("   Your credentials are entered locally and sent directly to the health portal.");
-      console.log("   They are NOT stored or logged anywhere.");
-      console.log();
-      await authModule.login(browser, authConfig);
-      if (browser.saveSession) {
-        const session = await browser.saveSession();
-        session.homeUrl = await browser.url();
-        saveSession(session, provider.id);
-        console.log(`   Session saved to output/${provider.id}/session.json (login + 2FA skipped next run).`);
-      }
-    }
+    await loginOrRestoreSession(browser, {
+      portalUrl,
+      providerId: provider.id,
+      authModule,
+      authenticatedSelectors: provider.authenticatedSelectors,
+    });
     console.log();
 
     const navNotes = readNavNotes(outputDir);

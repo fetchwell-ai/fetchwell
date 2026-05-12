@@ -13,11 +13,12 @@ dotenv.config({ override: true });
 
 import * as fs from "node:fs";
 import { createBrowserProvider } from "../browser/index.js";
-import { loadSavedSession, saveSession } from "../session.js";
-import { isAuthPage, prompt, getAuthModule } from "../auth.js";
+import { loadSavedSession } from "../session.js";
+import { prompt, getAuthModule } from "../auth.js";
 import { loadProviders, findProvider } from "../config.js";
 import { getOutputDir } from "../extract/helpers.js";
 import { discoverPortal } from "./index.js";
+import { loginOrRestoreSession } from "../auth/login-session.js";
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -71,11 +72,7 @@ async function run() {
   }
 
   const portalUrl = provider.url;
-  const providerCredentials = provider.username || provider.password
-    ? { username: provider.username, password: provider.password }
-    : undefined;
   const authModule = getAuthModule(provider.auth, provider.id);
-  const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
 
   console.log("=".repeat(60));
   console.log("  FetchWell — Portal Discovery");
@@ -118,42 +115,11 @@ async function run() {
     console.log();
 
     // Step 3: Login or restore session
-    let homeUrl: string;
-
-    if (savedSession && browser.loadSession) {
-      console.log("Step 3: Restoring saved session...");
-      await browser.loadSession(savedSession);
-      const verifyUrl = savedSession.homeUrl ?? portalUrl;
-      await browser.navigate(verifyUrl);
-      await new Promise((r) => setTimeout(r, 2000));
-
-      if (!isAuthPage(await browser.url())) {
-        console.log("   Session restored — skipping login and 2FA.");
-        homeUrl = await browser.url();
-      } else {
-        console.log("   Session expired or invalid. Logging in fresh...");
-        await browser.navigate(portalUrl);
-        await new Promise((r) => setTimeout(r, 2000));
-        await authModule.login(browser, authConfig);
-        homeUrl = await browser.url();
-        if (browser.saveSession) {
-          const session = await browser.saveSession();
-          session.homeUrl = homeUrl;
-          saveSession(session, provider.id);
-          console.log(`   Session saved to output/${provider.id}/session.json.`);
-        }
-      }
-    } else {
-      console.log("Step 3: Login");
-      await authModule.login(browser, authConfig);
-      homeUrl = await browser.url();
-      if (browser.saveSession) {
-        const session = await browser.saveSession();
-        session.homeUrl = homeUrl;
-        saveSession(session, provider.id);
-        console.log(`   Session saved to output/${provider.id}/session.json (login + 2FA skipped next run).`);
-      }
-    }
+    const homeUrl = await loginOrRestoreSession(browser, {
+      portalUrl,
+      providerId: provider.id,
+      authModule,
+    });
     console.log();
 
     // Step 4: Run discovery

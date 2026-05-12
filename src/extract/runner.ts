@@ -8,9 +8,10 @@
 
 import * as fs from "node:fs";
 import { createBrowserProvider } from "../browser/index.js";
-import { loadSavedSession, saveSession, clearSession } from "../session.js";
-import { isAuthPage, checkAuthenticatedElement, getAuthModule } from "../auth.js";
+import { loadSavedSession } from "../session.js";
+import { getAuthModule } from "../auth.js";
 import { type ProviderConfig } from "../config.js";
+import { loginOrRestoreSession } from "../auth/login-session.js";
 import {
   getOutputDir,
   buildIndex,
@@ -50,7 +51,6 @@ export async function extractProvider(
     ? { username: provider.username, password: provider.password }
     : undefined;
   const authModule = getAuthModule(provider.auth, provider.id);
-  const authConfig = { url: portalUrl, credentials: providerCredentials, providerId: provider.id };
 
   // Helper: emit if we have a progress emitter (Electron mode)
   const emit = (event: StructuredProgressEvent) => {
@@ -68,13 +68,6 @@ export async function extractProvider(
   console.log();
 
   const outputDir = getOutputDir(provider.id, basePath);
-  const savedSession = loadSavedSession(provider.id, basePath);
-  if (savedSession) {
-    console.log(`   Found saved session from ${savedSession.savedAt} — will skip login.`);
-    console.log(`   (Delete output/${provider.id}/session.json to force a fresh login.)`);
-    console.log();
-  }
-
   fs.mkdirSync(outputDir, { recursive: true });
 
   console.log(`Step 1: Creating ${providerType} browser session...`);
@@ -104,64 +97,14 @@ export async function extractProvider(
     // IMPORTANT: Do NOT navigate to portalUrl (the login URL) before checking
     // for a saved session — MyChart triggers ?action=logout when you visit the
     // login URL while already authenticated, destroying the session.
-    let homeUrl: string = portalUrl;
-
-    if (savedSession && browser.loadSession) {
-      emit({ type: 'status-message', phase: 'login', message: 'Restoring saved session...' });
-      console.log("Step 3: Restoring saved session...");
-      await browser.loadSession(savedSession);
-      const verifyUrl = savedSession.homeUrl ?? portalUrl;
-      await browser.navigate(verifyUrl);
-      await new Promise((r) => setTimeout(r, 2000));
-
-      const currentUrl = await browser.url();
-      const onAuthPage = isAuthPage(currentUrl);
-      const selectors = provider.authenticatedSelectors ?? [];
-      const hasAuthElement = onAuthPage || selectors.length === 0 ? false : await checkAuthenticatedElement(browser, selectors);
-
-      if (!onAuthPage && (selectors.length === 0 || hasAuthElement)) {
-        console.log("   Session restored — skipping login and 2FA.");
-        homeUrl = currentUrl;
-        console.log();
-      } else {
-        if (onAuthPage) {
-          console.log(`   Session expired — redirected to auth page: ${currentUrl}`);
-        } else {
-          console.log(`   Session validation failed — no authenticated elements found at ${currentUrl}`);
-        }
-        console.log("   Logging in fresh...");
-        emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
-        clearSession(provider.id, basePath);
-        console.log();
-        console.log("Step 3: Login");
-        await browser.navigate(portalUrl);
-        await new Promise((r) => setTimeout(r, 2000));
-        await authModule.login(browser, authConfig);
-        homeUrl = await browser.url();
-        if (browser.saveSession) {
-          const session = await browser.saveSession();
-          session.homeUrl = homeUrl;
-          saveSession(session, provider.id, basePath);
-          console.log(`   Session saved to output/${provider.id}/session.json.`);
-        }
-      }
-    } else {
-      emit({ type: 'status-message', phase: 'login', message: 'Navigating to sign-in page...' });
-      console.log(`Step 2: Navigating to ${portalUrl}...`);
-      await browser.navigate(portalUrl);
-      await new Promise((r) => setTimeout(r, 2000));
-      console.log("Page loaded.");
-      emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
-      console.log("Step 3: Login");
-      await authModule.login(browser, authConfig);
-      homeUrl = await browser.url();
-      if (browser.saveSession) {
-        const session = await browser.saveSession();
-        session.homeUrl = homeUrl;
-        saveSession(session, provider.id, basePath);
-        console.log(`   Session saved to output/${provider.id}/session.json (login + 2FA skipped next run).`);
-      }
-    }
+    const homeUrl = await loginOrRestoreSession(browser, {
+      portalUrl,
+      providerId: provider.id,
+      basePath,
+      authModule,
+      authenticatedSelectors: provider.authenticatedSelectors,
+      emitProgress,
+    });
     console.log(`   Dashboard URL: ${homeUrl}`);
     console.log();
 
