@@ -119,13 +119,13 @@ export async function mergePdfs(pdfDir: string, outputPath: string, label: strin
       const doc = await PDFDocument.load(bytes);
       const pages = await merged.copyPages(doc, doc.getPageIndices());
       pages.forEach((page) => merged.addPage(page));
-    } catch (err: any) {
-      console.log(`      → skipping ${pdfFile}: ${err?.message}`);
+    } catch (err: unknown) {
+      console.log(`      → skipping ${pdfFile}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
   const mergedBytes = await merged.save();
   fs.writeFileSync(outputPath, mergedBytes);
-  console.log(`   ✓ ${path.basename(outputPath)} (${pdfFiles.length} ${label}, ${(mergedBytes.length / 1024).toFixed(0)} KB)`);
+  console.log(`   [ok] ${path.basename(outputPath)} (${pdfFiles.length} ${label}, ${(mergedBytes.length / 1024).toFixed(0)} KB)`);
 }
 
 export async function logDepth(browser: BrowserProvider, section: string): Promise<void> {
@@ -137,10 +137,11 @@ export async function logDepth(browser: BrowserProvider, section: string): Promi
 export async function navigateWithRetry(browser: BrowserProvider, url: string): Promise<void> {
   try {
     await browser.navigate(url);
-  } catch (err: any) {
-    const isNetworkError = /ERR_TIMED_OUT|ERR_CONNECTION|net::ERR/i.test(err?.message ?? "");
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    const isNetworkError = /ERR_TIMED_OUT|ERR_CONNECTION|net::ERR/i.test(errMsg);
     if (!isNetworkError) throw err;
-    console.log(`   Navigation failed (${err.message?.slice(0, 60)}...) — retrying in 5s`);
+    console.log(`   Navigation failed (${errMsg.slice(0, 60)}...) — retrying in 5s`);
     await new Promise((r) => setTimeout(r, 5000));
     await browser.navigate(url);
   }
@@ -210,8 +211,8 @@ async function verifySectionPage(
     const result = await browser.extract(VerifySchema, VERIFY_INSTRUCTIONS[section]);
     console.log(`   Page verification: ${result.isCorrectPage} — ${result.description.slice(0, 100)}`);
     return result.isCorrectPage;
-  } catch (err: any) {
-    console.log(`   Page verification failed (extract error): ${err?.message?.slice(0, 80)}`);
+  } catch (err: unknown) {
+    console.log(`   Page verification failed (extract error): ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
     return false;
   }
 }
@@ -262,8 +263,8 @@ export async function navigateToSection(
         return { listInstruction: entry.listInstruction };
       }
       console.log(`   [nav] ${section}: cached URL stale, falling back to nav-map steps`);
-    } catch (err: any) {
-      console.log(`   [nav] ${section}: cached URL navigation error: ${err?.message?.slice(0, 80)}`);
+    } catch (err: unknown) {
+      console.log(`   [nav] ${section}: cached URL navigation error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
     }
   }
 
@@ -298,8 +299,8 @@ export async function navigateToSection(
         return { listInstruction: entry.listInstruction };
       }
       console.log(`   [nav] ${section}: steps did not reach the correct page, trying agentic search`);
-    } catch (err: any) {
-      console.log(`   [nav] ${section}: steps replay error: ${err?.message?.slice(0, 80)}`);
+    } catch (err: unknown) {
+      console.log(`   [nav] ${section}: steps replay error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
     }
   } else if (!entry) {
     // No nav-map entry at all — fall through to agentic search or hardcoded fallback
@@ -345,8 +346,8 @@ export async function navigateToSection(
           }
           return { listInstruction: entry?.listInstruction };
         }
-      } catch (err: any) {
-        console.log(`   [nav] ${section}: agentic attempt ${attempt + 1} error: ${err?.message?.slice(0, 80)}`);
+      } catch (err: unknown) {
+        console.log(`   [nav] ${section}: agentic attempt ${attempt + 1} error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
       }
     }
     console.log(`   [nav] ${section}: agentic search exhausted all attempts`);
@@ -356,8 +357,8 @@ export async function navigateToSection(
     try {
       await browser.act(fallback.act);
       return {};
-    } catch (err: any) {
-      console.log(`   [nav] ${section}: hardcoded fallback error: ${err?.message?.slice(0, 80)}`);
+    } catch (err: unknown) {
+      console.log(`   [nav] ${section}: hardcoded fallback error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
     }
   }
 

@@ -2,14 +2,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import {
   Activity,
-  AlertTriangle,
   Clock,
   Download,
   FileText,
   Folder,
   MessageSquare,
   Pill,
-  Settings,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import AddPortal from './AddPortal';
 import ProgressPanel from '../components/ProgressPanel';
@@ -107,12 +106,9 @@ function PortalListSkeleton() {
 
 // -- PortalCard v2 helpers --
 
-type PortalState = 'ready' | 'fetched' | 'error';
+type PortalState = 'ready' | 'fetched';
 
 function derivePortalState(portal: PortalEntry): PortalState {
-  // 'error' state reserved for future use — requires a lastError field on PortalEntry
-  // and corresponding IPC wiring. The error UI (badge, guidance, button) is implemented
-  // and ready to activate once the type is extended.
   if (portal.lastExtractedAt !== null) return 'fetched';
   return 'ready';
 }
@@ -342,15 +338,6 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
         body="Click Fetch records to download labs, visits, medications, and messages. The first run may take a few minutes while we learn your portal's layout. During extraction, page content — including health information — is sent to Anthropic's API so Claude can navigate the site."
       />
     );
-  } else if (portalState === 'error') {
-    guidance = (
-      <GuidanceStrip
-        variant="error"
-        icon={<AlertTriangle size={16} />}
-        heading="The portal didn't accept your credentials."
-        body="Try signing in directly first — sometimes portals require a security challenge. Then update your saved username and password."
-      />
-    );
   }
 
   return (
@@ -379,7 +366,7 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
             onClick={handleEdit}
             title="Edit portal"
           >
-            <Settings size={18} />
+            <SettingsIcon size={18} />
           </button>
         </div>
 
@@ -404,28 +391,18 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
         {/* Footer buttons */}
         <div className="flex items-center gap-2">
           {/* Primary action */}
-          {portalState === 'error' ? (
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleEdit}
-            >
-              Update credentials
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              onClick={handleExtract}
-              disabled={extractDisabled}
-              title={extractTitle}
-            >
-              <Download size={14} />
-              {isThisRunning && runningOperation?.operation === 'extraction'
-                ? 'Running...'
-                : portalState === 'fetched' ? 'Fetch again' : 'Fetch records'}
-            </Button>
-          )}
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleExtract}
+            disabled={extractDisabled}
+            title={extractTitle}
+          >
+            <Download size={14} />
+            {isThisRunning && runningOperation?.operation === 'extraction'
+              ? 'Running...'
+              : portalState === 'fetched' ? 'Fetch again' : 'Fetch records'}
+          </Button>
 
           {/* Remove — pushed to the right */}
           <Button
