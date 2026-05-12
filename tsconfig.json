@@ -8,8 +8,7 @@
     "skipLibCheck": true,
     "outDir": "dist",
     "rootDir": "src",
-    "resolveJsonModule": true,
-    "declaration": true
+    "resolveJsonModule": true
   },
   "include": ["src/**/*"],
   "exclude": ["src/renderer/**/*"]

@@ -1,7 +1,7 @@
 # electron-builder configuration
 # Docs: https://www.electron.build/configuration
 
-appId: com.wellfetch.app
+appId: ai.fetchwell.app
 productName: FetchWell
 
 # Override the main entry point to use the compiled CJS output
@@ -31,6 +31,7 @@ mac:
   # Set to null to allow unsigned builds during development.
   # When CSC_LINK and CSC_KEY_PASSWORD env vars are set,
   # electron-builder will sign automatically.
+  # Project owner's signing identity. Contributors: set CSC_NAME env var to use your own.
   identity: "Chad Allen (SDWTXTZJ3F)"
   notarize: true
 
