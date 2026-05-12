@@ -80,11 +80,22 @@ export function registerIpcHandlers(userDataPath?: string): void {
     if (updates.twoFactor !== undefined) configUpdates.twoFactor = updates.twoFactor;
 
     if (updates.username !== undefined && updates.password !== undefined) {
+      // Full credential update: new username + new password
       creds().setPortalCredentials(id, {
         username: updates.username,
         password: updates.password,
       });
       configUpdates.hasCredentials = true;
+    } else if (updates.username !== undefined) {
+      // Username-only update: re-use the existing password
+      const existing = creds().getPortalCredentials(id);
+      if (existing) {
+        creds().setPortalCredentials(id, {
+          username: updates.username,
+          password: existing.password,
+        });
+        configUpdates.hasCredentials = true;
+      }
     }
 
     return config().updatePortal(id, configUpdates);
@@ -212,10 +223,15 @@ export function registerIpcHandlers(userDataPath?: string): void {
     shell.showItemInFolder(folderPath);
   });
 
-  // --- Portal credentials (read-only for display) ---
+  // --- Portal credentials (read-only for display — password never sent to renderer) ---
 
-  ipcMain.handle('getPortalCredentials', (_event, portalId: string): { username: string; password: string } | null => {
-    return creds().getPortalCredentials(portalId);
+  ipcMain.handle('getPortalCredentials', (_event, portalId: string): { username: string; hasPassword: boolean } | null => {
+    const portalCreds = creds().getPortalCredentials(portalId);
+    if (!portalCreds) return null;
+    return {
+      username: portalCreds.username,
+      hasPassword: portalCreds.password.length > 0,
+    };
   });
 
 }
