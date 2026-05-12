@@ -3,6 +3,21 @@ import * as path from 'path';
 import { autoUpdater } from 'electron-updater';
 import { registerIpcHandlers } from './ipc-handlers';
 
+// ---------------------------------------------------------------------------
+// Playwright browser path — must be set before any browser launch
+// ---------------------------------------------------------------------------
+// When running from the packaged DMG, Playwright cannot find Chromium in its
+// default cache (~/.cache or ~/Library/Caches/ms-playwright/) because end-user
+// machines won't have it. electron-builder copies the Chromium binary into
+// Contents/Resources/ms-playwright/ (see electron-builder.yml extraResources).
+// We point PLAYWRIGHT_BROWSERS_PATH there so both this process and any
+// subprocess (pipeline-bridge forks src/electron-runner.ts) can find it.
+// In dev (app.isPackaged === false) we leave the env var unset so the normal
+// developer cache in ~/Library/Caches/ms-playwright/ is used.
+if (app.isPackaged) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = path.join(process.resourcesPath, 'ms-playwright');
+}
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1200,

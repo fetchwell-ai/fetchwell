@@ -44,6 +44,14 @@ publish:
   owner: fetchwell-ai
   repo: fetchwell
 
-# ── Known limitations ──────────────────────────────────────────────────────────
-# Playwright Chromium (~200 MB) is NOT bundled yet. The packaged app will need
-# Chromium available at runtime. Bundling strategy is tracked as a follow-up task.
+# ── Playwright Chromium (~200 MB) bundled as an unpacked resource ──────────────
+# Playwright Chromium is bundled as an unpacked resource (~200 MB).
+# The glob matches the version-stamped directory that `playwright install chromium`
+# creates in ~/Library/Caches/ms-playwright/ (e.g. chromium-1217/).
+# At runtime, electron/main.ts sets PLAYWRIGHT_BROWSERS_PATH to
+# path.join(process.resourcesPath, 'ms-playwright') so Playwright finds it.
+extraResources:
+  - from: "${env.HOME}/Library/Caches/ms-playwright/chromium-1217"
+    to: "ms-playwright/chromium-1217"
+    filter:
+      - "**/*"
