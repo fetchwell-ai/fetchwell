@@ -1,7 +1,54 @@
-import { app, BrowserWindow, nativeTheme, ipcMain, nativeImage } from 'electron';
+import { app, BrowserWindow, nativeTheme, ipcMain, nativeImage, dialog, net } from 'electron';
 import * as path from 'path';
 import { autoUpdater } from 'electron-updater';
 import { registerIpcHandlers } from './ipc-handlers';
+import { isVersionBelow } from './version-check';
+
+// ---------------------------------------------------------------------------
+// Minimum version gate — fetches min-version.json from GitHub on startup
+// ---------------------------------------------------------------------------
+async function checkMinimumVersion(): Promise<void> {
+  try {
+    const response = await net.fetch(
+      'https://raw.githubusercontent.com/fetchwell-ai/fetchwell/main/min-version.json'
+    );
+    if (!response.ok) return; // non-2xx → silently skip
+
+    const data = (await response.json()) as { minVersion?: unknown };
+    const minVersion = data?.minVersion;
+    if (typeof minVersion !== 'string') return;
+
+    const currentVersion = app.getVersion();
+    if (!isVersionBelow(currentVersion, minVersion)) return;
+
+    // Current version is below minimum — show blocking dialog
+    const win = BrowserWindow.getAllWindows()[0];
+    const { response: choice } = await dialog.showMessageBox(win ?? new BrowserWindow({ show: false }), {
+      type: 'warning',
+      title: 'Update Required',
+      message: 'A required update is available. Please update FetchWell to continue.',
+      buttons: ['Update now', 'Quit'],
+      defaultId: 0,
+      cancelId: 1,
+    });
+
+    if (choice === 1) {
+      app.quit();
+      return;
+    }
+
+    // "Update now" chosen
+    autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+    await dialog.showMessageBox(win ?? new BrowserWindow({ show: false }), {
+      type: 'info',
+      title: 'Downloading Update',
+      message: 'Downloading update... The app will restart when ready.',
+      buttons: ['OK'],
+    });
+  } catch {
+    // Network error, parse error, etc. — silently continue
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Playwright browser path — must be set before any browser launch
@@ -36,7 +83,7 @@ function createWindow(): void {
 
 app.setName('FetchWell');
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // Set dock icon for dev mode (macOS ignores BrowserWindow `icon`)
   if (process.platform === 'darwin' && app.dock) {
     const iconPath = path.join(__dirname, '..', 'build', 'icon.png');
@@ -60,6 +107,11 @@ app.whenReady().then(() => {
   });
 
   createWindow();
+
+  // Minimum version gate: blocks the app if running an outdated version.
+  // Must run after createWindow() so the dialog has a parent window.
+  // If offline or the fetch fails, the app continues normally.
+  await checkMinimumVersion();
 
   // Check for updates via GitHub Releases (silent — no blocking dialogs).
   // In development (non-packaged) this is a no-op; electron-updater skips
