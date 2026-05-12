@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "bin": {
-    "mychart-agent": "./bin/mychart-agent.mjs"
+    "fetchwell": "./bin/mychart-agent.mjs"
   },
   "scripts": {
     "extract": "tsx src/extract/index.ts",

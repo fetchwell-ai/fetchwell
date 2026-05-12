@@ -56,13 +56,13 @@ FetchWell also works from the command line:
 npm install -g fetchwell
 
 # Extract all records for all configured portals
-mychart-agent fetch
+fetchwell fetch
 
 # Extract for a specific portal
-mychart-agent fetch --provider stanford
+fetchwell fetch --provider stanford
 
 # Only fetch records newer than last run
-mychart-agent fetch --incremental
+fetchwell fetch --incremental
 ```
 
 CLI mode requires a `.env` file with your `ANTHROPIC_API_KEY` and a `providers.json` file. See `.env.example` and `providers.example.json` for the format.
