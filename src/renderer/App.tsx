@@ -137,7 +137,7 @@ export default function App() {
                 key={portalListKey}
                 onOpenSettings={() => handleSelectSettings('appearance')}
                 onNavigateToApiKey={handleNavigateToApiKey}
-                selectedPortalId={activePortalId}
+                selectedPortalId={null}
                 onPortalsChanged={loadPortals}
                 initialView={(() => {
                   if (openAddPortalRef.current) {
