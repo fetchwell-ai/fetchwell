@@ -8,8 +8,7 @@ export async function createBrowserProvider(
   type?: ProviderType,
   apiKey?: string,
 ): Promise<BrowserProvider> {
-  const providerType =
-    type ?? (process.env.BROWSER_PROVIDER as ProviderType) ?? "stagehand-local";
+  const providerType = type ?? "stagehand-local";
 
   let provider: BrowserProvider & { init(): Promise<void> };
 

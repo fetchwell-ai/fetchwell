@@ -10,9 +10,6 @@ import { type BrowserProvider } from "../../browser/interface.js";
 import {
   detect2FA,
   enterCodeInBrowser,
-  fetchGmailVerificationCode,
-  GMAIL_USER,
-  GMAIL_APP_PASSWORD,
   waitForFileBasedCode,
   waitForPostLoginNavigation,
   verifyLoginSuccess,
@@ -35,7 +32,7 @@ const none: TwoFactorHandler = async (browser) => {
 };
 
 /**
- * Email 2FA: try Gmail IMAP auto-fetch first, fall back to file-based relay.
+ * Email 2FA: select email delivery then use file-based relay for the code.
  */
 const email: TwoFactorHandler = async (browser, providerId) => {
   await new Promise((r) => setTimeout(r, 3000));
@@ -59,26 +56,11 @@ const email: TwoFactorHandler = async (browser, providerId) => {
     }
 
     console.log();
-    let enteredCode = false;
-
-    if (GMAIL_USER && GMAIL_APP_PASSWORD) {
-      console.log("   Fetching verification code from Gmail...");
-      const code = await fetchGmailVerificationCode();
-      if (code) {
-        await enterCodeInBrowser(browser, code);
-        enteredCode = true;
-      } else {
-        console.log("   Could not find code in Gmail. Falling back to file-based entry...");
-      }
-    }
-
-    if (!enteredCode) {
-      const code = await waitForFileBasedCode(providerId);
-      if (code) {
-        await enterCodeInBrowser(browser, code);
-      } else {
-        console.log("   No code received. Continuing to poll for browser-based entry...");
-      }
+    const code = await waitForFileBasedCode(providerId);
+    if (code) {
+      await enterCodeInBrowser(browser, code);
+    } else {
+      console.log("   No code received. Continuing to poll for browser-based entry...");
     }
 
     await waitForPostLoginNavigation(browser);
