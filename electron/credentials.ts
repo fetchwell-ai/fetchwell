@@ -48,7 +48,7 @@ export class CredentialsManager {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(this.credentialsPath, JSON.stringify(data, null, 2), 'utf-8');
+    fs.writeFileSync(this.credentialsPath, JSON.stringify(data, null, 2), { encoding: 'utf-8', mode: 0o600 });
   }
 
   private encrypt(value: string): string {
@@ -132,7 +132,7 @@ export class CredentialsManager {
 
 /**
  * Validate an Anthropic API key by format.
- * A real API call would require importing the Anthropic SDK — we avoid that for now.
+ * Format-only check; a live API call is unnecessary since the key is validated on first use.
  */
 export function validateApiKeyFormat(key: string): boolean {
   return typeof key === 'string' && key.trim().startsWith('sk-ant-') && key.trim().length > 10;

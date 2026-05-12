@@ -225,6 +225,7 @@ function runSubprocess(
 
     // Handle IPC messages from child (2FA requests, 2FA results, and structured progress events)
     child.on('message', (msg: unknown) => {
+      if (typeof msg !== 'object' || msg === null || !('type' in msg)) return;
       const message = msg as TwoFARequest | TwoFAResult | StructuredProgressEvent;
 
       if (message && message.type === '2fa:request') {
