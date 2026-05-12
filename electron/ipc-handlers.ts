@@ -1,18 +1,8 @@
 import { ipcMain, safeStorage, app, BrowserWindow, dialog, shell } from 'electron';
-import { ConfigManager, PortalEntry, ThemePreference, ApiKeySource } from './config';
+import { ConfigManager, PortalEntry, PortalInputSchema, PortalInput, ThemePreference, ApiKeySource } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
 import { runExtraction, cancelOperation, CategoryCounts } from './pipeline-bridge';
 import { getBundledApiKey, hasBundledApiKey } from './bundled-key';
-
-/** Input shape for adding/updating a portal (id is derived from name). */
-interface PortalInput {
-  name: string;
-  url: string;
-  loginForm?: 'two-step' | 'single-page' | 'auto';
-  twoFactor: 'none' | 'email' | 'manual' | 'ui';
-  username?: string;
-  password?: string;
-}
 
 let configManager: ConfigManager | null = null;
 let credentialsManager: CredentialsManager | null = null;
@@ -51,7 +41,14 @@ export function registerIpcHandlers(userDataPath?: string): void {
     return config().getPortals();
   });
 
-  ipcMain.handle('addPortal', (_event, input: PortalInput): PortalEntry => {
+  ipcMain.handle('addPortal', (_event, rawInput: unknown): PortalEntry => {
+    let input: PortalInput;
+    try {
+      input = PortalInputSchema.parse(rawInput);
+    } catch (err) {
+      throw new Error(`Invalid portal input: ${(err as Error).message}`);
+    }
+
     const entry = config().addPortal({
       name: input.name,
       url: input.url,
@@ -71,7 +68,14 @@ export function registerIpcHandlers(userDataPath?: string): void {
     return entry;
   });
 
-  ipcMain.handle('updatePortal', (_event, id: string, updates: Partial<PortalInput>): PortalEntry => {
+  ipcMain.handle('updatePortal', (_event, id: string, rawUpdates: unknown): PortalEntry => {
+    let updates: Partial<PortalInput>;
+    try {
+      updates = PortalInputSchema.partial().parse(rawUpdates);
+    } catch (err) {
+      throw new Error(`Invalid portal update input: ${(err as Error).message}`);
+    }
+
     const configUpdates: Partial<Omit<PortalEntry, 'id'>> = {};
 
     if (updates.name !== undefined) configUpdates.name = updates.name;
