@@ -3,9 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": {
-    "fetchwell-ai": "./bin/fetchwell-ai.mjs"
-  },
   "scripts": {
     "extract": "tsx src/extract/index.ts",
     "discover": "tsx src/discover/cli.ts",
