@@ -17,6 +17,15 @@ interface PortalInput {
 let configManager: ConfigManager | null = null;
 let credentialsManager: CredentialsManager | null = null;
 
+function config(): ConfigManager {
+  if (!configManager) throw new Error('IPC handlers called before initialization');
+  return configManager;
+}
+function creds(): CredentialsManager {
+  if (!credentialsManager) throw new Error('IPC handlers called before initialization');
+  return credentialsManager;
+}
+
 /**
  * Register all IPC handlers.
  * Call this once from main.ts after `app.whenReady()`.
@@ -39,11 +48,11 @@ export function registerIpcHandlers(userDataPath?: string): void {
   // --- Portal management ---
 
   ipcMain.handle('getPortals', (): PortalEntry[] => {
-    return configManager!.getPortals();
+    return config().getPortals();
   });
 
   ipcMain.handle('addPortal', (_event, input: PortalInput): PortalEntry => {
-    const entry = configManager!.addPortal({
+    const entry = config().addPortal({
       name: input.name,
       url: input.url,
       loginForm: input.loginForm ?? 'auto',
@@ -51,11 +60,11 @@ export function registerIpcHandlers(userDataPath?: string): void {
     });
 
     if (input.username !== undefined && input.password !== undefined) {
-      credentialsManager!.setPortalCredentials(entry.id, {
+      creds().setPortalCredentials(entry.id, {
         username: input.username,
         password: input.password,
       });
-      configManager!.updatePortal(entry.id, { hasCredentials: true });
+      config().updatePortal(entry.id, { hasCredentials: true });
       return { ...entry, hasCredentials: true };
     }
 
@@ -71,30 +80,30 @@ export function registerIpcHandlers(userDataPath?: string): void {
     if (updates.twoFactor !== undefined) configUpdates.twoFactor = updates.twoFactor;
 
     if (updates.username !== undefined && updates.password !== undefined) {
-      credentialsManager!.setPortalCredentials(id, {
+      creds().setPortalCredentials(id, {
         username: updates.username,
         password: updates.password,
       });
       configUpdates.hasCredentials = true;
     }
 
-    return configManager!.updatePortal(id, configUpdates);
+    return config().updatePortal(id, configUpdates);
   });
 
   ipcMain.handle('removePortal', (_event, id: string): void => {
-    configManager!.removePortal(id);
-    credentialsManager!.clearPortalCredentials(id);
+    config().removePortal(id);
+    creds().clearPortalCredentials(id);
   });
 
   // --- Settings ---
 
   ipcMain.handle('getSettings', () => {
-    const settings = configManager!.getSettings();
+    const settings = config().getSettings();
     const apiKeySource = settings.apiKeySource;
     const apiKeyConfigured =
       apiKeySource === 'bundled'
         ? hasBundledApiKey()
-        : credentialsManager!.hasApiKey();
+        : creds().hasApiKey();
     return {
       ...settings,
       apiKeyConfigured,
@@ -112,11 +121,11 @@ export function registerIpcHandlers(userDataPath?: string): void {
     const { apiKey, ...configUpdates } = updates;
 
     if (Object.keys(configUpdates).length > 0) {
-      configManager!.updateSettings(configUpdates);
+      config().updateSettings(configUpdates);
     }
 
     if (apiKey !== undefined) {
-      credentialsManager!.setApiKey(apiKey);
+      creds().setApiKey(apiKey);
     }
   });
 
@@ -132,27 +141,27 @@ export function registerIpcHandlers(userDataPath?: string): void {
     const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
     if (!win) throw new Error('No active window');
 
-    const portal = configManager!.getPortal(portalId);
+    const portal = config().getPortal(portalId);
     if (!portal) throw new Error(`Portal not found: ${portalId}`);
 
-    const settings = configManager!.getSettings();
+    const settings = config().getSettings();
     let apiKey: string;
     if (settings.apiKeySource === 'bundled') {
       apiKey = getBundledApiKey();
       if (!apiKey) throw new Error('No bundled API key available. Run scripts/encode-key.ts at build time.');
     } else {
-      const customKey = credentialsManager!.getApiKey();
+      const customKey = creds().getApiKey();
       if (!customKey) throw new Error('API key not configured');
       apiKey = customKey;
     }
 
-    const creds = credentialsManager!.getPortalCredentials(portalId);
-    if (!creds) throw new Error(`No credentials stored for portal: ${portalId}`);
+    const portalCreds = creds().getPortalCredentials(portalId);
+    if (!portalCreds) throw new Error(`No credentials stored for portal: ${portalId}`);
 
     try {
       const counts: CategoryCounts = await runExtraction(portalId, win, {
         apiKey,
-        credentials: creds,
+        credentials: portalCreds,
         portalUrl: portal.url,
         portalId: portal.id,
         portalName: portal.name,
@@ -171,7 +180,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
       if (counts.visitCount > 0) countUpdate.visitCount = counts.visitCount;
       if (counts.medicationCount > 0) countUpdate.medicationCount = counts.medicationCount;
       if (counts.messageCount > 0) countUpdate.messageCount = counts.messageCount;
-      configManager!.updatePortal(portalId, countUpdate);
+      config().updatePortal(portalId, countUpdate);
     } catch {
       // Error already sent to renderer via IPC event
     }
@@ -206,7 +215,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
   // --- Portal credentials (read-only for display) ---
 
   ipcMain.handle('getPortalCredentials', (_event, portalId: string): { username: string; password: string } | null => {
-    return credentialsManager!.getPortalCredentials(portalId);
+    return creds().getPortalCredentials(portalId);
   });
 
 }

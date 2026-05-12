@@ -37,7 +37,7 @@ const twoStep: LoginFormHandler = async (browser, credentials) => {
 
   // Credentials are interpolated into act() instructions and sent to the Anthropic API.
   // The API does not log or retain prompt content per Anthropic's data usage policy.
-  console.log("Step 4: Filling in login form...");
+  console.log("[login] Filling credentials...");
   console.log(`[login] URL: ${await browser.url()}`);
   await browser.act(`Type "${username}" into the username or email input field`);
   console.log("   Username entered.");
@@ -67,7 +67,7 @@ const singlePage: LoginFormHandler = async (browser, credentials) => {
     (await prompt("   Enter password: "));
   console.log();
 
-  console.log("Step 4: Filling in login form...");
+  console.log("[login] Filling credentials...");
   await browser.act(`Type "${email}" into the email input field`);
   console.log("   Email entered.");
 
