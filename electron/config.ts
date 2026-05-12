@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { z } from 'zod';
 
 export interface PortalEntry {
   id: string;
@@ -20,6 +21,18 @@ export interface PortalEntry {
 export type ThemePreference = 'system' | 'light' | 'dark';
 
 export type ApiKeySource = 'bundled' | 'custom';
+
+/** Zod schema for validating IPC input when adding or updating a portal. */
+export const PortalInputSchema = z.object({
+  name: z.string().min(1, 'Portal name must not be empty'),
+  url: z.string().min(1, 'Portal URL must not be empty'),
+  loginForm: z.enum(['two-step', 'single-page', 'auto']).optional(),
+  twoFactor: z.enum(['none', 'email', 'manual', 'ui']),
+  username: z.string().optional(),
+  password: z.string().optional(),
+});
+
+export type PortalInput = z.infer<typeof PortalInputSchema>;
 
 export interface AppConfig {
   downloadFolder: string;
