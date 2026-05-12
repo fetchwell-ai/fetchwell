@@ -453,7 +453,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
                   Ready to fetch your records
                 </h3>
                 <p className="m-0 text-[13px] leading-[20px] text-[var(--color-fw-ink-700)]">
-                  Click <em>Fetch records</em> to download labs, visits, medications, and messages. The first run may take a few minutes while we learn your portal's layout.
+                  Click <em>Fetch records</em> to download labs, visits, medications, and messages. The first run may take a few minutes while we learn your portal's layout. During extraction, page content — including health information — is sent to Anthropic's API so Claude can navigate the site.
                 </p>
               </div>
             </div>

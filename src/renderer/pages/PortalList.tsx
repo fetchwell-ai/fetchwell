@@ -339,7 +339,7 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
         variant="info"
         icon={<Download size={16} />}
         heading="Ready to fetch your records."
-        body="Click Fetch records to download labs, visits, medications, and messages. The first run may take a few minutes while we learn your portal's layout."
+        body="Click Fetch records to download labs, visits, medications, and messages. The first run may take a few minutes while we learn your portal's layout. During extraction, page content — including health information — is sent to Anthropic's API so Claude can navigate the site."
       />
     );
   } else if (portalState === 'error') {
