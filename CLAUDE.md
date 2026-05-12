@@ -49,7 +49,7 @@ pnpm lint                             # ESLint (src/)
 ## Testing
 
 ```bash
-pnpm test:unit                        # Vitest — 119 unit tests, <1s
+pnpm test:unit                        # Vitest — 143 unit tests, <1s
 pnpm test:e2e                         # Playwright Electron — 16 tests, ~15s
 ```
 
@@ -65,18 +65,19 @@ E2E tests launch the Electron app via Playwright and cover portal CRUD, settings
 
 - **PDF-only output.** `page.pdf()` captures full page height and waits for async content.
 - **Two browser providers.** `stagehand-local` (default, AI-powered) and `local` (plain Playwright). Set via `BROWSER_PROVIDER` env var.
-- **Auth is composable.** Two axes: `loginForm` (auto | two-step | single-page) and `twoFactor` (none | email | manual | ui). Login form type is auto-detected at runtime by default; detected value is cached for future runs.
+- **Auth is composable.** Two axes: `loginForm` (auto | two-step | single-page) and `twoFactor` (none | email | manual | ui). Login form type is auto-detected at runtime; detected value is cached. Electron app always uses `ui` 2FA strategy (in-app modal). The agent prefers SMS delivery over email when both are available.
+- **UI strings config.** All user-facing text is in `src/renderer/strings.ts` for easy editing.
 - **Nav-map is a cache, not a contract.** Agentic discovery builds nav-map.json with cached URLs and act() instructions. Extraction uses a 3-tier fallback: cached URL → replay steps → fresh agentic search. Discovery is not a required user-facing step — extraction discovers on-the-fly if no nav-map exists.
 - **Session persistence.** Cookies in `output/<provider-id>/session.json` (12h TTL). Skips login + 2FA when valid.
 - **Electron ↔ Pipeline bridge.** Electron forks `src/electron-runner.ts` as a subprocess (ESM via tsx). IPC for progress events, 2FA relay, and error reporting. One operation per portal at a time.
 - **Three TypeScript configs.** `tsconfig.json` (src/, ESM), `electron/tsconfig.json` (electron/, CJS), `src/renderer/tsconfig.json` (renderer/, Vite/bundler).
-- **CJS fix for Electron.** `dist-electron/package.json` with `{"type":"commonjs"}` is generated at build time (root package.json is `"type": "module"`).
+- **CJS fix for Electron.** `dist-electron/package.json` with `{"type":"commonjs"}` is generated at build time (root `package.json` is `"type": "module"`).
 - **Dark mode.** System preference matching + manual Light/Dark/System toggle. Uses Tailwind `dark:` variant with class-based toggling via `nativeTheme`.
 - **Structured progress events.** Subprocess sends typed IPC events (`src/progress-events.ts`). ProgressPanel renders progress bar, category rows, and status messages. Noisy Stagehand warnings are filtered from the detailed log.
 
 ## Environment variables
 
-See `.env.example`. Key: `ANTHROPIC_API_KEY`, `GMAIL_USER`/`GMAIL_APP_PASSWORD` (email 2FA), `BROWSER_PROVIDER`, `PROBE`.
+See `.env.example`. Key: `ANTHROPIC_API_KEY` (CLI mode only; Electron app uses bundled key or user-configured key in settings). Generate the bundled key: `BUNDLED_ANTHROPIC_KEY=<key> npx tsx scripts/encode-key.ts` → writes `electron/bundled-key.generated.ts` (gitignored).
 
 ## Task tracking
 
