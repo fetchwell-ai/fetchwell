@@ -51,19 +51,51 @@ pnpm install
 # Add your Anthropic API key to .env
 echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
 
-# Configure your portals in providers.json (see providers.example.json)
-
-# Extract all records for all configured portals
-pnpm extract
-
-# Extract for a specific portal
-pnpm extract --provider stanford
-
-# Only fetch records newer than last run
-pnpm extract --incremental
+# Copy the example config and add your portals
+cp providers.example.json providers.json
 ```
 
-The CLI handles 2FA via a file-based relay — when a code is needed, it prompts in the terminal.
+Edit `providers.json` with your portal details:
+
+```json
+{
+  "providers": [
+    {
+      "id": "stanford",
+      "name": "Stanford Health",
+      "type": "mychart",
+      "url": "https://mystanfordchart.stanfordhealthcare.org/MyChart/Authentication/Login",
+      "username": "your-username",
+      "password": "your-password",
+      "auth": {
+        "loginForm": "auto",
+        "twoFactor": "none"
+      }
+    }
+  ]
+}
+```
+
+| Field | Description |
+|---|---|
+| `id` | Short identifier used for output folder names and the `--provider` flag |
+| `name` | Display name (used in logs) |
+| `type` | Portal type — `mychart` for Epic-based portals |
+| `url` | Login page URL for the portal |
+| `username` | Your portal username or email |
+| `password` | Your portal password |
+| `auth.loginForm` | `auto` (detect at runtime), `two-step` (username then password), or `single-page` (both on one form) |
+| `auth.twoFactor` | `none`, `manual` (prompted in terminal), or `email` (auto-reads from Gmail — requires `GMAIL_USER` and `GMAIL_APP_PASSWORD` in `.env`) |
+
+Then run:
+
+```bash
+pnpm extract                          # Extract all portals
+pnpm extract --provider stanford      # Extract one portal
+pnpm extract --incremental            # Only fetch new records
+```
+
+Records are saved to `output/<provider-id>/`.
 
 ## Development
 
