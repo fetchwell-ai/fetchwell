@@ -7,8 +7,7 @@ It uses an AI assistant (Anthropic's Claude) to open a browser, log into your po
 ## How it works
 
 1. **Add a portal** — Paste the URL of your provider's patient portal and enter your login credentials. Credentials are encrypted and stored in your macOS Keychain.
-2. **FetchWell maps the portal** — An AI assistant opens the portal in a browser and learns where your records are. This happens once per portal.
-3. **Records arrive as PDFs** — Click "Fetch records" to download. Files are saved to your chosen folder, organized by category. Run it again anytime to get new records.
+2. **Fetch records** — Click "Fetch records." An AI assistant opens the portal in a browser, finds your records, and downloads them as PDFs to a folder you choose. On the first run it learns the portal layout; subsequent runs are faster.
 
 ## What it extracts
 
@@ -33,28 +32,14 @@ Download the latest `.dmg` from [GitHub Releases](https://github.com/fetchwell-a
 
 ### Requirements
 
-- macOS (Apple Silicon)
+- macOS (Apple Silicon — arm64)
 - A patient portal (tested with Epic-based portals; others may work)
 
 An Anthropic API key is bundled with the app. You can also use your own key in Settings.
 
 ## Two-factor authentication
 
-If your portal requires 2FA, FetchWell will prompt you to enter the verification code during sign-in. It prefers SMS delivery when available.
-
-## CLI
-
-FetchWell also works from the command line:
-
-```bash
-npm install -g fetchwell
-
-fetchwell-ai fetch                       # Extract all records
-fetchwell-ai fetch --provider stanford   # Extract for a specific portal
-fetchwell-ai fetch --incremental         # Only fetch new records
-```
-
-CLI mode requires an `ANTHROPIC_API_KEY` in `.env` and a `providers.json` file. See `.env.example` and `providers.example.json`.
+If your portal requires two-factor authentication, FetchWell will detect it and prompt you to enter the verification code in the app. When both SMS and email delivery are available, it selects SMS.
 
 ## Development
 
@@ -68,4 +53,4 @@ pnpm dist                 # Build a signed DMG
 
 ## License
 
-[BSL 1.1](LICENSE.md) — free for non-commercial use. See the license file for details.
+[PolyForm Noncommercial 1.0.0](LICENSE.md) — free for non-commercial use. See the license file for details.
