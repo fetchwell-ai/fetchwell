@@ -64,26 +64,50 @@ function SectionHeader({ children, className }: { children: React.ReactNode; cla
 function CredentialsSection({
   portalId,
   credentials,
+  twoFactor: initialTwoFactor,
   onSaved,
 }: {
   portalId: string;
   credentials: { username: string; hasPassword: boolean } | null;
+  twoFactor: 'none' | 'ui';
   onSaved: (creds: { username: string; hasPassword: boolean }) => void;
 }) {
   const [username, setUsername] = useState(credentials?.username ?? '');
+  const [usernameDirty, setUsernameDirty] = useState(false);
   // Password field: empty string means "not dirty" — only set when the user types
   const [password, setPassword] = useState('');
   const [passwordDirty, setPasswordDirty] = useState(false);
+  const [twoFactor, setTwoFactor] = useState(initialTwoFactor !== 'none');
   const [saving, setSaving] = useState(false);
 
   // Sync username when credentials load from IPC
   React.useEffect(() => {
     if (credentials) {
       setUsername(credentials.username);
+      setUsernameDirty(false);
       setPassword('');
       setPasswordDirty(false);
     }
   }, [credentials]);
+
+  const handleUsernameFocus = () => {
+    if (!usernameDirty && credentials?.username) {
+      setUsername('');
+      setUsernameDirty(true);
+    }
+  };
+
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUsername(e.target.value);
+    setUsernameDirty(true);
+  };
+
+  const handlePasswordFocus = () => {
+    if (!passwordDirty) {
+      setPassword('');
+      setPasswordDirty(true);
+    }
+  };
 
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPassword(e.target.value);
@@ -93,7 +117,10 @@ function CredentialsSection({
   const handleSave = async () => {
     setSaving(true);
     try {
-      const updates: { username: string; password?: string } = { username };
+      const updates: { username: string; password?: string; twoFactor: string } = {
+        username,
+        twoFactor: twoFactor ? 'ui' : 'none',
+      };
       if (passwordDirty) {
         updates.password = password;
       }
@@ -108,6 +135,7 @@ function CredentialsSection({
 
   const handleCancel = () => {
     setUsername(credentials?.username ?? '');
+    setUsernameDirty(false);
     setPassword('');
     setPasswordDirty(false);
   };
@@ -123,8 +151,10 @@ function CredentialsSection({
             </label>
             <Input
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={!usernameDirty && credentials?.username ? '••••••••' : username}
+              placeholder={credentials?.username ? '••••••••' : ''}
+              onFocus={handleUsernameFocus}
+              onChange={handleUsernameChange}
             />
           </div>
           <div className="flex flex-col gap-1.5">
@@ -133,13 +163,43 @@ function CredentialsSection({
             </label>
             <Input
               type="password"
-              value={password}
+              value={!passwordDirty && credentials?.hasPassword ? '••••••••' : password}
               placeholder={credentials?.hasPassword ? '••••••••' : ''}
+              onFocus={handlePasswordFocus}
               onChange={handlePasswordChange}
             />
             <span className="text-[12px] text-[var(--color-fw-fg-muted)]">
               Stored in macOS Keychain — never sent to Anthropic.
             </span>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[13px] font-medium text-[var(--color-fw-ink-900)]">
+              Two-factor authentication
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={`rounded-[var(--radius-md)] border px-4 py-1.5 text-sm font-medium transition-colors duration-[var(--fw-dur-fast,120ms)] ${
+                  twoFactor
+                    ? 'border-[var(--color-fw-sage-700)] bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)]'
+                    : 'border-[var(--color-fw-border)] bg-transparent text-[var(--color-fw-fg-muted)] hover:bg-[var(--color-fw-bg-deep)]'
+                }`}
+                onClick={() => setTwoFactor(true)}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                className={`rounded-[var(--radius-md)] border px-4 py-1.5 text-sm font-medium transition-colors duration-[var(--fw-dur-fast,120ms)] ${
+                  !twoFactor
+                    ? 'border-[var(--color-fw-sage-700)] bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)]'
+                    : 'border-[var(--color-fw-border)] bg-transparent text-[var(--color-fw-fg-muted)] hover:bg-[var(--color-fw-bg-deep)]'
+                }`}
+                onClick={() => setTwoFactor(false)}
+              >
+                No
+              </button>
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
@@ -519,6 +579,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
       <CredentialsSection
         portalId={portalId}
         credentials={credentials}
+        twoFactor={portal.twoFactor === 'none' ? 'none' : 'ui'}
         onSaved={(creds) => setCredentials(creds)}
       />
 
