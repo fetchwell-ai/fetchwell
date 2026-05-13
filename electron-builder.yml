@@ -2,7 +2,7 @@
 # Docs: https://www.electron.build/configuration
 
 appId: ai.fetchwell.app
-productName: FetchWell
+productName: Fetchwell
 
 # Override the main entry point to use the compiled CJS output
 extraMetadata:

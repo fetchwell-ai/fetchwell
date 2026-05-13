@@ -1,5 +1,5 @@
 /**
- * UI strings for the FetchWell app.
+ * UI strings for the Fetchwell app.
  * Edit this file to change any user-facing text.
  */
 

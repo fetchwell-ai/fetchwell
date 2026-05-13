@@ -1,5 +1,5 @@
 /**
- * FetchWell — Extraction Pipeline
+ * Fetchwell — Extraction Pipeline
  *
  * Logs into health portals (e.g. Epic MyChart), extracts health records as PDFs, and
  * builds a browsable local index.
@@ -159,7 +159,7 @@ async function probeProvider(provider: ProviderConfig) {
   const authModule = getAuthModule(provider.auth, provider.id);
 
   console.log("=".repeat(60));
-  console.log("  FetchWell — Probe Mode");
+  console.log("  Fetchwell — Probe Mode");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
   console.log("  (navigation smoke test — no PDFs will be written)");
   console.log("=".repeat(60));
@@ -265,7 +265,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
   const authModule = getAuthModule(provider.auth, provider.id);
 
   console.log("=".repeat(60));
-  console.log("  FetchWell — Record Extraction");
+  console.log("  Fetchwell — Record Extraction");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
   if (incremental) {
     console.log("  Incremental: ON (skipping items already extracted)");

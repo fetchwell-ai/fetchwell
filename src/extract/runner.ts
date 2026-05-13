@@ -56,7 +56,7 @@ export async function extractProvider(
   };
 
   console.log("=".repeat(60));
-  console.log("  FetchWell — Record Extraction");
+  console.log("  Fetchwell — Record Extraction");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
   console.log("  Mode: stagehand-local");
   if (incremental) {
