@@ -11,9 +11,13 @@ docs/
 # Bundled API key — generated file has the actual key, script encodes it
 scripts/
 
-# E2E tests reference real portals with credentials
+# E2E test config
 playwright.config.ts
-tests/e2e/
+
+# E2E tests that require real portal credentials (keep local only)
+tests/e2e/stanford-e2e.spec.ts
+tests/e2e/ucsf-discovery.spec.ts
+tests/e2e/integration.spec.ts
 
 # Dependencies and build output
 node_modules/
