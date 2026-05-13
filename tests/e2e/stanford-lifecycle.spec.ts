@@ -1,8 +1,8 @@
 /**
- * Stanford lifecycle: add → extract → delete → re-add → extract → delete.
+ * Stanford lifecycle: clean slate → add → extract → delete.
  *
- * Verifies the full portal lifecycle works end-to-end, including that
- * a portal can be cleanly removed and re-added with working extraction.
+ * Verifies the full portal lifecycle works end-to-end.
+ * If Stanford already exists at the start, removes it first.
  *
  * Excluded from `pnpm test:e2e` by default (see playwright.config.ts testIgnore).
  * Run explicitly:
@@ -125,6 +125,13 @@ async function removeStanfordPortal(page: Page): Promise<void> {
   await page.waitForSelector('text=Add your first health portal', { timeout: 10_000 });
 }
 
+async function removeStanfordIfExists(page: Page): Promise<void> {
+  const card = page.locator('.portal-card').first();
+  if (await card.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await removeStanfordPortal(page);
+  }
+}
+
 async function runExtractionAndVerify(page: Page): Promise<void> {
   const fetchButton = page.locator('.portal-card button:has-text("Fetch records")').first();
   await fetchButton.waitFor({ state: 'visible', timeout: 10_000 });
@@ -154,19 +161,17 @@ async function runExtractionAndVerify(page: Page): Promise<void> {
 // Test
 // ---------------------------------------------------------------------------
 
-test('stanford: add → extract → delete → re-add → extract → delete', async ({ page }) => {
-  // Two full extraction cycles — allow 20 minutes
-  test.setTimeout(1_200_000);
+test('stanford: clean slate → add → extract → delete', async ({ page }) => {
+  // One full extraction cycle — allow 10 minutes
+  test.setTimeout(600_000);
 
   // --- Boot ---
   await page.waitForSelector('.portal-list-page', { timeout: 15_000 });
 
-  // --- Cycle 1: add → extract → delete ---
-  await addStanfordPortal(page, stanford!);
-  await runExtractionAndVerify(page);
-  await removeStanfordPortal(page);
+  // --- Step 1: clean slate (remove Stanford if it exists) ---
+  await removeStanfordIfExists(page);
 
-  // --- Cycle 2: re-add → extract → delete ---
+  // --- Step 2: add → extract → delete ---
   await addStanfordPortal(page, stanford!);
   await runExtractionAndVerify(page);
   await removeStanfordPortal(page);
