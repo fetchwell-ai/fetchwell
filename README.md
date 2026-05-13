@@ -1,10 +1,10 @@
 # FetchWell
 
-There is no reliable programmatic way to get your health data. FHIR APIs exist in theory but are rarely exposed to patients in practice — the companies that build EHR systems have no incentive to make data portable. The one place patients *can* access their records is through web portals like Epic MyChart, but these are designed for human use, not automation. Traditional scraping is brittle: portal layouts change, session handling is complex, and every EHR vendor structures their UI differently.
+FetchWell is an open-source macOS desktop app that logs into your patient portals and downloads your health records as PDFs to a local folder.
 
-FetchWell takes a different approach. Instead of scraping DOM elements, it uses an AI agent (Anthropic's Claude) to drive a real browser the same way a human would — reading the page, clicking links, navigating menus, handling 2FA prompts. This makes it resilient to portal redesigns and not tied to any single EHR vendor. If you can log in and see your records, FetchWell can extract them.
+I built this because I wanted to share all of my health data with Claude so it could help me make sense of it. But there is no reliable way to get your health data in bulk without doing a bunch of manual work. Fancy technologies like FHIR APIs and HIEs exist for your doctors to use, but they are not available to patients. The one place patients *can* access their records is through web portals like Epic MyChart, but these are designed for human use, not automated downloads. Some people have built tools to "scrape" these sites, but that approach requires a lot of customization for different portals and can break when websites change.
 
-It's a macOS desktop app that logs into your patient portals, navigates to your labs, visits, medications, and messages, and saves each record as a full-page PDF to a local folder.
+FetchWell takes a different approach. Instead of scraping the source code of web pages, it uses an AI agent (Anthropic's Claude) to drive a real browser the same way a human would: by reading the page, clicking links and downloading PDFs. This makes it resilient to portal redesigns and not tied to any single EHR vendor. If you can log in and see your records, FetchWell can extract them.
 
 ## Architecture
 
