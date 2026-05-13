@@ -78,7 +78,7 @@ export class CredentialsManager {
     try {
       return this.decrypt(data.apiKey);
     } catch {
-      return null;
+      throw new Error('Could not decrypt API key — re-enter it in Settings.');
     }
   }
 
@@ -114,7 +114,7 @@ export class CredentialsManager {
         password: this.decrypt(entry.password),
       };
     } catch {
-      return null;
+      throw new Error('Could not decrypt portal credentials — re-enter them in the portal detail page.');
     }
   }
 

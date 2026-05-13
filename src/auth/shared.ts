@@ -312,19 +312,9 @@ export async function ensureLoggedIn(
   const hasAuthElement = await checkAuthenticatedElement(browser, authenticatedSelectors);
   if (hasAuthElement) return;
 
-  console.log(`   Session validation failed — URL looks authenticated (${currentUrl}) but no authenticated elements found.`);
-  console.log("   Re-authenticating...");
-  clearSession(providerId);
-  await browser.navigate(loginUrl);
-  await new Promise((r) => setTimeout(r, 2000));
-  const loginFn = providerId ? loginFnRegistry.get(providerId) : undefined;
-  if (loginFn) {
-    await loginFn(browser, credentials, providerId);
-  }
-  if (browser.saveSession) {
-    const session = await browser.saveSession();
-    session.homeUrl = await browser.url();
-    saveSession(session, providerId);
-    console.log("   Session re-saved.");
-  }
+  // Selectors not found but URL looks authenticated — do NOT navigate to
+  // the login URL. On MyChart, that triggers ?action=logout and destroys the
+  // session. Log a warning and proceed; the extractors will handle navigation
+  // failures gracefully.
+  console.log(`   Warning: authenticated elements not found at ${currentUrl} — proceeding anyway.`);
 }
