@@ -32,6 +32,9 @@ export default function AddPortal({
   const [name, setName] = useState(editPortal?.name ?? '');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [twoFactor, setTwoFactor] = useState<boolean>(
+    editPortal ? editPortal.twoFactor !== 'none' : true,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -79,7 +82,7 @@ export default function AddPortal({
       const input: PortalInput = {
         name: name.trim(),
         url: url.trim(),
-        twoFactor: 'ui',
+        twoFactor: twoFactor ? 'ui' : 'none',
         ...(username ? { username: username.trim() } : {}),
         ...(password ? { password } : {}),
       };
@@ -167,9 +170,36 @@ export default function AddPortal({
             />
           </div>
 
-          <p className="mb-5 text-[13px] text-[var(--color-fw-fg-muted)]">
-            {strings.addPortal.twoFactorNote}
-          </p>
+          <div className="mb-5">
+            <Label className="mb-1.5">Two-factor authentication</Label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={`rounded-[var(--radius-md)] border px-4 py-1.5 text-sm font-medium transition-colors duration-[var(--fw-dur-fast,120ms)] ${
+                  twoFactor
+                    ? 'border-[var(--color-fw-sage-700)] bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)]'
+                    : 'border-[var(--color-fw-border)] bg-transparent text-[var(--color-fw-fg-muted)] hover:bg-[var(--color-fw-bg-deep)]'
+                }`}
+                onClick={() => setTwoFactor(true)}
+              >
+                Yes
+              </button>
+              <button
+                type="button"
+                className={`rounded-[var(--radius-md)] border px-4 py-1.5 text-sm font-medium transition-colors duration-[var(--fw-dur-fast,120ms)] ${
+                  !twoFactor
+                    ? 'border-[var(--color-fw-sage-700)] bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)]'
+                    : 'border-[var(--color-fw-border)] bg-transparent text-[var(--color-fw-fg-muted)] hover:bg-[var(--color-fw-bg-deep)]'
+                }`}
+                onClick={() => setTwoFactor(false)}
+              >
+                No
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-[var(--color-fw-fg-muted)]">
+              {strings.addPortal.twoFactorNote}
+            </p>
+          </div>
 
           {error && <p className="form-error mb-2 text-xs text-[var(--color-fw-crimson-600)]">{error}</p>}
 
