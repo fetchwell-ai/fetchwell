@@ -64,12 +64,10 @@ function SectionHeader({ children, className }: { children: React.ReactNode; cla
 function CredentialsSection({
   portalId,
   credentials,
-  twoFactor: initialTwoFactor,
   onSaved,
 }: {
   portalId: string;
   credentials: { username: string; hasPassword: boolean } | null;
-  twoFactor: 'none' | 'ui';
   onSaved: (creds: { username: string; hasPassword: boolean }) => void;
 }) {
   const [username, setUsername] = useState(credentials?.username ?? '');
@@ -77,7 +75,6 @@ function CredentialsSection({
   // Password field: empty string means "not dirty" — only set when the user types
   const [password, setPassword] = useState('');
   const [passwordDirty, setPasswordDirty] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(initialTwoFactor !== 'none');
   const [saving, setSaving] = useState(false);
 
   // Sync username when credentials load from IPC
@@ -117,10 +114,7 @@ function CredentialsSection({
   const handleSave = async () => {
     setSaving(true);
     try {
-      const updates: { username: string; password?: string; twoFactor: string } = {
-        username,
-        twoFactor: twoFactor ? 'ui' : 'none',
-      };
+      const updates: { username: string; password?: string } = { username };
       if (passwordDirty) {
         updates.password = password;
       }
@@ -172,35 +166,6 @@ function CredentialsSection({
               Stored in macOS Keychain — never sent to Anthropic.
             </span>
           </div>
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[13px] font-medium text-[var(--color-fw-ink-900)]">
-              Two-factor authentication
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                className={`rounded-[var(--radius-md)] border px-4 py-1.5 text-sm font-medium transition-colors duration-[var(--fw-dur-fast,120ms)] ${
-                  twoFactor
-                    ? 'border-[var(--color-fw-sage-700)] bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)]'
-                    : 'border-[var(--color-fw-border)] bg-transparent text-[var(--color-fw-fg-muted)] hover:bg-[var(--color-fw-bg-deep)]'
-                }`}
-                onClick={() => setTwoFactor(true)}
-              >
-                Yes
-              </button>
-              <button
-                type="button"
-                className={`rounded-[var(--radius-md)] border px-4 py-1.5 text-sm font-medium transition-colors duration-[var(--fw-dur-fast,120ms)] ${
-                  !twoFactor
-                    ? 'border-[var(--color-fw-sage-700)] bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)]'
-                    : 'border-[var(--color-fw-border)] bg-transparent text-[var(--color-fw-fg-muted)] hover:bg-[var(--color-fw-bg-deep)]'
-                }`}
-                onClick={() => setTwoFactor(false)}
-              >
-                No
-              </button>
-            </div>
-          </div>
         </div>
         <div className="flex gap-2">
           <Button type="button" size="sm" onClick={handleSave} disabled={saving}>
@@ -209,6 +174,65 @@ function CredentialsSection({
           <Button type="button" variant="secondary" size="sm" onClick={handleCancel} disabled={saving}>
             Cancel
           </Button>
+        </div>
+      </Card>
+    </section>
+  );
+}
+
+// ── Two-factor section ─────────────────────────────────────────────────────────
+
+function TwoFactorSection({
+  portalId,
+  initialValue,
+}: {
+  portalId: string;
+  initialValue: 'none' | 'ui';
+}) {
+  const [enabled, setEnabled] = useState(initialValue !== 'none');
+
+  const toggle = async (value: boolean) => {
+    setEnabled(value);
+    try {
+      await window.electronAPI.updatePortal(portalId, { twoFactor: value ? 'ui' : 'none' });
+    } catch {
+      // revert on failure
+      setEnabled(!value);
+    }
+  };
+
+  return (
+    <section className="mb-8">
+      <SectionHeader>Two-factor authentication</SectionHeader>
+      <Card className="px-6 py-5">
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] text-[var(--color-fw-ink-700)]">
+            Does this portal require a verification code at login?
+          </span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={`rounded-[var(--radius-md)] border px-4 py-1.5 text-sm font-medium transition-colors duration-[var(--fw-dur-fast,120ms)] ${
+                enabled
+                  ? 'border-[var(--color-fw-sage-700)] bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)]'
+                  : 'border-[var(--color-fw-border)] bg-transparent text-[var(--color-fw-fg-muted)] hover:bg-[var(--color-fw-bg-deep)]'
+              }`}
+              onClick={() => toggle(true)}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              className={`rounded-[var(--radius-md)] border px-4 py-1.5 text-sm font-medium transition-colors duration-[var(--fw-dur-fast,120ms)] ${
+                !enabled
+                  ? 'border-[var(--color-fw-sage-700)] bg-[var(--color-fw-sage-100)] text-[var(--color-fw-sage-700)]'
+                  : 'border-[var(--color-fw-border)] bg-transparent text-[var(--color-fw-fg-muted)] hover:bg-[var(--color-fw-bg-deep)]'
+              }`}
+              onClick={() => toggle(false)}
+            >
+              No
+            </button>
+          </div>
         </div>
       </Card>
     </section>
@@ -330,13 +354,22 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
     };
   }, [runningOperation]);
 
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+
   const handleExtract = async () => {
     if (runningOperation !== null) return;
+    setExtractionError(null);
     setRunningOperation({ portalId, operation: 'extraction' });
     try {
       await window.electronAPI.runExtraction(portalId);
-    } catch {
-      // Errors surfaced in ProgressPanel
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      // Pipeline errors are surfaced in ProgressPanel via IPC events.
+      // Pre-launch errors (bad key, missing creds) need to be shown here.
+      if (!message.includes('Pipeline process exited')) {
+        setRunningOperation(null);
+        setExtractionError(message);
+      }
     }
   };
 
@@ -431,6 +464,13 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
           </Button>
         </div>
       </div>
+
+      {/* Pre-launch error (e.g. bad API key, missing credentials) */}
+      {extractionError && (
+        <div className="mb-6 rounded-[var(--radius-md)] border border-[#E0B8B7] bg-[var(--color-fw-crimson-50,#fdf2f2)] px-5 py-3 text-[13px] text-[var(--color-fw-crimson-700,#991b1b)]">
+          {extractionError}
+        </div>
+      )}
 
       {/* Records breakdown (fetched only) */}
       {portalState === 'fetched' && (
@@ -579,8 +619,13 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
       <CredentialsSection
         portalId={portalId}
         credentials={credentials}
-        twoFactor={portal.twoFactor === 'none' ? 'none' : 'ui'}
         onSaved={(creds) => setCredentials(creds)}
+      />
+
+      {/* Two-factor authentication */}
+      <TwoFactorSection
+        portalId={portalId}
+        initialValue={portal.twoFactor === 'none' ? 'none' : 'ui'}
       />
 
       {/* Danger zone */}

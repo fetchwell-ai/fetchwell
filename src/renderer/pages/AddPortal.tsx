@@ -30,8 +30,11 @@ export default function AddPortal({
 
   const [url, setUrl] = useState(editPortal?.url ?? '');
   const [name, setName] = useState(editPortal?.name ?? '');
+  const hasSavedCreds = isEdit && (editPortal.hasCredentials ?? false);
   const [username, setUsername] = useState('');
+  const [usernameDirty, setUsernameDirty] = useState(!hasSavedCreds);
   const [password, setPassword] = useState('');
+  const [passwordDirty, setPasswordDirty] = useState(!hasSavedCreds);
   const [twoFactor, setTwoFactor] = useState<boolean>(
     editPortal ? editPortal.twoFactor !== 'none' : true,
   );
@@ -83,8 +86,8 @@ export default function AddPortal({
         name: name.trim(),
         url: url.trim(),
         twoFactor: twoFactor ? 'ui' : 'none',
-        ...(username ? { username: username.trim() } : {}),
-        ...(password ? { password } : {}),
+        ...(usernameDirty && username ? { username: username.trim() } : {}),
+        ...(passwordDirty && password ? { password } : {}),
       };
 
       if (isEdit) {
@@ -150,8 +153,17 @@ export default function AddPortal({
             <Input
               id="portal-username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={!usernameDirty && hasSavedCreds ? '••••••••' : username}
+              onFocus={() => {
+                if (!usernameDirty) {
+                  setUsername('');
+                  setUsernameDirty(true);
+                }
+              }}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                setUsernameDirty(true);
+              }}
               placeholder="Your portal username or email"
               autoComplete="off"
               spellCheck={false}
@@ -163,8 +175,17 @@ export default function AddPortal({
             <Input
               id="portal-password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={!passwordDirty && hasSavedCreds ? '••••••••' : password}
+              onFocus={() => {
+                if (!passwordDirty) {
+                  setPassword('');
+                  setPasswordDirty(true);
+                }
+              }}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setPasswordDirty(true);
+              }}
               placeholder="Your portal password"
               autoComplete="new-password"
             />

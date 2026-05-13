@@ -172,6 +172,26 @@ function installOtpCallback(): void {
 // Build ProviderConfig from command payload
 // ---------------------------------------------------------------------------
 
+/**
+ * Default selectors for detecting authenticated MyChart sessions.
+ * Without these, stale sessions are never detected — the URL looks
+ * authenticated but the page is actually logged out.
+ */
+const DEFAULT_AUTHENTICATED_SELECTORS = [
+  'a[href*="Visits"]',
+  'a[href*="Messages"]',
+  'a[href*="TestResults"]',
+  'a[href*="Medications"]',
+  'a[href*="Appointments"]',
+  '[data-testid="account-menu"]',
+  '[aria-label*="Account"]',
+  '.MyChartGlobalNav',
+  '#MyChartGlobalNav',
+  'nav[aria-label*="MyChart"]',
+  '[class*="UserGreeting"]',
+  '[class*="PatientName"]',
+];
+
 function buildProviderConfig(cmd: RunnerCommand): ProviderConfig {
   return {
     id: cmd.providerConfig.id,
@@ -184,7 +204,7 @@ function buildProviderConfig(cmd: RunnerCommand): ProviderConfig {
       loginForm: cmd.providerConfig.loginForm,
       twoFactor: cmd.providerConfig.twoFactor,
     },
-    authenticatedSelectors: [],
+    authenticatedSelectors: DEFAULT_AUTHENTICATED_SELECTORS,
   };
 }
 
