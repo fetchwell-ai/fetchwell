@@ -26,7 +26,7 @@ async function checkMinimumVersion(): Promise<void> {
     const { response: choice } = await dialog.showMessageBox(win ?? new BrowserWindow({ show: false }), {
       type: 'warning',
       title: 'Update Required',
-      message: 'A required update is available. Please update FetchWell to continue.',
+      message: 'A required update is available. Please update Fetchwell to continue.',
       buttons: ['Update now', 'Quit'],
       defaultId: 0,
       cancelId: 1,
@@ -81,7 +81,7 @@ function createWindow(): void {
   win.loadFile(path.join(__dirname, '..', 'dist-renderer', 'index.html'));
 }
 
-app.setName('FetchWell');
+app.setName('Fetchwell');
 
 app.whenReady().then(async () => {
   // Set dock icon for dev mode (macOS ignores BrowserWindow `icon`)

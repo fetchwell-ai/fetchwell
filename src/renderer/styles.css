@@ -3,7 +3,7 @@
 /* Enable class-based dark mode for Tailwind v4 */
 @variant dark (&:where(.dark, .dark *));
 
-/* ── FetchWell design tokens ──────────────────────────────────────────────── */
+/* ── Fetchwell design tokens ──────────────────────────────────────────────── */
 @theme {
   /* ── Sage palette ──────────────────────────────────────── */
   --color-fw-sage-50:  #F1F6F2;

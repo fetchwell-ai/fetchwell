@@ -62,7 +62,7 @@ export default function Sidebar({
         {/* Logo mark */}
         <div
           role="img"
-          aria-label="FetchWell"
+          aria-label="Fetchwell"
           className="h-[20px] w-[20px] flex-shrink-0 select-none [&>svg]:h-full [&>svg]:w-full"
           dangerouslySetInnerHTML={{ __html: fetchWellMarkSvg }}
         />

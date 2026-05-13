@@ -76,7 +76,7 @@ async function run() {
   const authModule = getAuthModule(provider.auth, provider.id);
 
   console.log("=".repeat(60));
-  console.log("  FetchWell — Portal Discovery");
+  console.log("  Fetchwell — Portal Discovery");
   console.log(`  Provider: ${provider.name} (${provider.id})`);
   console.log("  Mode: stagehand-local");
   console.log("=".repeat(60));

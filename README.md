@@ -1,10 +1,10 @@
-# FetchWell
+# Fetchwell
 
-FetchWell is an open-source macOS desktop app that logs into your patient portals and downloads your health records as PDFs to a local folder.
+Fetchwell is an open-source macOS desktop app that logs into your patient portals and downloads your health records as PDFs to a local folder.
 
 I built this because I wanted to share all of my health data with Claude so it could help me make sense of it. But there is no reliable way to get your health data in bulk without doing a bunch of manual work. Fancy technologies like FHIR APIs and HIEs exist for your doctors to use, but they are not available to patients. The one place patients *can* access their records is through web portals like Epic MyChart, but these are designed for human use, not automated downloads. Some people have built tools to "scrape" these sites, but that approach requires a lot of customization for different portals and can break when websites change.
 
-FetchWell takes a different approach. Instead of scraping the source code of web pages, it uses an AI agent (Anthropic's Claude) to drive a real browser the same way a human would: by reading the page, clicking links and downloading PDFs. This makes it resilient to portal redesigns and not tied to any single EHR vendor. If you can log in and see your records, FetchWell can extract them.
+Fetchwell takes a different approach. Instead of scraping the source code of web pages, it uses an AI agent (Anthropic's Claude) to drive a real browser the same way a human would: by reading the page, clicking links and downloading PDFs. This makes it resilient to portal redesigns and not tied to any single EHR vendor. If you can log in and see your records, Fetchwell can extract them.
 
 ## Architecture
 
@@ -66,17 +66,17 @@ FetchWell takes a different approach. Instead of scraping the source code of web
 
 ## Privacy and data
 
-FetchWell has no servers and no cloud. Your records are downloaded directly to your Mac as PDFs, and your passwords are encrypted in your macOS Keychain via Electron's `safeStorage` API. Plaintext credentials never leave the main process — the renderer only receives a boolean indicating whether a password is stored.
+Fetchwell has no servers and no cloud. Your records are downloaded directly to your Mac as PDFs, and your passwords are encrypted in your macOS Keychain via Electron's `safeStorage` API. Plaintext credentials never leave the main process — the renderer only receives a boolean indicating whether a password is stored.
 
-To navigate your portal, FetchWell uses Claude, an AI assistant made by Anthropic. During extraction, page content — including health information visible on screen — is sent to Anthropic's API so Claude can read and interact with the site. As of March 2026, Anthropic does [not use API data](https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training) to train its models.
+To navigate your portal, Fetchwell uses Claude, an AI assistant made by Anthropic. During extraction, page content — including health information visible on screen — is sent to Anthropic's API so Claude can read and interact with the site. As of March 2026, Anthropic does [not use API data](https://privacy.claude.com/en/articles/7996868-is-my-data-used-for-model-training) to train its models.
 
-FetchWell is not affiliated with Anthropic.
+Fetchwell is not affiliated with Anthropic.
 
 ## Install
 
-**[Download FetchWell for macOS](https://github.com/fetchwell-ai/fetchwell/releases/latest/download/FetchWell-0.1.0-arm64.dmg)** (arm64, ~350 MB)
+**[Download Fetchwell for macOS](https://github.com/fetchwell-ai/fetchwell/releases/latest/download/Fetchwell-0.1.0-arm64.dmg)** (arm64, ~350 MB)
 
-Or browse all releases on [GitHub Releases](https://github.com/fetchwell-ai/fetchwell/releases/latest). Open the `.dmg` and drag FetchWell to Applications.
+Or browse all releases on [GitHub Releases](https://github.com/fetchwell-ai/fetchwell/releases/latest). Open the `.dmg` and drag Fetchwell to Applications.
 
 ### Requirements
 
@@ -87,11 +87,11 @@ An Anthropic API key is bundled with the app. You can also add your own key in S
 
 ## Two-factor authentication
 
-If your portal requires two-factor authentication, FetchWell will detect it and prompt you to enter the verification code in the app. The agent prefers SMS delivery over email when both are available.
+If your portal requires two-factor authentication, Fetchwell will detect it and prompt you to enter the verification code in the app. The agent prefers SMS delivery over email when both are available.
 
 ## CLI usage
 
-If you prefer the command line, you can run FetchWell without the Electron app. Clone the repo and set up a `.env` file and `providers.json` (see `.env.example` and `providers.example.json`).
+If you prefer the command line, you can run Fetchwell without the Electron app. Clone the repo and set up a `.env` file and `providers.json` (see `.env.example` and `providers.example.json`).
 
 ```bash
 pnpm install
