@@ -10,6 +10,6 @@
     "rootDir": "src",
     "resolveJsonModule": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "src/shared-types.d.ts"],
   "exclude": ["src/renderer/**/*"]
 }

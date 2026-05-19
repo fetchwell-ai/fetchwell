@@ -92,16 +92,8 @@ interface RunnerCommand {
   };
 }
 
-/**
- * Structured progress event sent from the subprocess via process.send().
- * Mirrors the types in src/progress-events.ts (kept in sync manually to
- * avoid a cross-tsconfig import).
- */
-type StructuredProgressEvent =
-  | { type: 'phase-change'; phase: string; status: string; message?: string }
-  | { type: 'item-progress'; phase: string; category: string; current: number; total?: number; message?: string }
-  | { type: 'category-complete'; phase: string; category: string; count: number; status: string }
-  | { type: 'status-message'; phase: string; message: string };
+// StructuredProgressEvent is declared as a global ambient type in src/shared-types.d.ts,
+// included in electron/tsconfig.json. No local re-declaration needed.
 
 // ---------------------------------------------------------------------------
 // 2FA IPC relay

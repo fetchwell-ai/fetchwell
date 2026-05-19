@@ -10,5 +10,5 @@
     "rootDir": ".",
     "resolveJsonModule": true
   },
-  "include": ["./**/*"]
+  "include": ["./**/*", "../src/shared-types.d.ts"]
 }
