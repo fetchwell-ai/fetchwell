@@ -11,7 +11,7 @@ const buttonVariants = cva(
         default:
           'bg-[var(--color-fw-primary)] text-[var(--color-fw-primary-foreground)] shadow-[var(--shadow-fw-1)] hover:bg-[var(--color-fw-primary-hover)]',
         destructive:
-          'bg-[var(--color-fw-crimson-100)] text-[var(--color-fw-crimson-600)] border border-[var(--color-fw-crimson-500)] shadow-sm hover:bg-[#F9DBD8] dark:bg-[#3A1A16] dark:text-[#E8685E] dark:border-[#5A2A24] dark:hover:bg-[#4A201A]',
+          'bg-[var(--color-fw-destructive-btn-bg)] text-[var(--color-fw-destructive)] border border-[var(--color-fw-destructive-btn-border)] shadow-sm hover:bg-[var(--color-fw-destructive-btn-hover)]',
         outline:
           'border border-[var(--color-fw-border)] bg-[var(--color-fw-card-bg)] shadow-sm hover:bg-[var(--color-fw-bg)] hover:text-[var(--color-fw-fg)]',
         secondary:

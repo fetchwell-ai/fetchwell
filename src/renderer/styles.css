@@ -80,6 +80,24 @@
   --color-fw-link:            #1F4D3E;
   --color-fw-link-hover:      #173B30;
 
+  /* ── Alert / badge / button variant tokens (light mode) ── */
+  --color-fw-destructive:         #9E2A2B;
+  --color-fw-destructive-bg:      #F4DAD9;
+  --color-fw-destructive-border:  #BF3F40;
+  --color-fw-destructive-btn-bg:  #F4DAD9;
+  --color-fw-destructive-btn-hover: #F9DBD8;
+  --color-fw-destructive-btn-border: #BF3F40;
+  --color-fw-warning-fg:          #B47834;
+  --color-fw-warning-bg:          #F2E6D0;
+  --color-fw-warning-border:      #C68F47;
+  --color-fw-info-fg:             #2C604F;
+  --color-fw-info-bg:             #E1ECE6;
+  --color-fw-info-border:         #4A7C66;
+  --color-fw-success-fg:          #4A7C59;
+  --color-fw-success-bg:          #E1ECDA;
+  --color-fw-success-border:      #5C9070;
+  --color-fw-tertiary-label:      #6e6e73;
+
   /* ── Shadows ───────────────────────────────────────────── */
   --shadow-fw-1: 0 1px 2px rgba(40,30,15,0.06), 0 1px 1px rgba(40,30,15,0.04);
   --shadow-fw-2: 0 4px 12px rgba(40,30,15,0.08), 0 1px 3px rgba(40,30,15,0.06);
@@ -185,6 +203,23 @@ body {
   /* Dark crimson overrides */
   --color-fw-crimson-100: #3A1A1A;
   --color-fw-crimson-700: #E08583;
+  /* Dark alert / badge / button variant token overrides */
+  --color-fw-destructive:         #E8685E;
+  --color-fw-destructive-bg:      #3A1410;
+  --color-fw-destructive-border:  #D44033;
+  --color-fw-destructive-btn-bg:  #3A1A16;
+  --color-fw-destructive-btn-hover: #4A201A;
+  --color-fw-destructive-btn-border: #5A2A24;
+  --color-fw-warning-fg:          #D4A043;
+  --color-fw-warning-bg:          #2C2010;
+  --color-fw-warning-border:      #D4A043;
+  --color-fw-info-fg:             #7BA170;
+  --color-fw-info-bg:             #1A2E1A;
+  --color-fw-info-border:         #5F8A54;
+  --color-fw-success-fg:          #6BBF5E;
+  --color-fw-success-bg:          #1A3A14;
+  --color-fw-success-border:      #3A7D2C;
+  --color-fw-tertiary-label:      #aeaeb2;
   /* Dark shadows */
   --shadow-fw-1: 0 1px 2px rgba(0,0,0,0.4), 0 1px 1px rgba(0,0,0,0.3);
   --shadow-fw-2: 0 4px 12px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.35);
