@@ -172,13 +172,13 @@ async function probeProvider(provider: ProviderConfig) {
 
   const savedSession = loadSavedSession(provider.id);
   if (savedSession) {
-    console.log(`   Found saved session from ${savedSession.savedAt} — will skip login.`);
+    console.log(`[session] Found saved session from ${savedSession.savedAt} — will skip login.`);
     console.log();
   }
 
-  console.log("Step 1: Creating browser session...");
+  console.log("[pipeline] Creating browser session...");
   const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
-  console.log("Browser session created!");
+  console.log("[pipeline] Browser session created!");
 
   const debugUrl = await browser.getDebugUrl();
   if (debugUrl) {
@@ -193,9 +193,9 @@ async function probeProvider(provider: ProviderConfig) {
   let failed = false;
 
   try {
-    console.log(`Step 2: Navigating to ${portalUrl}...`);
+    console.log(`[pipeline] Navigating to ${portalUrl}...`);
     await browser.navigate(portalUrl);
-    console.log("Page loaded.");
+    console.log("[pipeline] Page loaded.");
     console.log();
 
     // Login or restore session
@@ -210,7 +210,7 @@ async function probeProvider(provider: ProviderConfig) {
 
     const navNotes = readNavNotes(outputDir);
 
-    console.log("Step 4: Probing all sections...");
+    console.log("[probe] Probing all sections...");
     console.log();
 
     await probeLabsDocs(browser, portalUrl, probeDir, navNotes, providerCredentials, provider.id, provider.authenticatedSelectors);
@@ -240,16 +240,16 @@ async function probeProvider(provider: ProviderConfig) {
   } catch (err) {
     failed = true;
     console.error();
-    console.error("Probe failed with error:");
+    console.error("[probe] Probe failed with error:");
     console.error(err);
     console.error();
-    console.error("Browser is being kept open for inspection.");
-    console.error("Press Enter to close it.");
+    console.error("[probe] Browser is being kept open for inspection.");
+    console.error("[probe] Press Enter to close it.");
     await prompt("");
   } finally {
-    console.log("Cleaning up session...");
+    console.log("[pipeline] Cleaning up session...");
     await browser.close();
-    console.log("Done.");
+    console.log("[pipeline] Done.");
     if (failed) process.exit(1);
   }
 }
@@ -276,16 +276,16 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
   const outputDir = getOutputDir(provider.id);
   const savedSession = loadSavedSession(provider.id);
   if (savedSession) {
-    console.log(`   Found saved session from ${savedSession.savedAt} — will skip login.`);
-    console.log(`   (Delete output/${provider.id}/session.json to force a fresh login.)`);
+    console.log(`[session] Found saved session from ${savedSession.savedAt} — will skip login.`);
+    console.log(`[session] (Delete output/${provider.id}/session.json to force a fresh login.)`);
     console.log();
   }
 
   fs.mkdirSync(outputDir, { recursive: true });
 
-  console.log("Step 1: Creating browser session...");
+  console.log("[pipeline] Creating browser session...");
   const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
-  console.log("Browser session created!");
+  console.log("[pipeline] Browser session created!");
 
   const debugUrl = await browser.getDebugUrl();
   if (debugUrl) {
@@ -295,19 +295,19 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     console.log(`|  ${debugUrl}`);
     console.log("+---------------------------------------------------------+");
   } else if (process.env.HEADLESS !== 'true') {
-    console.log("   A browser window should have opened on your screen.");
+    console.log("[pipeline] A browser window should have opened on your screen.");
   }
   console.log();
 
   let failed = false;
 
   try {
-    console.log(`Step 2: Navigating to ${portalUrl}...`);
+    console.log(`[pipeline] Navigating to ${portalUrl}...`);
     await browser.navigate(portalUrl);
-    console.log("Page loaded.");
+    console.log("[pipeline] Page loaded.");
     console.log();
 
-    // Step 3: Login or restore session
+    // Login or restore session
     await loginOrRestoreSession(browser, {
       portalUrl,
       providerId: provider.id,
@@ -322,10 +322,10 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     if (incremental) {
       // Log the last-extracted timestamps so the user can see what the cutoff is
       const sections: IncrementalSection[] = ["labs", "visits", "medications", "messages"];
-      console.log("   Incremental cutoffs (items on/before these dates will be skipped):");
+      console.log("[extract] Incremental cutoffs (items on/before these dates will be skipped):");
       for (const sec of sections) {
         const cutoff = getLastExtractedDate(outputDir, sec);
-        console.log(`     ${sec.padEnd(12)}: ${cutoff?.toISOString() ?? "none (full run)"}`);
+        console.log(`[extract]   ${sec.padEnd(12)}: ${cutoff?.toISOString() ?? "none (full run)"}`);
       }
       console.log();
     }
@@ -366,16 +366,16 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
   } catch (err) {
     failed = true;
     console.error();
-    console.error("Extraction failed with error:");
+    console.error("[extract] Extraction failed with error:");
     console.error(err);
     console.error();
-    console.error("Browser is being kept open for inspection.");
-    console.error("Press Enter to close it.");
+    console.error("[extract] Browser is being kept open for inspection.");
+    console.error("[extract] Press Enter to close it.");
     await prompt("");
   } finally {
-    console.log("Cleaning up session...");
+    console.log("[pipeline] Cleaning up session...");
     await browser.close();
-    console.log("Done.");
+    console.log("[pipeline] Done.");
     if (failed) process.exit(1);
   }
 }
@@ -407,7 +407,7 @@ async function run() {
     }
     // Warn if no nav-map exists for this provider
     if (!loadNavMap(provider.id)) {
-      console.log(`Warning: No nav-map found for ${provider.id}. Run 'pnpm discover --provider ${provider.id}' first for better navigation.`);
+      console.log(`[nav] Warning: No nav-map found for ${provider.id}. Run 'pnpm discover --provider ${provider.id}' first for better navigation.`);
       console.log();
     }
 

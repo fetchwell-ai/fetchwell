@@ -67,12 +67,12 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
   const existingPdfs = readDirSafe(visitsDir).filter((f) => f.endsWith(".pdf"));
   if (incremental && existingPdfs.length > 0 && process.env.FORCE_VISITS !== "1") {
     console.log(
-      `Step 7: Visits already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_VISITS=1 to re-run).`,
+      `[extract] Visits already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_VISITS=1 to re-run).`,
     );
     return 0;
   }
 
-  console.log("Step 7: Navigating to visits...");
+  console.log("[extract] Navigating to visits...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
@@ -83,7 +83,7 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
     "Return each link separately.";
   const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "visits", { act: fallbackAct }, portalUrl);
   if (navigationFailed) {
-    console.log("   Visits: navigation failed — skipping section.");
+    console.log("[extract] Visits: navigation failed — skipping section.");
     return 0;
   }
   await new Promise((r) => setTimeout(r, 3000));
@@ -93,13 +93,13 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
   const visitLinks = await browser.observe(
     (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
-  console.log(`   Found ${visitLinks.length} visit document link(s).`);
+  console.log(`[extract] Found ${visitLinks.length} visit document link(s).`);
   if (visitLinks.length > 0) {
     emit({ type: 'status-message', phase: 'extract', message: `Found ${visitLinks.length} visits to fetch...` });
   }
 
   if (visitLinks.length === 0) {
-    console.log("   No visits found — saving screenshot.");
+    console.log("[extract] No visits found — saving screenshot.");
     const ss = await browser.screenshot();
     fs.writeFileSync(path.join(visitsDir, "visits-list.png"), Buffer.from(ss, "base64"));
     return 0;
@@ -114,16 +114,16 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
     const link = visitLinks[i];
     const prefix = String(i + 1).padStart(3, "0") + "_";
     if (incremental && savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
-      console.log(`   Visit ${i + 1}/${maxVisits}: already saved — skipping`);
+      console.log(`[extract] Visit ${i + 1}/${maxVisits}: already saved — skipping`);
       continue;
     }
     if (shouldSkipIncremental(link.description, cutoff ?? null)) {
-      console.log(`   Visit ${i + 1}/${maxVisits}: before cutoff — skipping (${link.description})`);
+      console.log(`[extract] Visit ${i + 1}/${maxVisits}: before cutoff — skipping (${link.description})`);
       continue;
     }
 
     emit({ type: 'status-message', phase: 'extract', message: `Downloading visit ${i + 1} of ${maxVisits}...` });
-    console.log(`   Visit ${i + 1}/${maxVisits}: ${link.description}`);
+    console.log(`[extract] Visit ${i + 1}/${maxVisits}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
       await new Promise((r) => setTimeout(r, 1000));

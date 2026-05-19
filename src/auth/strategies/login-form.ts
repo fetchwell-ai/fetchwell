@@ -40,14 +40,14 @@ const twoStep: LoginFormHandler = async (browser, credentials) => {
   console.log("[login] Filling credentials...");
   console.log(`[login] URL: ${await browser.url()}`);
   await browser.act(`Type "${username}" into the username or email input field`);
-  console.log("   Username entered.");
+  console.log("[login] Username entered.");
 
   await browser.act("Click the Next or Continue button to proceed to the password page");
   console.log(`[login] After Next. URL: ${await browser.url()}`);
   await new Promise((r) => setTimeout(r, 2000));
 
   await browser.act(`Type "${password}" into the password input field`);
-  console.log("   Password entered.");
+  console.log("[login] Password entered.");
 
   await browser.act("Click the Sign In or Log In button to submit the login form");
   console.log(`[login] Form submitted. URL: ${await browser.url()}`);
@@ -69,15 +69,15 @@ const singlePage: LoginFormHandler = async (browser, credentials) => {
 
   console.log("[login] Filling credentials...");
   await browser.act(`Type "${email}" into the email input field`);
-  console.log("   Email entered.");
+  console.log("[login] Email entered.");
 
   await browser.act(`Type "${password}" into the password input field`);
-  console.log("   Password entered.");
+  console.log("[login] Password entered.");
 
   await browser.act(
     "Click the Sign In, Log In, or Submit button to submit the login form",
   );
-  console.log("   Login form submitted.");
+  console.log("[login] Login form submitted.");
   console.log();
 };
 
@@ -107,7 +107,7 @@ function buildAutoHandler(providerId?: string): LoginFormHandler {
     if (providerId) {
       const cached = loadDetectedLoginFormType(providerId);
       if (cached) {
-        console.log(`   Login form: using cached detection result — ${cached}`);
+        console.log(`[login] Login form: using cached detection result — ${cached}`);
         const cachedHandler = loginFormRegistry[cached];
         if (cachedHandler) {
           return cachedHandler(browser, credentials);
@@ -116,13 +116,13 @@ function buildAutoHandler(providerId?: string): LoginFormHandler {
     }
 
     // No cache — detect from the current page
-    console.log("   Login form: auto-detecting form type...");
+    console.log("[login] Login form: auto-detecting form type...");
     const detected = await detectLoginFormType(browser);
 
     // Persist for future runs
     if (providerId) {
       saveDetectedLoginFormType(providerId, detected);
-      console.log(`   Login form: saved detected type '${detected}' to cache`);
+      console.log(`[login] Login form: saved detected type '${detected}' to cache`);
     }
 
     const handler = loginFormRegistry[detected];

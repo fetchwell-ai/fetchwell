@@ -68,9 +68,9 @@ export async function extractProvider(
   const outputDir = getOutputDir(provider.id, basePath);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  console.log("Step 1: Creating browser session...");
+  console.log("[pipeline] Creating browser session...");
   const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
-  console.log("Browser session created!");
+  console.log("[pipeline] Browser session created!");
 
   const debugUrl = await browser.getDebugUrl();
   if (debugUrl) {
@@ -80,7 +80,7 @@ export async function extractProvider(
     console.log(`|  ${debugUrl}`);
     console.log("+---------------------------------------------------------+");
   } else if (process.env.HEADLESS !== 'true') {
-    console.log("   A browser window should have opened on your screen.");
+    console.log("[pipeline] A browser window should have opened on your screen.");
   }
   console.log();
 
@@ -104,7 +104,7 @@ export async function extractProvider(
       authenticatedSelectors: provider.authenticatedSelectors,
       emitProgress,
     });
-    console.log(`   Dashboard URL: ${homeUrl}`);
+    console.log(`[pipeline] Dashboard URL: ${homeUrl}`);
     console.log();
 
     emit({ type: 'phase-change', phase: 'login', status: 'complete', message: 'Logged in' });
@@ -113,10 +113,10 @@ export async function extractProvider(
 
     if (incremental) {
       const sections: IncrementalSection[] = ["labs", "visits", "medications", "messages"];
-      console.log("   Incremental cutoffs (items on/before these dates will be skipped):");
+      console.log("[extract] Incremental cutoffs (items on/before these dates will be skipped):");
       for (const sec of sections) {
         const cutoff = getLastExtractedDate(outputDir, sec);
-        console.log(`     ${sec.padEnd(12)}: ${cutoff?.toISOString() ?? "none (full run)"}`);
+        console.log(`[extract]   ${sec.padEnd(12)}: ${cutoff?.toISOString() ?? "none (full run)"}`);
       }
       console.log();
     }
@@ -179,8 +179,8 @@ export async function extractProvider(
     console.log(`  [ok] output/${provider.id}/index.html  (upload PDFs to Claude.ai)`);
     console.log();
   } finally {
-    console.log("Cleaning up session...");
+    console.log("[pipeline] Cleaning up session...");
     await browser.close();
-    console.log("Done.");
+    console.log("[pipeline] Done.");
   }
 }

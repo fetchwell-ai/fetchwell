@@ -44,11 +44,11 @@ export async function extractMedications(ctx: ExtractionContext): Promise<number
   const medsFilename = providerId ? `medications-${providerId}.pdf` : "medications.pdf";
   const pdfPath = path.join(baseDir, medsFilename);
   if (incremental && fs.existsSync(pdfPath) && process.env.FORCE_MEDS !== "1") {
-    console.log("Step 8: Medications already extracted — skipping (FORCE_MEDS=1 to re-run).");
+    console.log("[extract] Medications already extracted — skipping (FORCE_MEDS=1 to re-run).");
     return 0;
   }
 
-  console.log("Step 8: Navigating to medications...");
+  console.log("[extract] Navigating to medications...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Click the Medications or Medicines link in the navigation menu, sidebar, or home page. ' +
@@ -56,7 +56,7 @@ export async function extractMedications(ctx: ExtractionContext): Promise<number
     'It may be in a left sidebar under a Medical Record section.';
   const { navigationFailed } = await navigateToSection(browser, providerId, "medications", { act: fallbackAct }, portalUrl);
   if (navigationFailed) {
-    console.log("   Medications: navigation failed — skipping section.");
+    console.log("[extract] Medications: navigation failed — skipping section.");
     return 0;
   }
   await new Promise((r) => setTimeout(r, 3000));
@@ -67,7 +67,7 @@ export async function extractMedications(ctx: ExtractionContext): Promise<number
     const pdfBuf = await browser.pdf();
     emit({ type: 'status-message', phase: 'extract', message: `Saving ${medsFilename}...` });
     fs.writeFileSync(pdfPath, pdfBuf);
-    console.log(`   ✓ ${medsFilename} (${(pdfBuf.length / 1024).toFixed(0)} KB)`);
+    console.log(`[extract] ${medsFilename} (${(pdfBuf.length / 1024).toFixed(0)} KB)`);
     return 1;
   }
   return 0;

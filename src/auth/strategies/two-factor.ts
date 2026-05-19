@@ -37,11 +37,11 @@ const none: TwoFactorHandler = async (browser) => {
 const email: TwoFactorHandler = async (browser, providerId) => {
   await new Promise((r) => setTimeout(r, 3000));
 
-  console.log("Step 5: Checking for 2FA/verification prompt...");
+  console.log("[2fa] Checking for 2FA/verification prompt...");
   const twoFaObservations = await detect2FA(browser);
 
   if (twoFaObservations.length > 0) {
-    console.log("2FA/MFA detected!");
+    console.log("[2fa] 2FA detected (email mode)");
 
     // Try to select email delivery
     try {
@@ -49,7 +49,7 @@ const email: TwoFactorHandler = async (browser, providerId) => {
         "If there is a choice between SMS/phone and email for the verification code, " +
         "click 'Send to my email' or the email option",
       );
-      console.log("   Selected email delivery for 2FA code.");
+      console.log("[2fa] Selected email delivery for 2FA code.");
       await new Promise((r) => setTimeout(r, 2000));
     } catch {
       // No delivery choice -- already showing code input
@@ -60,7 +60,7 @@ const email: TwoFactorHandler = async (browser, providerId) => {
     if (code) {
       await enterCodeInBrowser(browser, code);
     } else {
-      console.log("   No code received. Continuing to poll for browser-based entry...");
+      console.log("[2fa] No code received. Continuing to poll for browser-based entry...");
     }
 
     await waitForPostLoginNavigation(browser);
@@ -75,17 +75,17 @@ const email: TwoFactorHandler = async (browser, providerId) => {
 const manual: TwoFactorHandler = async (browser, providerId) => {
   await new Promise((r) => setTimeout(r, 3000));
 
-  console.log("Step 5: Checking for 2FA/verification prompt...");
+  console.log("[2fa] Checking for 2FA/verification prompt...");
   const twoFaObservations = await detect2FA(browser);
 
   if (twoFaObservations.length > 0) {
-    console.log("2FA/MFA detected!");
+    console.log("[2fa] 2FA detected (manual mode)");
 
     const code = await waitForFileBasedCode(providerId);
     if (code) {
       await enterCodeInBrowser(browser, code);
     } else {
-      console.log("   No code received. Continuing to poll for browser-based entry...");
+      console.log("[2fa] No code received. Continuing to poll for browser-based entry...");
     }
 
     await waitForPostLoginNavigation(browser);
@@ -114,7 +114,7 @@ export function setOtpCallback(cb: ((deliveryHint?: string) => Promise<string | 
 const ui: TwoFactorHandler = async (browser) => {
   await new Promise((r) => setTimeout(r, 3000));
 
-  console.log("Step 5: Checking for 2FA/verification prompt...");
+  console.log("[2fa] Checking for 2FA/verification prompt...");
   const twoFaObservations = await detect2FA(browser);
 
   if (twoFaObservations.length > 0) {

@@ -107,7 +107,7 @@ export async function waitForObservation(
   for (let i = 0; i < maxAttempts; i++) {
     const observations = await browser.observe(instruction);
     if (observations.length > 0) return true;
-    console.log(`   Waiting... (${i + 1}/${maxAttempts})`);
+    console.log(`[login] Waiting... (${i + 1}/${maxAttempts})`);
     await new Promise((r) => setTimeout(r, delayMs));
   }
   return false;
@@ -127,12 +127,12 @@ export async function waitForFileBasedCode(providerId?: string): Promise<string 
   const codeFile = path.join(outputDir, "2fa.code");
 
   const relCodeFile = path.relative(path.join(outputDir, "..", ".."), codeFile);
-  console.log("+=======================================================+");
-  console.log("|  2FA CODE NEEDED                                       |");
-  console.log("|  Provide the code by running:                          |");
-  console.log(`|    echo "XXXXXX" > ${relCodeFile}`);
-  console.log(`|  Watching: ${codeFile}`);
-  console.log("+=======================================================+");
+  console.log("[2fa] +=======================================================+");
+  console.log("[2fa] |  2FA CODE NEEDED                                       |");
+  console.log("[2fa] |  Provide the code by running:                          |");
+  console.log(`[2fa] |    echo "XXXXXX" > ${relCodeFile}`);
+  console.log(`[2fa] |  Watching: ${codeFile}`);
+  console.log("[2fa] +=======================================================+");
 
   const code = await new Promise<string | null>((resolve) => {
     let poll: ReturnType<typeof setInterval> | undefined;
@@ -190,7 +190,7 @@ export async function waitForFileBasedCode(providerId?: string): Promise<string 
  * input field structure (e.g. OneMedical's single-box OTP input).
  */
 export async function enterCodeInBrowser(browser: BrowserProvider, code: string): Promise<void> {
-  console.log("   Got 2FA code, entering in browser...");
+  console.log("[2fa] Got 2FA code, entering in browser...");
   const fields = await browser.observe(
     "the verification code, security code, or one-time password input field",
   );
@@ -200,9 +200,9 @@ export async function enterCodeInBrowser(browser: BrowserProvider, code: string)
     // Fallback: act()-based entry if observe finds nothing
     await browser.act(`Type "${code}" into the verification code or security code input field`);
   }
-  console.log("   Code entered.");
+  console.log("[2fa] Code entered.");
   await browser.act("Click the Submit, Verify, or Continue button to submit the verification code");
-  console.log("   Submitted.");
+  console.log("[2fa] Submitted.");
 }
 
 /**
@@ -213,14 +213,14 @@ export async function waitForPostLoginNavigation(
   { maxAttempts = 40, delayMs = 5000 }: { maxAttempts?: number; delayMs?: number } = {},
 ): Promise<void> {
   console.log();
-  console.log("   Waiting for login to complete...");
+  console.log("[2fa] Waiting for login to complete...");
   for (let i = 0; i < maxAttempts; i++) {
     const url = await browser.url();
     if (!isAuthPage(url)) {
-      console.log(`2FA completed — logged in! URL: ${url}`);
+      console.log(`[2fa] Login complete — URL: ${url}`);
       return;
     }
-    console.log(`   Waiting... (${i + 1}/${maxAttempts})`);
+    console.log(`[2fa] Waiting... (${i + 1}/${maxAttempts})`);
     await new Promise((r) => setTimeout(r, delayMs));
   }
   throw new Error("Timed out waiting for login to complete after 2FA.");
@@ -236,7 +236,7 @@ export async function detect2FA(browser: BrowserProvider): Promise<ObserveResult
       "security code field, or any MFA/2FA challenge",
     );
   } catch {
-    console.log("   (observe() returned no 2FA elements)");
+    console.log("[2fa] observe() returned no 2FA elements");
     return [];
   }
 }
@@ -250,9 +250,9 @@ export async function verifyLoginSuccess(browser: BrowserProvider): Promise<void
     "welcome message, patient name, appointments, or health records menu",
   );
   if (dashboardObs.length > 0) {
-    console.log("Logged in successfully (no 2FA required).");
+    console.log("[login] Logged in successfully (no 2FA required).");
   } else {
-    console.log("Login state unclear. Continuing anyway...");
+    console.log("[login] Login state unclear. Continuing anyway...");
   }
 }
 
@@ -284,8 +284,8 @@ export async function ensureLoggedIn(
 
   // Primary check: are we on an auth/login page?
   if (isAuthPage(currentUrl)) {
-    console.log(`   Session expired — on auth page: ${currentUrl}`);
-    console.log("   Re-authenticating...");
+    console.log(`[session] Session expired — on auth page: ${currentUrl}`);
+    console.log("[session] Re-authenticating...");
     clearSession(providerId);
     await browser.navigate(loginUrl);
     await new Promise((r) => setTimeout(r, 2000));
@@ -297,7 +297,7 @@ export async function ensureLoggedIn(
       const session = await browser.saveSession();
       session.homeUrl = await browser.url();
       saveSession(session, providerId);
-      console.log("   Session re-saved.");
+      console.log("[session] Session re-saved.");
     }
     return;
   }
@@ -316,5 +316,5 @@ export async function ensureLoggedIn(
   // the login URL. On MyChart, that triggers ?action=logout and destroys the
   // session. Log a warning and proceed; the extractors will handle navigation
   // failures gracefully.
-  console.log(`   Warning: authenticated elements not found at ${currentUrl} — proceeding anyway.`);
+  console.log(`[session] Warning: authenticated elements not found at ${currentUrl} — proceeding anyway.`);
 }

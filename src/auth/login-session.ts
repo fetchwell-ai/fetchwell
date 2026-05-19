@@ -80,7 +80,7 @@ export async function loginOrRestoreSession(
 
   if (savedSession && browser.loadSession) {
     emit({ type: 'status-message', phase: 'login', message: 'Restoring saved session...' });
-    console.log("Step 3: Restoring saved session...");
+    console.log("[session] Restoring saved session...");
     await browser.loadSession(savedSession);
 
     // Navigate to the saved home URL — NOT the login URL.
@@ -99,22 +99,22 @@ export async function loginOrRestoreSession(
         : await checkAuthenticatedElement(browser, selectors);
 
     if (!onAuthPage && (selectors.length === 0 || hasAuthElement)) {
-      console.log("   Session restored — skipping login and 2FA.");
+      console.log("[session] Session restored — skipping login and 2FA.");
       console.log();
       return currentUrl;
     }
 
     // Session is invalid — log why and fall through to fresh login
     if (onAuthPage) {
-      console.log(`   Session expired — redirected to auth page: ${currentUrl}`);
+      console.log(`[session] Session expired — redirected to auth page: ${currentUrl}`);
     } else {
-      console.log(`   Session validation failed — no authenticated elements found at ${currentUrl}`);
+      console.log(`[session] Session validation failed — no authenticated elements found at ${currentUrl}`);
     }
-    console.log("   Logging in fresh...");
+    console.log("[session] Logging in fresh...");
     emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
     clearSession(providerId, basePath);
     console.log();
-    console.log("Step 3: Login");
+    console.log("[login] Starting login...");
     await browser.navigate(portalUrl);
     await new Promise((r) => setTimeout(r, 2000));
     await authModule.login(browser, authConfig);
@@ -123,14 +123,14 @@ export async function loginOrRestoreSession(
       const session = await browser.saveSession();
       session.homeUrl = homeUrl;
       saveSession(session, providerId, basePath);
-      console.log(`   Session saved to output/${providerId}/session.json.`);
+      console.log(`[session] Session saved to output/${providerId}/session.json.`);
     }
     return homeUrl;
   }
 
   // No saved session — perform fresh login
   emit({ type: 'status-message', phase: 'login', message: 'Navigating to sign-in page...' });
-  console.log("Step 3: Login");
+  console.log("[login] Starting login...");
   await browser.navigate(portalUrl);
   await new Promise((r) => setTimeout(r, 2000));
   emit({ type: 'status-message', phase: 'login', message: 'Signing in...' });
@@ -140,7 +140,7 @@ export async function loginOrRestoreSession(
     const session = await browser.saveSession();
     session.homeUrl = homeUrl;
     saveSession(session, providerId, basePath);
-    console.log(`   Session saved to output/${providerId}/session.json (login + 2FA skipped next run).`);
+    console.log(`[session] Session saved to output/${providerId}/session.json (login + 2FA skipped next run).`);
   }
   return homeUrl;
 }

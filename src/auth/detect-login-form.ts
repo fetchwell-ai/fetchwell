@@ -57,7 +57,7 @@ export function saveDetectedLoginFormType(
     fs.writeFileSync(filePath, JSON.stringify({ loginForm }, null, 2), "utf-8");
   } catch (err) {
     console.log(
-      `   Warning: could not save login form type cache: ${(err as Error).message}`,
+      `[login] Warning: could not save login form type cache: ${(err as Error).message}`,
     );
   }
 }
@@ -82,7 +82,7 @@ export async function detectLoginFormType(
     );
 
     if (observations.length === 0) {
-      console.log("   Login form detection: no observations returned — defaulting to two-step");
+      console.log("[login] Login form detection: no observations returned — defaulting to two-step");
       return "two-step";
     }
 
@@ -124,22 +124,22 @@ export async function detectLoginFormType(
     const twoStepScore = twoStepSignals.filter((s) => combined.includes(s)).length;
 
     console.log(
-      `   Login form detection: single-page signals=${singlePageScore}, two-step signals=${twoStepScore}`,
+      `[login] Login form detection: single-page signals=${singlePageScore}, two-step signals=${twoStepScore}`,
     );
-    console.log(`   Observation: "${combined.slice(0, 200)}"`);
+    console.log(`[login] Observation: "${combined.slice(0, 200)}"`);
 
     // Only classify as single-page if there's clear positive evidence
     if (singlePageScore > twoStepScore && singlePageScore > 0) {
-      console.log("   Detected: single-page login form");
+      console.log("[login] Detected: single-page login form");
       return "single-page";
     }
 
     // Default to two-step on ambiguity or when two-step signals dominate
-    console.log("   Detected: two-step login form (or defaulting)");
+    console.log("[login] Detected: two-step login form (or defaulting)");
     return "two-step";
   } catch (err) {
     console.log(
-      `   Login form detection failed (${(err as Error).message?.slice(0, 80) ?? "unknown error"}) — defaulting to two-step`,
+      `[login] Login form detection failed (${(err as Error).message?.slice(0, 80) ?? "unknown error"}) — defaulting to two-step`,
     );
     return "two-step";
   }

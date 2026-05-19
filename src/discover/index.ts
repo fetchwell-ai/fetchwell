@@ -97,15 +97,15 @@ export async function discoverPortal(
   const discoverDir = path.join(OUTPUT_BASE, providerId, "discover");
   fs.mkdirSync(discoverDir, { recursive: true });
 
-  console.log("Discovery: starting agentic section finder...");
-  console.log(`   Home URL: ${homeUrl}`);
+  console.log("[discover] Starting agentic section finder...");
+  console.log(`[discover] Home URL: ${homeUrl}`);
 
   await browser.navigate(homeUrl);
   await new Promise((r) => setTimeout(r, 3000));
 
   const dashSs = await browser.screenshot();
   fs.writeFileSync(path.join(discoverDir, "dashboard.png"), Buffer.from(dashSs, "base64"));
-  console.log("Discovery: dashboard screenshot saved");
+  console.log("[discover] Dashboard screenshot saved");
 
   const portalName = await browser.title();
   const sections: NavMap["sections"] = {};
@@ -114,7 +114,7 @@ export async function discoverPortal(
   for (const section of allSections) {
     emit({ type: 'status-message', phase: 'navigate', message: `Looking for ${section}...` });
     console.log();
-    console.log(`Discovery: searching for "${section}"...`);
+    console.log(`[discover] Searching for "${section}"...`);
 
     let found = false;
     const instructions = SECTION_INSTRUCTIONS[section];
@@ -125,11 +125,11 @@ export async function discoverPortal(
       await browser.navigate(homeUrl);
       await new Promise((r) => setTimeout(r, 2000));
 
-      console.log(`   Attempt ${attempt + 1}: acting...`);
+      console.log(`[discover]   Attempt ${attempt + 1}: acting...`);
       try {
         await browser.act(actInstruction);
       } catch (err: unknown) {
-        console.log(`   act() failed: ${(err instanceof Error ? err.message : String(err)).slice(0, 100)}`);
+        console.log(`[discover]   act() failed: ${(err instanceof Error ? err.message : String(err)).slice(0, 100)}`);
         continue;
       }
       await new Promise((r) => setTimeout(r, 3000));
@@ -138,11 +138,11 @@ export async function discoverPortal(
       try {
         verification = await browser.extract(VerifySchema, VERIFY_INSTRUCTIONS[section]);
       } catch (err: unknown) {
-        console.log(`   extract() failed: ${(err instanceof Error ? err.message : String(err)).slice(0, 100)}`);
+        console.log(`[discover]   extract() failed: ${(err instanceof Error ? err.message : String(err)).slice(0, 100)}`);
         continue;
       }
 
-      console.log(`   Verified: ${verification.isCorrectPage} — ${verification.description.slice(0, 100)}`);
+      console.log(`[discover]   Verified: ${verification.isCorrectPage} — ${verification.description.slice(0, 100)}`);
 
       if (verification.isCorrectPage) {
         emit({ type: 'status-message', phase: 'navigate', message: `Mapping ${section}...` });
@@ -153,7 +153,7 @@ export async function discoverPortal(
           listInstruction: buildListInstruction(section),
           itemInstruction: buildItemInstruction(section),
         };
-        console.log(`   Found ${section} at: ${currentUrl}`);
+        console.log(`[discover]   Found ${section} at: ${currentUrl}`);
         found = true;
         const ss = await browser.screenshot();
         fs.writeFileSync(path.join(discoverDir, `${section}.png`), Buffer.from(ss, "base64"));
@@ -162,7 +162,7 @@ export async function discoverPortal(
     }
 
     if (!found) {
-      console.log(`   Could not find "${section}" after ${instructions.length} attempt(s).`);
+      console.log(`[discover]   Could not find "${section}" after ${instructions.length} attempt(s).`);
       try {
         const ss = await browser.screenshot();
         fs.writeFileSync(path.join(discoverDir, `${section}-notfound.png`), Buffer.from(ss, "base64"));
@@ -178,12 +178,12 @@ export async function discoverPortal(
 
   saveNavMap(navMap, providerId);
   console.log();
-  console.log(`Discovery complete. Found ${Object.keys(sections).length}/4 sections:`);
+  console.log(`[discover] Complete. Found ${Object.keys(sections).length}/4 sections:`);
   for (const [key, sec] of Object.entries(sections)) {
-    console.log(`   ${key}: ${sec.steps.length} step(s) → ${sec.url ?? "no URL"}`);
+    console.log(`[discover]   ${key}: ${sec.steps.length} step(s) → ${sec.url ?? "no URL"}`);
   }
   const missing = allSections.filter((k) => !sections[k]);
-  if (missing.length > 0) console.log(`   Missing: ${missing.join(", ")}`);
+  if (missing.length > 0) console.log(`[discover]   Missing: ${missing.join(", ")}`);
 
   return navMap;
 }

@@ -71,12 +71,12 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
   const existingPdfs = readDirSafe(labsDir).filter((f) => f.endsWith(".pdf"));
   if (incremental && existingPdfs.length > 0 && process.env.FORCE_LABS !== "1") {
     console.log(
-      `Step 6: Labs already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_LABS=1 to re-run).`,
+      `[extract] Labs already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_LABS=1 to re-run).`,
     );
     return 0;
   }
 
-  console.log("Step 6: Navigating to lab/test results...");
+  console.log("[extract] Navigating to lab/test results...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
@@ -86,7 +86,7 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
     "Return each one as a separate result.";
   const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct }, portalUrl);
   if (navigationFailed) {
-    console.log("   Labs: navigation failed — skipping section.");
+    console.log("[extract] Labs: navigation failed — skipping section.");
     return 0;
   }
   await new Promise((r) => setTimeout(r, 3000));
@@ -96,13 +96,13 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
   const panelLinks = await browser.observe(
     (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
-  console.log(`   Found ${panelLinks.length} panel link(s).`);
+  console.log(`[extract] Found ${panelLinks.length} panel link(s).`);
   if (panelLinks.length > 0) {
     emit({ type: 'status-message', phase: 'extract', message: `Found ${panelLinks.length} lab results to fetch...` });
   }
 
   if (panelLinks.length === 0) {
-    console.log("   No panels found — saving screenshot.");
+    console.log("[extract] No panels found — saving screenshot.");
     const ss = await browser.screenshot();
     fs.writeFileSync(path.join(labsDir, "labs-list.png"), Buffer.from(ss, "base64"));
     return 0;
@@ -117,16 +117,16 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
     const link = panelLinks[i];
     const prefix = String(i + 1).padStart(3, "0") + "_";
     if (incremental && savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
-      console.log(`   Doc ${i + 1}/${maxPanels}: already saved — skipping`);
+      console.log(`[extract] Doc ${i + 1}/${maxPanels}: already saved — skipping`);
       continue;
     }
     if (shouldSkipIncremental(link.description, cutoff ?? null)) {
-      console.log(`   Doc ${i + 1}/${maxPanels}: before cutoff — skipping (${link.description})`);
+      console.log(`[extract] Doc ${i + 1}/${maxPanels}: before cutoff — skipping (${link.description})`);
       continue;
     }
 
     emit({ type: 'status-message', phase: 'extract', message: `Downloading lab result ${i + 1} of ${maxPanels}...` });
-    console.log(`   Doc ${i + 1}/${maxPanels}: ${link.description}`);
+    console.log(`[extract] Doc ${i + 1}/${maxPanels}: ${link.description}`);
     try {
       await browser.act(`Click the element: ${link.description}`);
       await new Promise((r) => setTimeout(r, 1000));
@@ -149,9 +149,9 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
         fs.writeFileSync(path.join(labsDir, filename), pdfBuf);
         extracted++;
       }
-      console.log(`      → saved ${filename}`);
+      console.log(`[extract]   → saved ${filename}`);
     } catch (err: unknown) {
-      console.log(`      → error: ${err instanceof Error ? err.message : String(err)}`);
+      console.log(`[extract]   → error: ${err instanceof Error ? err.message : String(err)}`);
       try {
         const ss = await browser.screenshot();
         fs.writeFileSync(

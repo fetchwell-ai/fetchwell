@@ -49,7 +49,7 @@ export function loadSavedSession(providerId?: string, basePath?: string): Serial
     const session = result.data;
     const ageMs = Date.now() - new Date(session.savedAt).getTime();
     if (ageMs > 12 * 60 * 60 * 1000) {
-      console.log("   Saved session expired (>12h). Will log in fresh.");
+      console.log("[session] Saved session expired (>12h). Will log in fresh.");
       fs.unlinkSync(filePath);
       return null;
     }

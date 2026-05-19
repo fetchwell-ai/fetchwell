@@ -67,7 +67,7 @@ export async function extractMessages(ctx: ExtractionContext): Promise<number> {
     readDirSafe(msgsDir).forEach((f) => fs.unlinkSync(path.join(msgsDir, f)));
   }
 
-  console.log("Step 9: Navigating to messages...");
+  console.log("[extract] Navigating to messages...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Click the Messages or Inbox link in the navigation menu. ' +
@@ -76,7 +76,7 @@ export async function extractMessages(ctx: ExtractionContext): Promise<number> {
     "Each entry is a row with a subject line, sender, and date. Return each one separately.";
   const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct }, portalUrl);
   if (navigationFailed) {
-    console.log("   Messages: navigation failed — skipping section.");
+    console.log("[extract] Messages: navigation failed — skipping section.");
     return 0;
   }
   await new Promise((r) => setTimeout(r, 3000));
@@ -86,13 +86,13 @@ export async function extractMessages(ctx: ExtractionContext): Promise<number> {
   const threadLinks = await browser.observe(
     (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
-  console.log(`   Found ${threadLinks.length} message thread(s).`);
+  console.log(`[extract] Found ${threadLinks.length} message thread(s).`);
   if (threadLinks.length > 0) {
     emit({ type: 'status-message', phase: 'extract', message: `Found ${threadLinks.length} messages to fetch...` });
   }
 
   if (threadLinks.length === 0) {
-    console.log("   No messages found — saving screenshot.");
+    console.log("[extract] No messages found — saving screenshot.");
     const ss = await browser.screenshot();
     fs.writeFileSync(path.join(msgsDir, "inbox.png"), Buffer.from(ss, "base64"));
     return 0;
@@ -107,23 +107,23 @@ export async function extractMessages(ctx: ExtractionContext): Promise<number> {
     const link = threadLinks[i];
     const prefix = String(i + 1).padStart(3, "0") + "_";
     if (incremental && savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
-      console.log(`   Thread ${i + 1}/${maxThreads}: already saved — skipping`);
+      console.log(`[extract]   Thread ${i + 1}/${maxThreads}: already saved — skipping`);
       continue;
     }
     if (shouldSkipIncremental(link.description, cutoff ?? null)) {
-      console.log(`   Thread ${i + 1}/${maxThreads}: before cutoff — skipping (${link.description})`);
+      console.log(`[extract]   Thread ${i + 1}/${maxThreads}: before cutoff — skipping (${link.description})`);
       continue;
     }
 
     emit({ type: 'status-message', phase: 'extract', message: `Downloading message ${i + 1} of ${maxThreads}...` });
-    console.log(`   Thread ${i + 1}/${maxThreads}: ${link.description}`);
+    console.log(`[extract]   Thread ${i + 1}/${maxThreads}: ${link.description}`);
     try {
       const urlBefore = await browser.url();
       await browser.act(`Click the element: ${link.description}`);
       await new Promise((r) => setTimeout(r, 1000));
       // If act() silently failed (shadow DOM element), fall back to direct selector click
       if ((await browser.url()) === urlBefore && browser.clickSelector && link.selector) {
-        console.log(`      (act() didn't navigate — trying direct selector click)`);
+        console.log(`[extract]   (act() didn't navigate — trying direct selector click)`);
         await browser.clickSelector(link.selector);
         await new Promise((r) => setTimeout(r, 1000));
       }
@@ -138,9 +138,9 @@ export async function extractMessages(ctx: ExtractionContext): Promise<number> {
         fs.writeFileSync(path.join(msgsDir, filename), pdfBuf);
         extracted++;
       }
-      console.log(`      → saved ${filename}`);
+      console.log(`[extract]   Saved ${filename}`);
     } catch (err: unknown) {
-      console.log(`      → error: ${err instanceof Error ? err.message : String(err)}`);
+      console.log(`[extract]   Error: ${err instanceof Error ? err.message : String(err)}`);
       try {
         const ss = await browser.screenshot();
         fs.writeFileSync(path.join(msgsDir, `thread-${i + 1}-error.png`), Buffer.from(ss, "base64"));
@@ -150,7 +150,7 @@ export async function extractMessages(ctx: ExtractionContext): Promise<number> {
     await new Promise((r) => setTimeout(r, 1500));
   }
 
-  console.log(`   Messages saved to ${msgsDir}`);
+  console.log(`[extract] Messages saved to ${msgsDir}`);
   const mergedFilename = providerId ? `messages-${providerId}.pdf` : "messages.pdf";
   await mergePdfs(msgsDir, path.join(baseDir, mergedFilename), "threads");
   return extracted;
