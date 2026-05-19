@@ -15,6 +15,7 @@ import ProgressPanel from '../components/ProgressPanel';
 import TwoFactorModal from '../components/TwoFactorModal';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { SkeletonBar } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { strings } from '../strings';
 
@@ -50,28 +51,6 @@ function formatDate(iso: string | null): string {
 }
 
 // -- Skeleton for the portal list loading state --
-
-function SkeletonBar({
-  width,
-  height,
-  rounded = 'rounded-md',
-}: {
-  width: number | string;
-  height: number;
-  rounded?: string;
-}) {
-  return (
-    <div
-      className={`bg-[var(--color-fw-bg-deep)] animate-pulse ${rounded}`}
-      style={{
-        width: typeof width === 'number' ? `${width}px` : width,
-        height,
-        animationDuration: '1.4s',
-        animationTimingFunction: 'ease-in-out',
-      }}
-    />
-  );
-}
 
 function PortalCardSkeleton() {
   return (
