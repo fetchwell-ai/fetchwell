@@ -164,4 +164,86 @@ describe('ConfigManager', () => {
       expect(manager2.getSettings().showBrowser).toBe(true);
     });
   });
+
+  describe('load with Zod validation', () => {
+    const configPath = () => path.join(tmpDir, 'config.json');
+
+    it('falls back to DEFAULT_CONFIG when config.json contains non-JSON text', () => {
+      fs.writeFileSync(configPath(), 'not valid json!!!', 'utf-8');
+      const m = new ConfigManager(tmpDir);
+      expect(m.getPortals()).toHaveLength(0);
+      expect(m.getSettings().showBrowser).toBe(false);
+      expect(m.getSettings().incrementalExtraction).toBe(true);
+    });
+
+    it('falls back to DEFAULT_CONFIG when config.json has invalid field types', () => {
+      fs.writeFileSync(
+        configPath(),
+        JSON.stringify({ showBrowser: 'yes', incrementalExtraction: 42, portals: 'none' }),
+        'utf-8',
+      );
+      const m = new ConfigManager(tmpDir);
+      expect(m.getSettings().showBrowser).toBe(false);
+      expect(m.getSettings().incrementalExtraction).toBe(true);
+      expect(m.getPortals()).toHaveLength(0);
+    });
+
+    it('falls back to DEFAULT_CONFIG when config.json is an empty object', () => {
+      // An empty object is valid for the partial schema — all fields use defaults.
+      fs.writeFileSync(configPath(), JSON.stringify({}), 'utf-8');
+      const m = new ConfigManager(tmpDir);
+      expect(m.getSettings().showBrowser).toBe(false);
+      expect(m.getPortals()).toHaveLength(0);
+    });
+
+    it('loads valid portals from config.json', () => {
+      const validConfig = {
+        showBrowser: true,
+        incrementalExtraction: false,
+        downloadFolder: '/tmp/records',
+        theme: 'dark',
+        apiKeySource: 'custom',
+        portals: [
+          {
+            id: 'my-clinic',
+            name: 'My Clinic',
+            url: 'https://myclinic.example.com',
+            loginForm: 'two-step',
+            twoFactor: 'none',
+            hasCredentials: true,
+            discoveredAt: null,
+            lastExtractedAt: null,
+          },
+        ],
+      };
+      fs.writeFileSync(configPath(), JSON.stringify(validConfig), 'utf-8');
+      const m = new ConfigManager(tmpDir);
+      expect(m.getSettings().showBrowser).toBe(true);
+      expect(m.getSettings().incrementalExtraction).toBe(false);
+      expect(m.getSettings().theme).toBe('dark');
+      expect(m.getPortals()).toHaveLength(1);
+      expect(m.getPortal('my-clinic')?.name).toBe('My Clinic');
+    });
+
+    it('falls back to DEFAULT_CONFIG when a portal entry has an invalid twoFactor value', () => {
+      const corruptedConfig = {
+        portals: [
+          {
+            id: 'bad-portal',
+            name: 'Bad Portal',
+            url: 'https://bad.example.com',
+            loginForm: 'two-step',
+            twoFactor: 'carrier-pigeon', // invalid
+            hasCredentials: false,
+            discoveredAt: null,
+            lastExtractedAt: null,
+          },
+        ],
+      };
+      fs.writeFileSync(configPath(), JSON.stringify(corruptedConfig), 'utf-8');
+      const m = new ConfigManager(tmpDir);
+      // Corrupted portals array causes safeParse to fail → default config
+      expect(m.getPortals()).toHaveLength(0);
+    });
+  });
 });

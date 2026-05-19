@@ -1,6 +1,25 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { z } from "zod";
 import { type SerializedSession } from "./browser/interface.js";
+
+/** Zod schema for validating session.json on disk. */
+const CookieSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+  domain: z.string(),
+  path: z.string(),
+  expires: z.number(),
+  httpOnly: z.boolean(),
+  secure: z.boolean(),
+  sameSite: z.string().optional(),
+});
+
+const SerializedSessionSchema = z.object({
+  cookies: z.array(CookieSchema),
+  savedAt: z.string(),
+  homeUrl: z.string().optional(),
+});
 
 const DEFAULT_OUTPUT_BASE = path.join(import.meta.dirname, "..", "output");
 
@@ -22,11 +41,12 @@ function sessionPath(providerId?: string, basePath?: string): string {
 export function loadSavedSession(providerId?: string, basePath?: string): SerializedSession | null {
   const filePath = sessionPath(providerId, basePath);
   try {
-    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
-    if (!data || typeof data !== 'object' || !('savedAt' in data) || !('cookies' in data)) {
+    const json = JSON.parse(fs.readFileSync(filePath, "utf8"));
+    const result = SerializedSessionSchema.safeParse(json);
+    if (!result.success) {
       return null;
     }
-    const session = data as SerializedSession;
+    const session = result.data;
     const ageMs = Date.now() - new Date(session.savedAt).getTime();
     if (ageMs > 12 * 60 * 60 * 1000) {
       console.log("   Saved session expired (>12h). Will log in fresh.");

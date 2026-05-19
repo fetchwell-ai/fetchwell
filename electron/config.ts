@@ -43,6 +43,31 @@ export interface AppConfig {
   portals: PortalEntry[];
 }
 
+/** Zod schema for validating config.json on disk. */
+const PortalEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+  loginForm: z.enum(['two-step', 'single-page', 'auto']),
+  twoFactor: z.enum(['none', 'email', 'manual', 'ui']),
+  hasCredentials: z.boolean(),
+  discoveredAt: z.string().nullable(),
+  lastExtractedAt: z.string().nullable(),
+  labCount: z.number().optional(),
+  visitCount: z.number().optional(),
+  medicationCount: z.number().optional(),
+  messageCount: z.number().optional(),
+});
+
+const AppConfigSchema = z.object({
+  downloadFolder: z.string(),
+  showBrowser: z.boolean(),
+  incrementalExtraction: z.boolean(),
+  theme: z.enum(['system', 'light', 'dark']),
+  apiKeySource: z.enum(['bundled', 'custom']),
+  portals: z.array(PortalEntrySchema),
+}).partial();
+
 const DEFAULT_CONFIG: AppConfig = {
   downloadFolder: path.join(os.homedir(), 'Documents', 'HealthRecords'),
   showBrowser: false,
@@ -72,11 +97,15 @@ export class ConfigManager {
     try {
       if (fs.existsSync(this.configPath)) {
         const raw = fs.readFileSync(this.configPath, 'utf-8');
-        const parsed = JSON.parse(raw) as Partial<AppConfig>;
-        return { ...DEFAULT_CONFIG, ...parsed, portals: parsed.portals ?? [] };
+        const json = JSON.parse(raw);
+        const result = AppConfigSchema.safeParse(json);
+        if (result.success) {
+          return { ...DEFAULT_CONFIG, ...result.data, portals: result.data.portals ?? [] };
+        }
+        // Corrupted config — fall through to default
       }
     } catch {
-      // Fall through to default
+      // Unreadable or unparseable — fall through to default
     }
     return { ...DEFAULT_CONFIG, portals: [] };
   }
