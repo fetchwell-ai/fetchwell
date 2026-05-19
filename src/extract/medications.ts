@@ -1,12 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { type BrowserProvider } from "../browser/interface.js";
 import { ensureLoggedIn } from "../auth.js";
 import { logDepth, navigateToSection } from "./helpers.js";
+import { type ExtractionContext } from "./context.js";
+import { type BrowserProvider } from "../browser/interface.js";
 import { type StructuredProgressEvent } from "../progress-events.js";
-
-/** Optional callback for emitting structured progress events. */
-type ProgressEmitter = (event: StructuredProgressEvent) => void;
 
 /**
  * Probe mode: navigate to medications page, log URL, take a screenshot.
@@ -34,7 +32,8 @@ export async function probeMedications(browser: BrowserProvider, portalUrl: stri
  * Returns 1 if the medications PDF was written, 0 otherwise.
  * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractMedications(browser: BrowserProvider, portalUrl: string, credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, incremental = false, authenticatedSelectors?: string[], emitProgress?: ProgressEmitter): Promise<number> {
+export async function extractMedications(ctx: ExtractionContext): Promise<number> {
+  const { browser, portalUrl, credentials, outputDir, providerId, incremental = false, authenticatedSelectors, emitProgress } = ctx;
   const emit = (event: StructuredProgressEvent) => {
     if (emitProgress) emitProgress(event);
   };

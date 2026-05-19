@@ -331,23 +331,23 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     }
 
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    const labsCount = await extractLabsDocs(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, labsCutoff, incremental, provider.authenticatedSelectors);
+    const labsCount = await extractLabsDocs({ browser, portalUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: labsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
     // Only record the timestamp when items were actually extracted; a 0-item run should not
     // advance the cutoff, or the section would be skipped as "already extracted" on the next run.
     if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
     console.log();
 
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    const visitsCount = await extractVisits(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, visitsCutoff, incremental, provider.authenticatedSelectors);
+    const visitsCount = await extractVisits({ browser, portalUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: visitsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
     if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
     console.log();
 
-    const medsCount = await extractMedications(browser, portalUrl, providerCredentials, outputDir, provider.id, incremental, provider.authenticatedSelectors);
+    const medsCount = await extractMedications({ browser, portalUrl, credentials: providerCredentials, outputDir, providerId: provider.id, incremental, authenticatedSelectors: provider.authenticatedSelectors });
     if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
     console.log();
 
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    const msgsCount = await extractMessages(browser, portalUrl, navNotes, providerCredentials, outputDir, provider.id, msgsCutoff, incremental, provider.authenticatedSelectors);
+    const msgsCount = await extractMessages({ browser, portalUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: msgsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
     if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
     console.log();
 

@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { type BrowserProvider } from "../browser/interface.js";
 import { ensureLoggedIn } from "../auth.js";
 import {
   readDirSafe,
@@ -11,10 +10,9 @@ import {
   logDepth,
   shouldSkipIncremental,
 } from "./helpers.js";
+import { type ExtractionContext } from "./context.js";
+import { type BrowserProvider } from "../browser/interface.js";
 import { type StructuredProgressEvent } from "../progress-events.js";
-
-/** Optional callback for emitting structured progress events. */
-type ProgressEmitter = (event: StructuredProgressEvent) => void;
 
 /**
  * Probe mode: navigate to visits list, observe items, log count + titles,
@@ -57,7 +55,8 @@ export async function probeVisits(browser: BrowserProvider, portalUrl: string, p
  * Returns the number of PDFs written in this run (0 if none extracted).
  * The caller should only record a timestamp in last-extracted.json when the count is > 0.
  */
-export async function extractVisits(browser: BrowserProvider, portalUrl: string, navNotes = "", credentials?: { username?: string; password?: string }, outputDir?: string, providerId?: string, cutoff?: Date | null, incremental = false, authenticatedSelectors?: string[], emitProgress?: ProgressEmitter): Promise<number> {
+export async function extractVisits(ctx: ExtractionContext): Promise<number> {
+  const { browser, portalUrl, navNotes = "", credentials, outputDir, providerId, cutoff, incremental = false, authenticatedSelectors, emitProgress } = ctx;
   const emit = (event: StructuredProgressEvent) => {
     if (emitProgress) emitProgress(event);
   };
