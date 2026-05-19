@@ -27,7 +27,7 @@ export function readNavNotes(outputDir?: string): string {
   const navNotesPath = path.join(dir, "nav-notes.md");
   try {
     const contents = fs.readFileSync(navNotesPath, "utf8");
-    console.log(`   Nav notes loaded from ${navNotesPath}`);
+    console.log(`[config] Nav notes loaded from ${navNotesPath}`);
     return contents;
   } catch {
     return "";
@@ -111,7 +111,7 @@ export function makeVisitFilename(
 export async function mergePdfs(pdfDir: string, outputPath: string, label: string): Promise<void> {
   const pdfFiles = readDirSafe(pdfDir).filter((f) => f.endsWith(".pdf")).sort();
   if (pdfFiles.length === 0) return;
-  console.log(`   Merging ${pdfFiles.length} PDFs → ${path.basename(outputPath)}...`);
+  console.log(`[extract] Merging ${pdfFiles.length} PDFs → ${path.basename(outputPath)}...`);
   const merged = await PDFDocument.create();
   for (const pdfFile of pdfFiles) {
     try {
@@ -120,12 +120,12 @@ export async function mergePdfs(pdfDir: string, outputPath: string, label: strin
       const pages = await merged.copyPages(doc, doc.getPageIndices());
       pages.forEach((page) => merged.addPage(page));
     } catch (err: unknown) {
-      console.log(`      → skipping ${pdfFile}: ${err instanceof Error ? err.message : String(err)}`);
+      console.log(`[extract]   Skipping ${pdfFile}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
   const mergedBytes = await merged.save();
   fs.writeFileSync(outputPath, mergedBytes);
-  console.log(`   [ok] ${path.basename(outputPath)} (${pdfFiles.length} ${label}, ${(mergedBytes.length / 1024).toFixed(0)} KB)`);
+  console.log(`[extract] ${path.basename(outputPath)} (${pdfFiles.length} ${label}, ${(mergedBytes.length / 1024).toFixed(0)} KB)`);
 }
 
 export async function logDepth(browser: BrowserProvider, section: string): Promise<void> {
@@ -141,7 +141,7 @@ export async function navigateWithRetry(browser: BrowserProvider, url: string): 
     const errMsg = err instanceof Error ? err.message : String(err);
     const isNetworkError = /ERR_TIMED_OUT|ERR_CONNECTION|net::ERR/i.test(errMsg);
     if (!isNetworkError) throw err;
-    console.log(`   Navigation failed (${errMsg.slice(0, 60)}...) — retrying in 5s`);
+    console.log(`[nav] Navigation failed (${errMsg.slice(0, 60)}...) — retrying in 5s`);
     await new Promise((r) => setTimeout(r, 5000));
     await browser.navigate(url);
   }
@@ -209,10 +209,10 @@ async function verifySectionPage(
 ): Promise<boolean> {
   try {
     const result = await browser.extract(VerifySchema, VERIFY_INSTRUCTIONS[section]);
-    console.log(`   Page verification: ${result.isCorrectPage} — ${result.description.slice(0, 100)}`);
+    console.log(`[nav] Page verification: ${result.isCorrectPage} — ${result.description.slice(0, 100)}`);
     return result.isCorrectPage;
   } catch (err: unknown) {
-    console.log(`   Page verification failed (extract error): ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+    console.log(`[nav] Page verification failed (extract error): ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
     return false;
   }
 }
@@ -253,24 +253,24 @@ export async function navigateToSection(
 
   // ── Tier 1: Try cached URL ──────────────────────────────────────────────
   if (entry?.url) {
-    console.log(`   [nav] ${section}: trying cached URL ${entry.url}`);
+    console.log(`[nav] ${section}: trying cached URL ${entry.url}`);
     try {
       await browser.navigate(entry.url);
       await new Promise((r) => setTimeout(r, 2000));
       const isCorrect = await verifySectionPage(browser, section);
       if (isCorrect) {
-        console.log(`   [nav] ${section}: cached URL valid`);
+        console.log(`[nav] ${section}: cached URL valid`);
         return { listInstruction: entry.listInstruction };
       }
-      console.log(`   [nav] ${section}: cached URL stale, falling back to nav-map steps`);
+      console.log(`[nav] ${section}: cached URL stale, falling back to nav-map steps`);
     } catch (err: unknown) {
-      console.log(`   [nav] ${section}: cached URL navigation error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+      console.log(`[nav] ${section}: cached URL navigation error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
     }
   }
 
   // ── Tier 2: Replay nav-map steps ────────────────────────────────────────
   if (entry && entry.steps.length > 0) {
-    console.log(`   [nav] ${section}: replaying ${entry.steps.length} nav-map step(s)`);
+    console.log(`[nav] ${section}: replaying ${entry.steps.length} nav-map step(s)`);
     try {
       // Navigate home before replaying steps so we start from a known state
       if (homeUrl) {
@@ -285,7 +285,7 @@ export async function navigateToSection(
       if (isCorrect) {
         // Steps worked — update the URL in the nav-map so the fast path works next time
         const newUrl = await browser.url();
-        console.log(`   [nav] ${section}: steps succeeded, updating nav-map URL to ${newUrl}`);
+        console.log(`[nav] ${section}: steps succeeded, updating nav-map URL to ${newUrl}`);
         if (providerId && navMap) {
           const updatedNavMap = {
             ...navMap,
@@ -298,19 +298,19 @@ export async function navigateToSection(
         }
         return { listInstruction: entry.listInstruction };
       }
-      console.log(`   [nav] ${section}: steps did not reach the correct page, trying agentic search`);
+      console.log(`[nav] ${section}: steps did not reach the correct page, trying agentic search`);
     } catch (err: unknown) {
-      console.log(`   [nav] ${section}: steps replay error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+      console.log(`[nav] ${section}: steps replay error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
     }
   } else if (!entry) {
     // No nav-map entry at all — fall through to agentic search or hardcoded fallback
-    console.log(`   [nav] ${section}: no nav-map entry, trying agentic search`);
+    console.log(`[nav] ${section}: no nav-map entry, trying agentic search`);
   }
 
   // ── Tier 3: Agentic search from home ────────────────────────────────────
   const searchHomeUrl = homeUrl;
   if (searchHomeUrl) {
-    console.log(`   [nav] ${section}: starting agentic search from ${searchHomeUrl}`);
+    console.log(`[nav] ${section}: starting agentic search from ${searchHomeUrl}`);
     const instructions = SECTION_INSTRUCTIONS[section];
     for (let attempt = 0; attempt < instructions.length; attempt++) {
       const actInstruction = instructions[attempt];
@@ -322,7 +322,7 @@ export async function navigateToSection(
         const isCorrect = await verifySectionPage(browser, section);
         if (isCorrect) {
           const newUrl = await browser.url();
-          console.log(`   [nav] ${section}: agentic search found section at ${newUrl}`);
+          console.log(`[nav] ${section}: agentic search found section at ${newUrl}`);
           // Update nav-map with new URL and instruction
           if (providerId && navMap) {
             const existingEntry = navMap.sections?.[section];
@@ -341,29 +341,29 @@ export async function navigateToSection(
             };
             try {
               saveNavMap(updatedNavMap, providerId, basePath);
-              console.log(`   [nav] ${section}: nav-map updated with new URL`);
+              console.log(`[nav] ${section}: nav-map updated with new URL`);
             } catch { /* non-fatal */ }
           }
           return { listInstruction: entry?.listInstruction };
         }
       } catch (err: unknown) {
-        console.log(`   [nav] ${section}: agentic attempt ${attempt + 1} error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+        console.log(`[nav] ${section}: agentic attempt ${attempt + 1} error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
       }
     }
-    console.log(`   [nav] ${section}: agentic search exhausted all attempts`);
+    console.log(`[nav] ${section}: agentic search exhausted all attempts`);
   } else {
     // No homeUrl available — try the hardcoded fallback act() as a last resort
-    console.log(`   [nav] ${section}: no homeUrl for agentic search, trying hardcoded fallback`);
+    console.log(`[nav] ${section}: no homeUrl for agentic search, trying hardcoded fallback`);
     try {
       await browser.act(fallback.act);
       return {};
     } catch (err: unknown) {
-      console.log(`   [nav] ${section}: hardcoded fallback error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
+      console.log(`[nav] ${section}: hardcoded fallback error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);
     }
   }
 
   // ── All tiers failed ────────────────────────────────────────────────────
-  console.error(`   [nav] ERROR: Could not navigate to ${section} — all strategies exhausted. Skipping section.`);
+  console.error(`[nav] ERROR: Could not navigate to ${section} — all strategies exhausted. Skipping section.`);
   return { navigationFailed: true };
 }
 

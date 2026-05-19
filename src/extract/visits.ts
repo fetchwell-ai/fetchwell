@@ -140,9 +140,9 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
         fs.writeFileSync(path.join(visitsDir, filename), pdfBuf);
         extracted++;
       }
-      console.log(`      → saved ${filename}`);
+      console.log(`[extract]   Saved ${filename}`);
     } catch (err: unknown) {
-      console.log(`      → error: ${err instanceof Error ? err.message : String(err)}`);
+      console.log(`[extract]   Error: ${err instanceof Error ? err.message : String(err)}`);
       try {
         const ss = await browser.screenshot();
         fs.writeFileSync(path.join(visitsDir, `visit-${i + 1}-error.png`), Buffer.from(ss, "base64"));
@@ -152,7 +152,7 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
     await new Promise((r) => setTimeout(r, 1500));
   }
 
-  console.log(`   Visits saved to ${visitsDir}`);
+  console.log(`[extract] Visits saved to ${visitsDir}`);
   const mergedFilename = providerId ? `visits-${providerId}.pdf` : "visits.pdf";
   await mergePdfs(visitsDir, path.join(baseDir, mergedFilename), "visits");
   return extracted;

@@ -118,7 +118,7 @@ const ui: TwoFactorHandler = async (browser) => {
   const twoFaObservations = await detect2FA(browser);
 
   if (twoFaObservations.length > 0) {
-    console.log("[2fa:ui] 2FA detected");
+    console.log("[2fa] 2FA detected");
 
     if (!otpCallback) {
       throw new Error("No OTP callback registered for ui 2FA strategy");
@@ -169,10 +169,10 @@ const ui: TwoFactorHandler = async (browser) => {
         );
       }
     } catch (err) {
-      console.log(`[2fa:ui] Delivery selection failed: ${err instanceof Error ? err.message : err}`);
+      console.log(`[2fa] Delivery selection failed: ${err instanceof Error ? err.message : err}`);
     }
 
-    console.log(`[2fa:ui] Requesting code from user (hint: ${deliveryHint ?? 'none'})`);
+    console.log(`[2fa] Requesting code from user (hint: ${deliveryHint ?? 'none'})`);
     const code = await otpCallback(deliveryHint);
     if (code === null) {
       throw new Error("2FA code not provided — user may have timed out or cancelled");
@@ -180,7 +180,7 @@ const ui: TwoFactorHandler = async (browser) => {
 
     await enterCodeInBrowser(browser, code);
     await waitForPostLoginNavigation(browser);
-    console.log("[2fa:ui] Code entered, post-login complete");
+    console.log("[2fa] Code entered, post-login complete");
   } else {
     await verifyLoginSuccess(browser);
   }

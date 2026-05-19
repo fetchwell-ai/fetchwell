@@ -87,13 +87,13 @@ async function run() {
 
   const savedSession = loadSavedSession(provider.id);
   if (savedSession) {
-    console.log(`   Found saved session from ${savedSession.savedAt} — will skip login.`);
+    console.log(`[session] Found saved session from ${savedSession.savedAt} — will skip login.`);
     console.log();
   }
 
-  console.log("Step 1: Creating browser session...");
+  console.log("[discover] Creating browser session...");
   const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
-  console.log("Browser session created!");
+  console.log("[discover] Browser session created.");
 
   const debugUrl = await browser.getDebugUrl();
   if (debugUrl) {
@@ -103,16 +103,16 @@ async function run() {
     console.log(`|  ${debugUrl}`);
     console.log("+---------------------------------------------------------+");
   } else if (process.env.HEADLESS !== 'true') {
-    console.log("   A browser window should have opened on your screen.");
+    console.log("[discover] A browser window should have opened on your screen.");
   }
   console.log();
 
   let failed = false;
 
   try {
-    console.log(`Step 2: Navigating to ${portalUrl}...`);
+    console.log(`[discover] Navigating to ${portalUrl}...`);
     await browser.navigate(portalUrl);
-    console.log("Page loaded.");
+    console.log("[discover] Page loaded.");
     console.log();
 
     // Step 3: Login or restore session
@@ -125,7 +125,7 @@ async function run() {
     console.log();
 
     // Step 4: Run discovery
-    console.log("Step 4: Discovering portal structure...");
+    console.log("[discover] Discovering portal structure...");
     console.log();
     const navMap = await discoverPortal(browser, provider.id, homeUrl);
 
@@ -152,9 +152,9 @@ async function run() {
     console.error("Press Enter to close it.");
     await prompt("");
   } finally {
-    console.log("Cleaning up session...");
+    console.log("[discover] Cleaning up session...");
     await browser.close();
-    console.log("Done.");
+    console.log("[discover] Done.");
     if (failed) process.exit(1);
   }
 }
