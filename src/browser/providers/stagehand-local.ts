@@ -49,29 +49,9 @@ export class StagehandLocalProvider implements BrowserProvider {
     const llmClient = new AISdkClient({ model });
 
     const execPath = this.headless ? chromium.executablePath() : undefined;
-    console.error(`[stagehand] headless=${this.headless} executablePath=${execPath ?? '(default)'}`);
-    console.error(`[stagehand] PLAYWRIGHT_BROWSERS_PATH=${process.env.PLAYWRIGHT_BROWSERS_PATH ?? '(unset)'}`);
-
-    // Pre-flight: test that Playwright can actually launch Chromium.
-    // Stagehand swallows the real Playwright error — this surfaces it.
-    try {
-      const os = await import("node:os");
-      const path = await import("node:path");
-      const fs = await import("node:fs");
-      const testDir = path.join(os.tmpdir(), `pw-preflight-${Date.now()}`);
-      fs.mkdirSync(testDir, { recursive: true });
-      const ctx = await chromium.launchPersistentContext(testDir, {
-        headless: this.headless,
-        ...(execPath ? { executablePath: execPath } : {}),
-      });
-      console.error(`[stagehand] preflight OK — Chromium launched`);
-      await ctx.close();
-      fs.rmSync(testDir, { recursive: true, force: true });
-    } catch (preflightErr: any) {
-      console.error(`[stagehand] preflight FAILED — Chromium cannot launch:`);
-      console.error(preflightErr.message);
-      throw preflightErr;
-    }
+    const sandboxArgs = process.env.FETCHWELL_PACKAGED === '1'
+      ? ['--no-sandbox', '--disable-gpu-sandbox']
+      : [];
 
     this.stagehand = new Stagehand({
       env: "LOCAL",
@@ -83,6 +63,7 @@ export class StagehandLocalProvider implements BrowserProvider {
         // Playwright uses a separate chromium_headless_shell binary which would
         // require bundling a second ~70MB browser in the DMG.
         ...(execPath ? { executablePath: execPath } : {}),
+        ...(sandboxArgs.length > 0 ? { args: sandboxArgs } : {}),
       },
       verbose: 1,
       disablePino: true,

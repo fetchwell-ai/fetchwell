@@ -18,7 +18,13 @@ export class PlaywrightLocalProvider implements BrowserProvider {
   }
 
   async init(): Promise<void> {
-    this.browser = await chromium.launch({ headless: this.headless });
+    const sandboxArgs = process.env.FETCHWELL_PACKAGED === '1'
+      ? ['--no-sandbox', '--disable-gpu-sandbox']
+      : [];
+    this.browser = await chromium.launch({
+      headless: this.headless,
+      ...(sandboxArgs.length > 0 ? { args: sandboxArgs } : {}),
+    });
     const context = await this.browser.newContext();
     this.page = await context.newPage();
   }

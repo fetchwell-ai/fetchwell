@@ -186,6 +186,7 @@ function runSubprocess(
       ANTHROPIC_API_KEY: config.apiKey,
       BROWSER_PROVIDER: 'stagehand-local',
       HEADLESS: config.showBrowser ? 'false' : 'true',
+      ...(app.isPackaged ? { FETCHWELL_PACKAGED: '1' } : {}),
     };
 
     const child = fork(runnerScript, [], {
