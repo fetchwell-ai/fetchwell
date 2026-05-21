@@ -7,8 +7,8 @@ export const strings = {
   // ── Brand ────────────────────────────────────────────────────────────────
   brand: {
     name: 'fetchwell',
-    version: 'v0.1.1',
-    buildVersion: 'fetchwell 0.1.1 \u00B7 build 2026.05.20',
+    version: `v${__APP_VERSION__}`,
+    buildVersion: `fetchwell ${__APP_VERSION__} \u00B7 build ${__BUILD_DATE__}`,
     badge: 'local-only',
     tagline: 'An app that uses an AI assistant to fetch your medical records from all your patient portals and store them locally on your computer.',
   },
