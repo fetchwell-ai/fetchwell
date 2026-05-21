@@ -173,7 +173,7 @@ function runSubprocess(
     let runnerScript: string;
     let execArgv: string[];
     if (app.isPackaged) {
-      runnerScript = path.join(__dirname, 'electron-runner.mjs');
+      runnerScript = path.join(__dirname, 'electron-runner.cjs');
       execArgv = [];
     } else {
       runnerScript = path.join(__dirname, '..', 'src', 'electron-runner.ts');
@@ -214,11 +214,20 @@ function runSubprocess(
       });
     }
 
-    // Forward stderr to main process stderr (for debugging)
+    // Capture stderr — forward to main stderr AND accumulate for error reporting
+    const stderrChunks: string[] = [];
     if (child.stderr) {
       child.stderr.setEncoding('utf8');
       child.stderr.on('data', (chunk: string) => {
         process.stderr.write(chunk);
+        stderrChunks.push(chunk);
+        // Also forward stderr lines to the renderer log so "Copy log" captures them
+        const lines = chunk.split('\n').filter((l: string) => l.trim());
+        for (const line of lines) {
+          if (!win.isDestroyed()) {
+            win.webContents.send(logChannel, `[stderr] ${line}`);
+          }
+        }
       });
     }
 
@@ -312,7 +321,9 @@ function runSubprocess(
       if (code === 0) {
         resolve(counts);
       } else {
-        reject(new Error(`Pipeline process exited with code ${code}`));
+        const stderr = stderrChunks.join('').trim();
+        const detail = stderr ? `\n${stderr.slice(-2000)}` : '';
+        reject(new Error(`Pipeline process exited with code ${code}${detail}`));
       }
     });
 

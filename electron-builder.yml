@@ -13,14 +13,17 @@ directories:
   output: release
   buildResources: build
 
-# Files to include in the app bundle
+# Files to include in the app bundle.
+# node_modules/** forces inclusion of ALL packages — electron-builder's
+# dependency walker is broken for pnpm and misses transitive deps.
 files:
   - dist-electron/**/*
   - dist-renderer/**/*
   - "!node_modules/**/{test,tests,__tests__}/**"
   - "!node_modules/**/*.{md,ts,map}"
 
-asar: true
+asar: false
+afterPack: ./scripts/after-pack.cjs
 
 # ── macOS ──────────────────────────────────────────────────────────────────────
 mac:
@@ -37,6 +40,7 @@ mac:
 
 dmg:
   title: "${productName} ${version}"
+  artifactName: "${productName}-arm64.dmg"
 
 # ── Auto-update via GitHub Releases ────────────────────────────────────────────
 publish:
