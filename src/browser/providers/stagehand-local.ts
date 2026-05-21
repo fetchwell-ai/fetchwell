@@ -53,15 +53,19 @@ export class StagehandLocalProvider implements BrowserProvider {
       ? ['--no-sandbox', '--disable-gpu-sandbox']
       : [];
 
+    // Stagehand defaults downloadsPath to process.cwd()/downloads.
+    // When launched from Finder, cwd is "/" which isn't writable → silent crash.
+    const os = await import("node:os");
+    const pathMod = await import("node:path");
+    const downloadsPath = pathMod.join(os.tmpdir(), "fetchwell-downloads");
+
     this.stagehand = new Stagehand({
       env: "LOCAL",
       llmClient,
       modelName: `anthropic/${modelId}`,
       localBrowserLaunchOptions: {
         headless: this.headless,
-        // Force the full Chromium binary even in headless mode. Without this,
-        // Playwright uses a separate chromium_headless_shell binary which would
-        // require bundling a second ~70MB browser in the DMG.
+        downloadsPath,
         ...(execPath ? { executablePath: execPath } : {}),
         ...(sandboxArgs.length > 0 ? { args: sandboxArgs } : {}),
       },
