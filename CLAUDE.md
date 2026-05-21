@@ -68,7 +68,7 @@ E2E tests launch the Electron app via Playwright and cover portal CRUD, settings
 - **UI strings config.** All user-facing text is in `src/renderer/strings.ts` for easy editing.
 - **Nav-map is a cache, not a contract.** Agentic discovery builds nav-map.json with cached URLs and act() instructions. Extraction uses a 3-tier fallback: cached URL → replay steps → fresh agentic search. Discovery is not a required user-facing step — extraction discovers on-the-fly if no nav-map exists.
 - **Session persistence.** Cookies in `output/<provider-id>/session.json` (12h TTL). Skips login + 2FA when valid.
-- **Electron ↔ Pipeline bridge.** Electron forks `src/electron-runner.ts` as a subprocess (ESM via tsx). IPC for progress events, 2FA relay, and error reporting. One operation per portal at a time.
+- **Electron ↔ Pipeline bridge.** Electron forks `src/electron-runner.ts` as a subprocess — via tsx in dev, or the pre-compiled `dist-electron/electron-runner.mjs` bundle when packaged. IPC for progress events, 2FA relay, and error reporting. One operation per portal at a time.
 - **Three TypeScript configs.** `tsconfig.json` (src/, ESM), `electron/tsconfig.json` (electron/, CJS), `src/renderer/tsconfig.json` (renderer/, Vite/bundler).
 - **CJS fix for Electron.** A `package.json` with `{"type":"commonjs"}` is generated in `dist-electron/` at build time (root `package.json` is `"type": "module"`).
 - **Dark mode.** System preference matching + manual Light/Dark/System toggle. Uses Tailwind `dark:` variant with class-based toggling via `nativeTheme`.
