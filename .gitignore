@@ -58,6 +58,9 @@ release/
 *.bak
 CertificateSigningRequest.certSigningRequest
 
+# Symlink to local Playwright browser cache (for electron-builder bundling)
+ms-playwright-cache
+
 # Personal / scratch
 scratch.md
 brainstorm.md

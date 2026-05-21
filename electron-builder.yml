@@ -51,7 +51,7 @@ publish:
 # At runtime, electron/main.ts sets PLAYWRIGHT_BROWSERS_PATH to
 # path.join(process.resourcesPath, 'ms-playwright') so Playwright finds it.
 extraResources:
-  - from: "${env.HOME}/Library/Caches/ms-playwright/chromium-1217"
+  - from: "ms-playwright-cache/chromium-1217"
     to: "ms-playwright/chromium-1217"
     filter:
       - "**/*"
