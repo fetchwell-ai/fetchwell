@@ -1,6 +1,6 @@
 {
   "name": "fetchwell",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "AI agent that extracts health records from patient portals",
   "author": "Chad Allen",
   "license": "SEE LICENSE IN LICENSE.md",
@@ -22,7 +22,7 @@
     "electron:dev": "pnpm run build:renderer && pnpm run build:electron && electron dist-electron/main.js",
     "predist": "pnpm run build:renderer && pnpm run build:electron && pnpm run build:runner",
     "dist": "electron-builder --mac",
-    "dist:release": "export $(grep -E '^APPLE_' .env | xargs) && electron-builder --mac",
+    "dist:release": "electron-builder --mac",
     "test:unit": "vitest run"
   },
   "dependencies": {
