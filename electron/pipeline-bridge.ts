@@ -20,7 +20,7 @@
 
 import { fork } from 'child_process';
 import * as path from 'path';
-import { BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { categorizeError } from './error-categorize';
 
 // ---------------------------------------------------------------------------
@@ -164,8 +164,21 @@ function runSubprocess(
       messageCount: 0,
     };
 
-    // Path to the runner script, resolved relative to this file
-    const runnerScript = path.join(__dirname, '..', 'src', 'electron-runner.ts');
+    // Resolve the runner script path and execution arguments based on whether
+    // the app is packaged (DMG) or running in dev mode.
+    //
+    // Packaged: use the pre-compiled ESM bundle (dist-electron/electron-runner.mjs)
+    //   — tsx and src/ are not included in the DMG.
+    // Dev: use tsx to run the TypeScript source directly.
+    let runnerScript: string;
+    let execArgv: string[];
+    if (app.isPackaged) {
+      runnerScript = path.join(__dirname, 'electron-runner.mjs');
+      execArgv = [];
+    } else {
+      runnerScript = path.join(__dirname, '..', 'src', 'electron-runner.ts');
+      execArgv = ['--import', 'tsx/esm'];
+    }
 
     // Environment for the child process — the env-bridge
     const childEnv: NodeJS.ProcessEnv = {
@@ -177,7 +190,7 @@ function runSubprocess(
 
     const child = fork(runnerScript, [], {
       execPath: process.execPath,
-      execArgv: ['--import', 'tsx/esm'],
+      execArgv,
       env: childEnv,
       stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
     });

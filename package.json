@@ -18,8 +18,9 @@
     "lint": "eslint src/",
     "build:renderer": "vite build",
     "build:electron": "tsc -p electron/tsconfig.json && echo '{\"type\":\"commonjs\"}' > dist-electron/package.json",
+    "build:runner": "node_modules/.bin/esbuild src/electron-runner.ts --bundle --platform=node --format=esm --target=node22 --packages=external --outfile=dist-electron/electron-runner.mjs",
     "electron:dev": "pnpm run build:renderer && pnpm run build:electron && electron dist-electron/main.js",
-    "predist": "pnpm run build:renderer && pnpm run build:electron",
+    "predist": "pnpm run build:renderer && pnpm run build:electron && pnpm run build:runner",
     "dist": "electron-builder --mac",
     "dist:release": "export $(grep -E '^APPLE_' .env | xargs) && electron-builder --mac",
     "test:unit": "vitest run"
