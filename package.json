@@ -1,6 +1,6 @@
 {
   "name": "fetchwell",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "AI agent that extracts health records from patient portals",
   "author": "Chad Allen",
   "license": "SEE LICENSE IN LICENSE.md",
