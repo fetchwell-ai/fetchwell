@@ -1,5 +1,3 @@
-.DS_Store
-
 # Dependencies and build output
 node_modules/
 dist/
@@ -20,12 +18,6 @@ playwright-report/
 
 # TypeScript build cache
 *.tsbuildinfo
-
-# Generated bundled API key (produced by scripts/encode-key.ts)
-electron/bundled-key.generated.ts
-
-# electron-builder output
-release/
 
 # Runtime directories
 downloads/
