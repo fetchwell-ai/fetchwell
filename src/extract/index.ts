@@ -338,24 +338,44 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     }
 
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    const labsCount = await extractLabsDocs({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: labsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
     // Only record the timestamp when items were actually extracted; a 0-item run should not
     // advance the cutoff, or the section would be skipped as "already extracted" on the next run.
-    if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
+    try {
+      const labsCount = await extractLabsDocs({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: labsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
+      if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
+    } catch (err) {
+      console.error(`[extract] Labs section failed: ${err instanceof Error ? err.message : String(err)}`);
+      console.error("[extract] Continuing to next section...");
+    }
     console.log();
 
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    const visitsCount = await extractVisits({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: visitsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
-    if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
+    try {
+      const visitsCount = await extractVisits({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: visitsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
+      if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
+    } catch (err) {
+      console.error(`[extract] Visits section failed: ${err instanceof Error ? err.message : String(err)}`);
+      console.error("[extract] Continuing to next section...");
+    }
     console.log();
 
-    const medsCount = await extractMedications({ browser, portalUrl: homeUrl, credentials: providerCredentials, outputDir, providerId: provider.id, incremental, authenticatedSelectors: provider.authenticatedSelectors });
-    if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
+    try {
+      const medsCount = await extractMedications({ browser, portalUrl: homeUrl, credentials: providerCredentials, outputDir, providerId: provider.id, incremental, authenticatedSelectors: provider.authenticatedSelectors });
+      if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
+    } catch (err) {
+      console.error(`[extract] Medications section failed: ${err instanceof Error ? err.message : String(err)}`);
+      console.error("[extract] Continuing to next section...");
+    }
     console.log();
 
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    const msgsCount = await extractMessages({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: msgsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
-    if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
+    try {
+      const msgsCount = await extractMessages({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: msgsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
+      if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
+    } catch (err) {
+      console.error(`[extract] Messages section failed: ${err instanceof Error ? err.message : String(err)}`);
+      console.error("[extract] Continuing to next section...");
+    }
     console.log();
 
     buildIndex(outputDir, provider.id);

@@ -93,9 +93,19 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
 
   await logDepth(browser, "labs");
   const observeInstruction = listInstruction ?? defaultObserve;
-  const panelLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
-  );
+  let panelLinks: Awaited<ReturnType<typeof browser.observe>>;
+  try {
+    panelLinks = await browser.observe(
+      (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
+    );
+  } catch (err) {
+    console.error(`[extract] Labs: observe() failed: ${err instanceof Error ? err.message : String(err)}`);
+    try {
+      const ss = await browser.screenshot();
+      fs.writeFileSync(path.join(labsDir, "labs-observe-error.png"), Buffer.from(ss, "base64"));
+    } catch {}
+    return 0;
+  }
   console.log(`[extract] Found ${panelLinks.length} panel link(s).`);
   if (panelLinks.length > 0) {
     emit({ type: 'status-message', phase: 'extract', message: `Found ${panelLinks.length} lab results to fetch...` });

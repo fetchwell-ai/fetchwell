@@ -83,9 +83,19 @@ export async function extractMessages(ctx: ExtractionContext): Promise<number> {
 
   await logDepth(browser, "messages");
   const observeInstruction = listInstruction ?? defaultObserve;
-  const threadLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
-  );
+  let threadLinks: Awaited<ReturnType<typeof browser.observe>>;
+  try {
+    threadLinks = await browser.observe(
+      (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
+    );
+  } catch (err) {
+    console.error(`[extract] Messages: observe() failed: ${err instanceof Error ? err.message : String(err)}`);
+    try {
+      const ss = await browser.screenshot();
+      fs.writeFileSync(path.join(msgsDir, "messages-observe-error.png"), Buffer.from(ss, "base64"));
+    } catch {}
+    return 0;
+  }
   console.log(`[extract] Found ${threadLinks.length} message thread(s).`);
   if (threadLinks.length > 0) {
     emit({ type: 'status-message', phase: 'extract', message: `Found ${threadLinks.length} messages to fetch...` });

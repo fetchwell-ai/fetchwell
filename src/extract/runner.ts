@@ -128,39 +128,67 @@ export async function extractProvider(
     emit({ type: 'status-message', phase: 'extract', message: 'Opening lab results...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'labs', current: 0, message: 'Extracting labs...' });
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    const labsCount = await extractLabsDocs({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: labsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors, emitProgress });
-    if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
-    emit({ type: 'status-message', phase: 'extract', message: `Labs complete — ${labsCount} records fetched` });
-    emit({ type: 'category-complete', phase: 'extract', category: 'labs', count: labsCount, status: 'complete' });
+    let labsCount = 0;
+    try {
+      labsCount = await extractLabsDocs({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: labsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors, emitProgress });
+      if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
+      emit({ type: 'status-message', phase: 'extract', message: `Labs complete — ${labsCount} records fetched` });
+      emit({ type: 'category-complete', phase: 'extract', category: 'labs', count: labsCount, status: 'complete' });
+    } catch (err) {
+      console.error(`[extract] Labs section failed: ${err instanceof Error ? err.message : String(err)}`);
+      emit({ type: 'status-message', phase: 'extract', message: 'Labs section failed — continuing' });
+      emit({ type: 'category-complete', phase: 'extract', category: 'labs', count: 0, status: 'error' });
+    }
     console.log();
 
     // Visits
     emit({ type: 'status-message', phase: 'extract', message: 'Opening visits...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'visits', current: 0, message: 'Extracting visits...' });
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    const visitsCount = await extractVisits({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: visitsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors, emitProgress });
-    if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
-    emit({ type: 'status-message', phase: 'extract', message: `Visits complete — ${visitsCount} records fetched` });
-    emit({ type: 'category-complete', phase: 'extract', category: 'visits', count: visitsCount, status: 'complete' });
+    let visitsCount = 0;
+    try {
+      visitsCount = await extractVisits({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: visitsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors, emitProgress });
+      if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
+      emit({ type: 'status-message', phase: 'extract', message: `Visits complete — ${visitsCount} records fetched` });
+      emit({ type: 'category-complete', phase: 'extract', category: 'visits', count: visitsCount, status: 'complete' });
+    } catch (err) {
+      console.error(`[extract] Visits section failed: ${err instanceof Error ? err.message : String(err)}`);
+      emit({ type: 'status-message', phase: 'extract', message: 'Visits section failed — continuing' });
+      emit({ type: 'category-complete', phase: 'extract', category: 'visits', count: 0, status: 'error' });
+    }
     console.log();
 
     // Medications
     emit({ type: 'status-message', phase: 'extract', message: 'Opening medications...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'medications', current: 0, message: 'Extracting medications...' });
-    const medsCount = await extractMedications({ browser, portalUrl: homeUrl, credentials: providerCredentials, outputDir, providerId: provider.id, incremental, authenticatedSelectors: provider.authenticatedSelectors, emitProgress });
-    if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
-    emit({ type: 'status-message', phase: 'extract', message: `Medications complete — ${medsCount} records fetched` });
-    emit({ type: 'category-complete', phase: 'extract', category: 'medications', count: medsCount, status: 'complete' });
+    let medsCount = 0;
+    try {
+      medsCount = await extractMedications({ browser, portalUrl: homeUrl, credentials: providerCredentials, outputDir, providerId: provider.id, incremental, authenticatedSelectors: provider.authenticatedSelectors, emitProgress });
+      if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
+      emit({ type: 'status-message', phase: 'extract', message: `Medications complete — ${medsCount} records fetched` });
+      emit({ type: 'category-complete', phase: 'extract', category: 'medications', count: medsCount, status: 'complete' });
+    } catch (err) {
+      console.error(`[extract] Medications section failed: ${err instanceof Error ? err.message : String(err)}`);
+      emit({ type: 'status-message', phase: 'extract', message: 'Medications section failed — continuing' });
+      emit({ type: 'category-complete', phase: 'extract', category: 'medications', count: 0, status: 'error' });
+    }
     console.log();
 
     // Messages
     emit({ type: 'status-message', phase: 'extract', message: 'Opening messages...' });
     emit({ type: 'item-progress', phase: 'extract', category: 'messages', current: 0, message: 'Extracting messages...' });
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    const msgsCount = await extractMessages({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: msgsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors, emitProgress });
-    if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
-    emit({ type: 'status-message', phase: 'extract', message: `Messages complete — ${msgsCount} records fetched` });
-    emit({ type: 'category-complete', phase: 'extract', category: 'messages', count: msgsCount, status: 'complete' });
+    let msgsCount = 0;
+    try {
+      msgsCount = await extractMessages({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: msgsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors, emitProgress });
+      if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
+      emit({ type: 'status-message', phase: 'extract', message: `Messages complete — ${msgsCount} records fetched` });
+      emit({ type: 'category-complete', phase: 'extract', category: 'messages', count: msgsCount, status: 'complete' });
+    } catch (err) {
+      console.error(`[extract] Messages section failed: ${err instanceof Error ? err.message : String(err)}`);
+      emit({ type: 'status-message', phase: 'extract', message: 'Messages section failed — continuing' });
+      emit({ type: 'category-complete', phase: 'extract', category: 'messages', count: 0, status: 'error' });
+    }
     console.log();
 
     buildIndex(outputDir, provider.id);

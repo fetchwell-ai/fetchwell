@@ -90,9 +90,19 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
 
   await logDepth(browser, "visits");
   const observeInstruction = listInstruction ?? defaultObserve;
-  const visitLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
-  );
+  let visitLinks: Awaited<ReturnType<typeof browser.observe>>;
+  try {
+    visitLinks = await browser.observe(
+      (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
+    );
+  } catch (err) {
+    console.error(`[extract] Visits: observe() failed: ${err instanceof Error ? err.message : String(err)}`);
+    try {
+      const ss = await browser.screenshot();
+      fs.writeFileSync(path.join(visitsDir, "visits-observe-error.png"), Buffer.from(ss, "base64"));
+    } catch {}
+    return 0;
+  }
   console.log(`[extract] Found ${visitLinks.length} visit document link(s).`);
   if (visitLinks.length > 0) {
     emit({ type: 'status-message', phase: 'extract', message: `Found ${visitLinks.length} visits to fetch...` });
