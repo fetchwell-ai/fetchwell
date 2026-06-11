@@ -222,15 +222,12 @@ export async function fillFieldByObserve(
  */
 export async function enterCodeInBrowser(browser: BrowserProvider, code: string): Promise<void> {
   console.log("[2fa] Got 2FA code, entering in browser...");
-  const fields = await browser.observe(
+  await fillFieldByObserve(
+    browser,
     "the verification code, security code, or one-time password input field",
+    code,
+    "Click the verification code, security code, or one-time password input field so it is focused",
   );
-  if (fields.length > 0) {
-    await browser.fill(fields[0].selector, code);
-  } else {
-    // Fallback: act()-based entry if observe finds nothing
-    await browser.act(`Type "${code}" into the verification code or security code input field`);
-  }
   console.log("[2fa] Code entered.");
   await browser.act("Click the Submit, Verify, or Continue button to submit the verification code");
   console.log("[2fa] Submitted.");
