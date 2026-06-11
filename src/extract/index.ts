@@ -199,7 +199,9 @@ async function probeProvider(provider: ProviderConfig) {
     console.log();
 
     // Login or restore session
-    await loginOrRestoreSession(browser, {
+    // homeUrl = the authenticated dashboard URL (NOT the login URL).
+    // Passing portalUrl to probers while authenticated can trigger ?action=logout on MyChart.
+    const homeUrl = await loginOrRestoreSession(browser, {
       portalUrl,
       providerId: provider.id,
       authModule,
@@ -213,16 +215,16 @@ async function probeProvider(provider: ProviderConfig) {
     console.log("[probe] Probing all sections...");
     console.log();
 
-    await probeLabsDocs(browser, portalUrl, probeDir, navNotes, providerCredentials, provider.id, provider.authenticatedSelectors);
+    await probeLabsDocs(browser, homeUrl, probeDir, navNotes, providerCredentials, provider.id, provider.authenticatedSelectors);
     console.log();
 
-    await probeVisits(browser, portalUrl, probeDir, navNotes, providerCredentials, provider.id, provider.authenticatedSelectors);
+    await probeVisits(browser, homeUrl, probeDir, navNotes, providerCredentials, provider.id, provider.authenticatedSelectors);
     console.log();
 
-    await probeMedications(browser, portalUrl, probeDir, providerCredentials, provider.id, provider.authenticatedSelectors);
+    await probeMedications(browser, homeUrl, probeDir, providerCredentials, provider.id, provider.authenticatedSelectors);
     console.log();
 
-    await probeMessages(browser, portalUrl, probeDir, navNotes, providerCredentials, provider.id, provider.authenticatedSelectors);
+    await probeMessages(browser, homeUrl, probeDir, navNotes, providerCredentials, provider.id, provider.authenticatedSelectors);
     console.log();
 
     console.log("=".repeat(60));
@@ -308,13 +310,18 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     console.log();
 
     // Login or restore session
-    await loginOrRestoreSession(browser, {
+    // homeUrl = the authenticated dashboard URL (NOT the login URL).
+    // IMPORTANT: Do NOT navigate to portalUrl (the login URL) before checking
+    // for a saved session — MyChart triggers ?action=logout when you visit the
+    // login URL while already authenticated, destroying the session.
+    const homeUrl = await loginOrRestoreSession(browser, {
       portalUrl,
       providerId: provider.id,
       authModule,
       credentials: providerCredentials,
       authenticatedSelectors: provider.authenticatedSelectors,
     });
+    console.log(`[pipeline] Dashboard URL: ${homeUrl}`);
     console.log();
 
     const navNotes = readNavNotes(outputDir);
@@ -331,23 +338,23 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     }
 
     const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    const labsCount = await extractLabsDocs({ browser, portalUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: labsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
+    const labsCount = await extractLabsDocs({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: labsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
     // Only record the timestamp when items were actually extracted; a 0-item run should not
     // advance the cutoff, or the section would be skipped as "already extracted" on the next run.
     if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
     console.log();
 
     const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    const visitsCount = await extractVisits({ browser, portalUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: visitsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
+    const visitsCount = await extractVisits({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: visitsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
     if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
     console.log();
 
-    const medsCount = await extractMedications({ browser, portalUrl, credentials: providerCredentials, outputDir, providerId: provider.id, incremental, authenticatedSelectors: provider.authenticatedSelectors });
+    const medsCount = await extractMedications({ browser, portalUrl: homeUrl, credentials: providerCredentials, outputDir, providerId: provider.id, incremental, authenticatedSelectors: provider.authenticatedSelectors });
     if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
     console.log();
 
     const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    const msgsCount = await extractMessages({ browser, portalUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: msgsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
+    const msgsCount = await extractMessages({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: msgsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
     if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
     console.log();
 
