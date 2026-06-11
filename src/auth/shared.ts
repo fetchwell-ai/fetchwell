@@ -135,11 +135,11 @@ export async function waitForFileBasedCode(providerId?: string): Promise<string 
   console.log("[2fa] +=======================================================+");
 
   const code = await new Promise<string | null>((resolve) => {
-    let poll: ReturnType<typeof setInterval> | undefined;
+    const pollRef: { current: ReturnType<typeof setInterval> | undefined } = { current: undefined };
 
     const cleanup = () => {
       clearTimeout(timeout);
-      if (poll) clearInterval(poll);
+      if (pollRef.current) clearInterval(pollRef.current);
     };
 
     const timeout = setTimeout(() => {
@@ -168,7 +168,7 @@ export async function waitForFileBasedCode(providerId?: string): Promise<string 
     });
 
     // Also poll every 10s as a fallback (fs.watch can be unreliable on some systems)
-    poll = setInterval(() => {
+    pollRef.current = setInterval(() => {
       if (fs.existsSync(codeFile)) {
         cleanup();
         watcher.close();

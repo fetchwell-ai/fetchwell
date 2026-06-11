@@ -21,7 +21,6 @@ import { strings } from '../strings';
 
 interface PortalListProps {
   onOpenSettings: () => void;
-  onNavigateToApiKey: () => void;
   selectedPortalId?: string | null;
   onPortalsChanged?: () => void;
   initialView?: 'list' | 'add';
@@ -296,14 +295,12 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
   let badge: React.ReactNode;
   if (portalState === 'ready') {
     badge = <PortalBadge variant="info">Ready to fetch</PortalBadge>;
-  } else if (portalState === 'fetched') {
+  } else {
     badge = (
       <PortalBadge variant="success">
         Last fetched {formatDate(portal.lastExtractedAt)}
       </PortalBadge>
     );
-  } else {
-    badge = <PortalBadge variant="danger">Login failed</PortalBadge>;
   }
 
   // Guidance strip per state
@@ -399,7 +396,7 @@ function PortalCard({ portal, onEdit, onRemove, onExtract, runningOperation, isS
   );
 }
 
-export default function PortalList({ onOpenSettings, onNavigateToApiKey, selectedPortalId, onPortalsChanged, initialView }: PortalListProps) {
+export default function PortalList({ onOpenSettings, selectedPortalId, onPortalsChanged, initialView }: PortalListProps) {
   const [view, setView] = useState<View>(initialView === 'add' ? { type: 'add' } : { type: 'list' });
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   const [loading, setLoading] = useState(true);

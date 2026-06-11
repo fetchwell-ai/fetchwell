@@ -167,7 +167,7 @@ function runSubprocess(
     // Resolve the runner script path and execution arguments based on whether
     // the app is packaged (DMG) or running in dev mode.
     //
-    // Packaged: use the pre-compiled ESM bundle (dist-electron/electron-runner.mjs)
+    // Packaged: use the pre-compiled CJS bundle (dist-electron/electron-runner.cjs)
     //   — tsx and src/ are not included in the DMG.
     // Dev: use tsx to run the TypeScript source directly.
     let runnerScript: string;

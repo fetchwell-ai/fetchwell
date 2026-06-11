@@ -73,11 +73,6 @@ export default function App() {
   }, [rootPage, isPortalsView, loadPortals]);
 
 
-  const handleNavigateToApiKey = () => {
-    setActivePortalId(null);
-    setActiveSettingsKey('key');
-  };
-
   if (rootPage === 'loading') {
     return <AppSkeleton />;
   }
@@ -136,7 +131,6 @@ export default function App() {
               <PortalList
                 key={portalListKey}
                 onOpenSettings={() => handleSelectSettings('appearance')}
-                onNavigateToApiKey={handleNavigateToApiKey}
                 selectedPortalId={null}
                 onPortalsChanged={loadPortals}
                 initialView={(() => {

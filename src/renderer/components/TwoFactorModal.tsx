@@ -22,7 +22,7 @@ function getTwoFactorHint(deliveryHint?: string): string {
   return 'Your portal sent a verification code. Check your email or phone.';
 }
 
-export default function TwoFactorModal({ portalId, twoFactorType: twoFactorTypeProp, deliveryHint, onDismiss }: TwoFactorModalProps) {
+export default function TwoFactorModal({ portalId, deliveryHint, onDismiss }: TwoFactorModalProps) {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [timedOut, setTimedOut] = useState(false);
