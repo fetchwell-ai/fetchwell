@@ -14,7 +14,6 @@ const PROJECT_ROOT = path.join(import.meta.dirname, "..");
 const AuthSchema = z.object({
   loginForm: z.enum(["two-step", "single-page", "auto"]).default("auto"),
   twoFactor: z.enum(["none", "email", "manual", "ui"]).default("manual"),
-  credentialMode: z.enum(["stored", "manual"]).default("stored"),
 });
 
 export type AuthSettings = z.infer<typeof AuthSchema>;

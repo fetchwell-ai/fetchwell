@@ -80,11 +80,10 @@ interface RunnerCommand {
     id: string;
     name: string;
     url: string;
-    username?: string;
-    password?: string;
+    username: string;
+    password: string;
     loginForm: 'two-step' | 'single-page' | 'auto';
     twoFactor: 'none' | 'email' | 'manual' | 'ui';
-    credentialMode: 'stored' | 'manual';
   };
 }
 
@@ -222,7 +221,6 @@ function buildProviderConfig(cmd: RunnerCommand): ProviderConfig {
     auth: {
       loginForm: cmd.providerConfig.loginForm,
       twoFactor: cmd.providerConfig.twoFactor,
-      credentialMode: cmd.providerConfig.credentialMode,
     },
     authenticatedSelectors: DEFAULT_AUTHENTICATED_SELECTORS,
   };

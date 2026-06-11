@@ -9,7 +9,6 @@ export interface PortalEntry {
   url: string;
   loginForm: 'two-step' | 'single-page' | 'auto';
   twoFactor: 'none' | 'email' | 'manual' | 'ui';
-  credentialMode: 'stored' | 'manual';
   hasCredentials: boolean;
   discoveredAt: string | null;
   lastExtractedAt: string | null;
@@ -29,7 +28,6 @@ export const PortalInputSchema = z.object({
   url: z.string().min(1, 'Portal URL must not be empty'),
   loginForm: z.enum(['two-step', 'single-page', 'auto']).optional(),
   twoFactor: z.enum(['none', 'email', 'manual', 'ui']),
-  credentialMode: z.enum(['stored', 'manual']).optional(),
   username: z.string().optional(),
   password: z.string().optional(),
 });
@@ -52,7 +50,6 @@ const PortalEntrySchema = z.object({
   url: z.string(),
   loginForm: z.enum(['two-step', 'single-page', 'auto']),
   twoFactor: z.enum(['none', 'email', 'manual', 'ui']),
-  credentialMode: z.enum(['stored', 'manual']).default('stored'),
   hasCredentials: z.boolean(),
   discoveredAt: z.string().nullable(),
   lastExtractedAt: z.string().nullable(),
@@ -133,7 +130,7 @@ export class ConfigManager {
     return this.config.portals.find((p) => p.id === id);
   }
 
-  addPortal(input: Omit<PortalEntry, 'id' | 'hasCredentials' | 'discoveredAt' | 'lastExtractedAt'> & { loginForm?: 'two-step' | 'single-page' | 'auto'; credentialMode?: 'stored' | 'manual' }): PortalEntry {
+  addPortal(input: Omit<PortalEntry, 'id' | 'hasCredentials' | 'discoveredAt' | 'lastExtractedAt'> & { loginForm?: 'two-step' | 'single-page' | 'auto' }): PortalEntry {
     const id = slugify(input.name);
     if (!id) {
       throw new Error('Portal name must produce a valid slug');
@@ -147,7 +144,6 @@ export class ConfigManager {
       url: input.url,
       loginForm: input.loginForm ?? 'auto',
       twoFactor: input.twoFactor,
-      credentialMode: input.credentialMode ?? 'stored',
       hasCredentials: false,
       discoveredAt: null,
       lastExtractedAt: null,

@@ -57,46 +57,6 @@ describe('PortalInputSchema (full parse — addPortal)', () => {
     }
   });
 
-  it('accepts credentialMode: stored', () => {
-    const result = PortalInputSchema.parse({
-      name: 'Test',
-      url: 'https://test.com',
-      twoFactor: 'none',
-      credentialMode: 'stored',
-    });
-    expect(result.credentialMode).toBe('stored');
-  });
-
-  it('accepts credentialMode: manual', () => {
-    const result = PortalInputSchema.parse({
-      name: 'Test',
-      url: 'https://test.com',
-      twoFactor: 'none',
-      credentialMode: 'manual',
-    });
-    expect(result.credentialMode).toBe('manual');
-  });
-
-  it('accepts missing credentialMode (optional)', () => {
-    const result = PortalInputSchema.parse({
-      name: 'Test',
-      url: 'https://test.com',
-      twoFactor: 'none',
-    });
-    expect(result.credentialMode).toBeUndefined();
-  });
-
-  it('rejects an invalid credentialMode value', () => {
-    expect(() =>
-      PortalInputSchema.parse({
-        name: 'Test',
-        url: 'https://test.com',
-        twoFactor: 'none',
-        credentialMode: 'auto',
-      }),
-    ).toThrow();
-  });
-
   it('rejects when name is missing', () => {
     expect(() =>
       PortalInputSchema.parse({
