@@ -185,6 +185,36 @@ export async function waitForFileBasedCode(providerId?: string): Promise<string 
 }
 
 /**
+ * Fill a form field by first using observe() to find the selector, then fill().
+ *
+ * Using observe() + fill() instead of act("Type ... into ...") prevents the
+ * secret value from being embedded in any LLM instruction string. If observe()
+ * finds no matching field, falls back to the provided actFallbackInstruction
+ * (which should NOT include the secret value — callers must handle that).
+ *
+ * @param browser - BrowserProvider to use
+ * @param observeInstruction - Natural language description of the field to locate
+ * @param value - The value to fill in (never appears in an act() call)
+ * @param actFallbackInstruction - act() instruction used only if observe() finds nothing;
+ *   must NOT contain the secret value
+ */
+export async function fillFieldByObserve(
+  browser: BrowserProvider,
+  observeInstruction: string,
+  value: string,
+  actFallbackInstruction: string,
+): Promise<void> {
+  const fields = await browser.observe(observeInstruction);
+  if (fields.length > 0) {
+    await browser.fill(fields[0].selector, value);
+  } else {
+    // Fallback: act()-based entry if observe finds nothing.
+    // Note: actFallbackInstruction must NOT contain the secret value.
+    await browser.act(actFallbackInstruction);
+  }
+}
+
+/**
  * Enter a 2FA code into the browser and submit.
  *
  * Uses observe() + fill() instead of act() to avoid AI misinterpreting the
@@ -229,12 +259,27 @@ export async function waitForPostLoginNavigation(
 
 /**
  * Check if 2FA is being requested by observing the page.
+ *
+ * Returns empty if the current URL does not look like an authentication page
+ * (guards against false-positives on dashboards that happen to mention
+ * "verification" in their content).
  */
 export async function detect2FA(browser: BrowserProvider): Promise<ObserveResult[]> {
+  // Gate on URL first — if we're not on an auth/login page, do not even call
+  // observe() so we can't false-positive on dashboard content.
+  const currentUrl = await browser.url();
+  if (!isAuthPage(currentUrl)) {
+    console.log(`[2fa] Not on an auth page (${currentUrl}) — skipping 2FA detection`);
+    return [];
+  }
+
   try {
     return await browser.observe(
       "Look for a two-factor authentication prompt, verification code input, " +
-      "security code field, or any MFA/2FA challenge",
+      "security code field, or any MFA/2FA challenge on this page. " +
+      "Do NOT return elements from a logged-in dashboard, home page, appointment list, " +
+      "medication list, health records, or settings page — only return elements that are " +
+      "part of an active authentication or verification step.",
     );
   } catch {
     console.log("[2fa] observe() returned no 2FA elements");

@@ -43,14 +43,28 @@ const email: TwoFactorHandler = async (browser, providerId) => {
   if (twoFaObservations.length > 0) {
     console.log("[2fa] 2FA detected (email mode)");
 
-    // Try to select email delivery
+    // Try to select email delivery using extract-then-branch to avoid
+    // sending conditional logic in the act() instruction.
     try {
-      await browser.act(
-        "If there is a choice between SMS/phone and email for the verification code, " +
-        "click 'Send to my email' or the email option",
+      const deliveryChoice = await browser.extract(
+        z.object({
+          hasDeliveryChoice: z.boolean(),
+          hasEmailOption: z.boolean(),
+          codeInputAlreadyVisible: z.boolean(),
+        }),
+        "Look at this page. " +
+        "(1) hasDeliveryChoice: is there a choice of how to receive a verification code? " +
+        "(2) hasEmailOption: is there an option for email delivery? " +
+        "(3) codeInputAlreadyVisible: is there already a code/OTP input field visible?",
       );
-      console.log("[2fa] Selected email delivery for 2FA code.");
-      await new Promise((r) => setTimeout(r, 2000));
+      if (!deliveryChoice.codeInputAlreadyVisible && deliveryChoice.hasDeliveryChoice && deliveryChoice.hasEmailOption) {
+        await browser.act(
+          "Click the email option to receive the verification code via email. " +
+          "Do NOT click Resend, Cancel, Back, Remember this device, Sign Out, or any other button.",
+        );
+        console.log("[2fa] Selected email delivery for 2FA code.");
+        await new Promise((r) => setTimeout(r, 2000));
+      }
     } catch {
       // No delivery choice -- already showing code input
     }
@@ -148,24 +162,28 @@ const ui: TwoFactorHandler = async (browser) => {
         if (deliveryChoice.hasSms) {
           await browser.act(
             "Click the option to receive the verification code via SMS, text message, or phone. " +
-            "Then click any 'Send', 'Send code', 'Continue', or similar button if present.",
+            "Then click any 'Send', 'Send code', 'Continue', or similar button if present. " +
+            "Do NOT click Resend, Cancel, Back, Remember this device, Sign Out, or any destructive button.",
           );
           deliveryHint = "text message";
         } else if (deliveryChoice.hasEmail) {
           await browser.act(
             "Click the option to receive the verification code via email. " +
-            "Then click any 'Send', 'Send code', 'Continue', or similar button if present.",
+            "Then click any 'Send', 'Send code', 'Continue', or similar button if present. " +
+            "Do NOT click Resend, Cancel, Back, Remember this device, Sign Out, or any destructive button.",
           );
           deliveryHint = "email";
         } else {
           await browser.act(
-            "Select any available option to receive the verification code, then click 'Send', 'Continue', or similar.",
+            "Select any available option to receive the verification code, then click 'Send', 'Continue', or similar. " +
+            "Do NOT click Resend, Cancel, Back, Remember this device, Sign Out, or any destructive button.",
           );
         }
       } else {
         // No choice but might need to click a send button
         await browser.act(
-          "If there is a 'Send code', 'Send', 'Continue', or similar button to trigger sending the verification code, click it.",
+          "If there is a 'Send code', 'Send', 'Continue', or similar button to trigger sending the verification code, click it. " +
+          "Do NOT click Resend, Cancel, Back, Remember this device, Sign Out, or any destructive button.",
         );
       }
     } catch (err) {

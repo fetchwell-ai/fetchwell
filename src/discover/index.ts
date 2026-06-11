@@ -62,7 +62,10 @@ export const VERIFY_INSTRUCTIONS: Record<SectionKey, string> = {
   messages: `Is this page showing a list of messages or an inbox? It should display conversations or secure message threads with healthcare providers. ${NOT_THESE}`,
 };
 
-const VerifySchema = z.object({ isCorrectPage: z.boolean(), description: z.string() });
+const VerifySchema = z.object({
+  description: z.string().describe("Brief explanation of what you see on this page and why it does or does not match the expected section"),
+  isCorrectPage: z.boolean().describe("True only if this page is actively showing the expected section content (e.g. a list of lab results, visits, medications, or messages)"),
+});
 
 // ---------------------------------------------------------------------------
 // Instruction helpers (used downstream by extraction)

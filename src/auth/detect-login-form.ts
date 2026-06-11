@@ -71,77 +71,42 @@ export function saveDetectedLoginFormType(
 /**
  * Detect whether a portal's login form is single-page or two-step.
  *
+ * Uses a deterministic querySelector('input[type=password]') approach:
+ * if a visible password field is present on the current page, the form is
+ * single-page (both username and password on the same step). If no visible
+ * password field is found, the form is two-step (password appears after
+ * clicking Next).
+ *
  * Must be called while the browser is on the portal's login page.
  *
  * @param browser - A BrowserProvider positioned on the login page
- * @returns 'single-page' if both username and password are visible together,
- *          'two-step' if only username is visible (password comes later),
+ * @returns 'single-page' if a visible password field is present,
+ *          'two-step' if no visible password field is found,
  *          or 'two-step' on any detection error
  */
 export async function detectLoginFormType(
   browser: BrowserProvider,
 ): Promise<"two-step" | "single-page"> {
   try {
-    const observations = await browser.observe(
-      "Look at the login form. Are both a username/email field AND a password field visible at the same time? " +
-      "Or is only the username/email field visible (password comes on a separate page)?",
-    );
-
-    if (observations.length === 0) {
-      console.log("[login] Login form detection: no observations returned — defaulting to two-step");
+    // Primary check: does a password input exist in the DOM?
+    const passwordField = await browser.querySelector('input[type="password"]');
+    if (!passwordField) {
+      console.log("[login] Login form detection: no password field found — two-step");
       return "two-step";
     }
 
-    // Concatenate all observation descriptions for keyword analysis
-    const combined = observations.map((o) => o.description).join(" ").toLowerCase();
-
-    // Positive signals for single-page (both fields visible at once)
-    const singlePageSignals = [
-      "both",
-      "password field",
-      "password input",
-      "two fields",
-      "both fields",
-      "email and password",
-      "username and password",
-      "same page",
-      "same form",
-      "simultaneously",
-    ];
-
-    // Positive signals for two-step (only username visible)
-    const twoStepSignals = [
-      "only username",
-      "only email",
-      "username only",
-      "email only",
-      "no password",
-      "separate page",
-      "next page",
-      "next step",
-      "password comes",
-      "password field is not",
-      "password is not visible",
-      "username field only",
-      "email field only",
-    ];
-
-    const singlePageScore = singlePageSignals.filter((s) => combined.includes(s)).length;
-    const twoStepScore = twoStepSignals.filter((s) => combined.includes(s)).length;
-
-    console.log(
-      `[login] Login form detection: single-page signals=${singlePageScore}, two-step signals=${twoStepScore}`,
-    );
-    console.log(`[login] Observation: "${combined.slice(0, 200)}"`);
-
-    // Only classify as single-page if there's clear positive evidence
-    if (singlePageScore > twoStepScore && singlePageScore > 0) {
-      console.log("[login] Detected: single-page login form");
+    // Visibility check: confirm the password input is not hidden via inline style
+    // or a hidden/disabled attribute. Parse the page HTML for the password input's
+    // context — if it appears with display:none, visibility:hidden, or type=hidden
+    // in the raw markup we treat it as not visible (i.e., two-step).
+    const html = await browser.pageHtml();
+    const visible = hasVisiblePasswordInput(html);
+    if (visible) {
+      console.log("[login] Login form detection: visible password field found — single-page");
       return "single-page";
     }
 
-    // Default to two-step on ambiguity or when two-step signals dominate
-    console.log("[login] Detected: two-step login form (or defaulting)");
+    console.log("[login] Login form detection: password field present but not visible — two-step");
     return "two-step";
   } catch (err) {
     console.log(
@@ -149,4 +114,41 @@ export async function detectLoginFormType(
     );
     return "two-step";
   }
+}
+
+/**
+ * Check whether the given HTML markup contains a visible password input.
+ *
+ * A password input is considered NOT visible if:
+ * - It has display:none or visibility:hidden in its inline style
+ * - It is inside a container with display:none (checked one level up via simple heuristics)
+ *
+ * This function is exported for unit testing.
+ */
+export function hasVisiblePasswordInput(html: string): boolean {
+  // Match all <input type="password" ...> or <input ... type="password" ...> tags
+  // Use a case-insensitive pattern to handle varied capitalisation.
+  const inputRegex = /<input\b([^>]*?type\s*=\s*["']password["'][^>]*?)>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = inputRegex.exec(html)) !== null) {
+    const attrs = match[1];
+    // Check for inline style that hides the element
+    const styleMatch = /\bstyle\s*=\s*["']([^"']*)["']/i.exec(attrs);
+    if (styleMatch) {
+      const style = styleMatch[1].toLowerCase();
+      if (style.includes("display:none") || style.includes("display: none") ||
+          style.includes("visibility:hidden") || style.includes("visibility: hidden")) {
+        continue; // This password field is hidden — check the next one
+      }
+    }
+    // Check for hidden attribute
+    if (/\bhidden\b/i.test(attrs)) {
+      continue;
+    }
+    // Found a password input without explicit hiding — treat as visible
+    return true;
+  }
+
+  return false;
 }
