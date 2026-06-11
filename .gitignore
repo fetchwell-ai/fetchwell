@@ -8,6 +8,9 @@ dist-renderer/
 output/
 !output/.gitkeep
 
+# API-exploration scratch dir — holds live session cookies + PHI, never commit
+scratch-explore/
+
 # Credentials and provider config
 .env
 providers.json
