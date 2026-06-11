@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { PDFDocument } from "pdf-lib";
 import { type BrowserProvider } from "../browser/interface.js";
-import { loadNavMap, saveNavMap } from "../discover/nav-map.js";
+import { loadNavMap, saveNavMap, type NavMap } from "../discover/nav-map.js";
 import { loadSavedSession } from "../session.js";
 import { SECTION_INSTRUCTIONS, VERIFY_INSTRUCTIONS } from "../discover/index.js";
 import { getOutputBase } from "../paths.js";
@@ -327,13 +327,20 @@ export async function navigateToSection(
         if (isCorrect) {
           const newUrl = await browser.url();
           console.log(`[nav] ${section}: agentic search found section at ${newUrl}`);
-          // Update nav-map with new URL and instruction
-          if (providerId && navMap) {
-            const existingEntry = navMap.sections?.[section];
+          // Update (or create) nav-map with new URL and instruction.
+          // When navMap is null (first run, no nav-map file exists) we construct a
+          // fresh skeleton so the discovery is persisted for the next run.
+          if (providerId) {
+            const baseNavMap: NavMap = navMap ?? {
+              discoveredAt: new Date().toISOString(),
+              portalName: "",
+              sections: {},
+            };
+            const existingEntry = baseNavMap.sections?.[section];
             const updatedNavMap = {
-              ...navMap,
+              ...baseNavMap,
               sections: {
-                ...navMap.sections,
+                ...baseNavMap.sections,
                 [section]: {
                   ...(existingEntry ?? {}),
                   steps: [actInstruction],

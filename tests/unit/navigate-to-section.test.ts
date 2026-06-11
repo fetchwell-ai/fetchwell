@@ -352,4 +352,82 @@ describe('navigateToSection', () => {
 
     expect(result.navigationFailed).toBe(true);
   });
+
+  it('creates a fresh nav-map on first run when no nav-map exists', async () => {
+    // Simulate first run: no nav-map on disk
+    (loadNavMap as Mock).mockReturnValue(null);
+
+    // Agentic search succeeds on first attempt
+    const extract = vi.fn().mockResolvedValue({ isCorrectPage: true, description: 'labs page found' });
+    const browser = makeBrowser({
+      extract,
+      url: vi.fn().mockResolvedValue('https://portal.example.com/labs-new'),
+    });
+
+    const result = await runWithFakeTimers(() =>
+      navigateToSection(
+        browser as any,
+        'test-provider',
+        'labs',
+        { act: 'hardcoded fallback' },
+        'https://portal.example.com/home',
+      )
+    ) as Awaited<ReturnType<typeof navigateToSection>>;
+
+    // Navigation should succeed (no navigationFailed)
+    expect(result.navigationFailed).toBeUndefined();
+
+    // saveNavMap must have been called with a freshly constructed nav-map
+    expect(saveNavMap).toHaveBeenCalledTimes(1);
+    expect(saveNavMap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        discoveredAt: expect.any(String),
+        portalName: '',
+        sections: expect.objectContaining({
+          labs: expect.objectContaining({
+            url: 'https://portal.example.com/labs-new',
+            steps: ['Find and navigate to the test results or lab results page.'],
+          }),
+        }),
+      }),
+      'test-provider',
+      undefined,
+    );
+  });
+
+  it('uses cached nav-map URL on second run after first-run discovery', async () => {
+    // Simulate what saveNavMap would have written on the first run, now loaded back
+    const savedNavMap = {
+      discoveredAt: '2026-01-01T00:00:00.000Z',
+      portalName: '',
+      sections: {
+        labs: {
+          steps: ['Find and navigate to the test results or lab results page.'],
+          url: 'https://portal.example.com/labs-new',
+        },
+      },
+    };
+    (loadNavMap as Mock).mockReturnValue(savedNavMap);
+
+    // Cached URL resolves correctly on second run
+    const extract = vi.fn().mockResolvedValue({ isCorrectPage: true, description: 'labs page' });
+    const browser = makeBrowser({ extract });
+
+    const result = await runWithFakeTimers(() =>
+      navigateToSection(
+        browser as any,
+        'test-provider',
+        'labs',
+        { act: 'hardcoded fallback' },
+        'https://portal.example.com/home',
+      )
+    ) as Awaited<ReturnType<typeof navigateToSection>>;
+
+    // Should use the cached URL (Tier 1) — no agentic search needed
+    expect(browser.navigate).toHaveBeenCalledWith('https://portal.example.com/labs-new');
+    expect(browser.act).not.toHaveBeenCalled();
+    expect(result.navigationFailed).toBeUndefined();
+    // saveNavMap should NOT be called (cached URL was valid, no update needed)
+    expect(saveNavMap).not.toHaveBeenCalled();
+  });
 });
