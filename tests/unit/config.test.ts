@@ -32,6 +32,21 @@ describe('ConfigManager', () => {
       expect(portal.lastExtractedAt).toBeNull();
     });
 
+    it('defaults credentialMode to stored', () => {
+      const portal = manager.addPortal({ name: 'Default Mode', url: 'https://a.com', twoFactor: 'none' });
+      expect(portal.credentialMode).toBe('stored');
+    });
+
+    it('persists credentialMode: manual', () => {
+      const portal = manager.addPortal({
+        name: 'Manual Portal',
+        url: 'https://a.com',
+        twoFactor: 'none',
+        credentialMode: 'manual',
+      });
+      expect(portal.credentialMode).toBe('manual');
+    });
+
     it('added portal appears in getPortals()', () => {
       manager.addPortal({ name: 'Portal A', url: 'https://a.com', loginForm: 'single-page', twoFactor: 'email' });
       const portals = manager.getPortals();
@@ -163,6 +178,12 @@ describe('ConfigManager', () => {
       expect(portals[0].name).toBe('Clinic One');
       expect(manager2.getSettings().showBrowser).toBe(true);
     });
+
+    it('credentialMode round-trips through disk', () => {
+      manager.addPortal({ name: 'Manual Clinic', url: 'https://m.com', twoFactor: 'none', credentialMode: 'manual' });
+      const manager2 = new ConfigManager(tmpDir);
+      expect(manager2.getPortal('manual-clinic')?.credentialMode).toBe('manual');
+    });
   });
 
   describe('load with Zod validation', () => {
@@ -223,6 +244,27 @@ describe('ConfigManager', () => {
       expect(m.getSettings().theme).toBe('dark');
       expect(m.getPortals()).toHaveLength(1);
       expect(m.getPortal('my-clinic')?.name).toBe('My Clinic');
+    });
+
+    it('defaults credentialMode to stored for old config.json without the field', () => {
+      const oldConfig = {
+        portals: [
+          {
+            id: 'old-portal',
+            name: 'Old Portal',
+            url: 'https://old.example.com',
+            loginForm: 'two-step',
+            twoFactor: 'none',
+            hasCredentials: false,
+            discoveredAt: null,
+            lastExtractedAt: null,
+            // credentialMode absent — simulates config written before this field existed
+          },
+        ],
+      };
+      fs.writeFileSync(configPath(), JSON.stringify(oldConfig), 'utf-8');
+      const m = new ConfigManager(tmpDir);
+      expect(m.getPortal('old-portal')?.credentialMode).toBe('stored');
     });
 
     it('falls back to DEFAULT_CONFIG when a portal entry has an invalid twoFactor value', () => {

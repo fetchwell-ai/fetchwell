@@ -54,6 +54,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
       url: input.url,
       loginForm: input.loginForm ?? 'auto',
       twoFactor: input.twoFactor,
+      credentialMode: input.credentialMode ?? 'stored',
     });
 
     if (input.username !== undefined && input.password !== undefined) {
@@ -82,6 +83,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     if (updates.url !== undefined) configUpdates.url = updates.url;
     if (updates.loginForm !== undefined) configUpdates.loginForm = updates.loginForm ?? 'auto';
     if (updates.twoFactor !== undefined) configUpdates.twoFactor = updates.twoFactor;
+    if (updates.credentialMode !== undefined) configUpdates.credentialMode = updates.credentialMode;
 
     if (updates.username !== undefined && updates.password !== undefined) {
       // Full credential update: new username + new password
@@ -170,13 +172,14 @@ export function registerIpcHandlers(userDataPath?: string): void {
       apiKey = customKey;
     }
 
+    const isManual = portal.credentialMode === 'manual';
     const portalCreds = creds().getPortalCredentials(portalId);
-    if (!portalCreds) throw new Error(`No credentials stored for portal: ${portalId}`);
+    if (!isManual && !portalCreds) throw new Error(`No credentials stored for portal: ${portalId}`);
 
     try {
       const counts: CategoryCounts = await runExtraction(portalId, win, {
         apiKey,
-        credentials: portalCreds,
+        credentials: portalCreds ?? undefined,
         portalUrl: portal.url,
         portalId: portal.id,
         portalName: portal.name,
@@ -185,6 +188,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
         incremental: settings.incrementalExtraction,
         loginForm: portal.loginForm,
         twoFactor: portal.twoFactor,
+        credentialMode: portal.credentialMode,
       });
       const countUpdate: Partial<PortalEntry> = {
         lastExtractedAt: new Date().toISOString(),

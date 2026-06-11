@@ -29,7 +29,7 @@ import { categorizeError } from './error-categorize';
 
 export interface RunConfig {
   apiKey: string;
-  credentials: { username: string; password: string };
+  credentials?: { username: string; password: string };
   portalUrl: string;
   portalId: string;
   portalName: string;
@@ -38,6 +38,7 @@ export interface RunConfig {
   incremental: boolean;
   loginForm: 'two-step' | 'single-page' | 'auto';
   twoFactor: 'none' | 'email' | 'manual' | 'ui';
+  credentialMode: 'stored' | 'manual';
 }
 
 export interface CategoryCounts {
@@ -85,10 +86,11 @@ interface RunnerCommand {
     id: string;
     name: string;
     url: string;
-    username: string;
-    password: string;
+    username?: string;
+    password?: string;
     loginForm: 'two-step' | 'single-page' | 'auto';
     twoFactor: 'none' | 'email' | 'manual' | 'ui';
+    credentialMode: 'stored' | 'manual';
   };
 }
 
@@ -305,10 +307,11 @@ function runSubprocess(
         id: config.portalId,
         name: config.portalName,
         url: config.portalUrl,
-        username: config.credentials.username,
-        password: config.credentials.password,
+        username: config.credentials?.username,
+        password: config.credentials?.password,
         loginForm: config.loginForm,
         twoFactor: config.twoFactor,
+        credentialMode: config.credentialMode,
       },
     };
 
