@@ -6,9 +6,13 @@ import { type BrowserProvider } from "../browser/interface.js";
 import { loadNavMap, saveNavMap } from "../discover/nav-map.js";
 import { loadSavedSession } from "../session.js";
 import { SECTION_INSTRUCTIONS, VERIFY_INSTRUCTIONS } from "../discover/index.js";
+import { getOutputBase } from "../paths.js";
 
-/** Default base output directory (parent of all provider-scoped dirs). */
-export const OUTPUT_BASE = path.resolve(import.meta.dirname, "..", "..", "output");
+/**
+ * Default base output directory (parent of all provider-scoped dirs).
+ * Derived from the central paths module so CLI fallback stays consistent.
+ */
+export const OUTPUT_BASE = getOutputBase();
 
 
 /**

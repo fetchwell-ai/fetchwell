@@ -25,6 +25,13 @@ export interface ExtractionContext {
   /** Base output directory for this provider (e.g. output/<providerId>/). */
   outputDir?: string;
 
+  /**
+   * Base path override for session, nav-map, and other provider-scoped files.
+   * In Electron mode this is the user's configured download folder.
+   * When omitted, defaults to the CLI-mode output directory.
+   */
+  basePath?: string;
+
   /** Provider identifier used for PDF filenames and session scoping. */
   providerId?: string;
 

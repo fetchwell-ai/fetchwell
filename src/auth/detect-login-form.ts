@@ -15,23 +15,26 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { type BrowserProvider } from "../browser/interface.js";
-
-const OUTPUT_BASE = path.join(import.meta.dirname, "..", "..", "output");
+import { getOutputBase } from "../paths.js";
 
 /**
  * Return the path to the login form type cache file for a provider.
+ *
+ * @param basePath - Optional Electron download folder override.
  */
-function cacheFilePath(providerId: string): string {
-  return path.join(OUTPUT_BASE, providerId, "login-form-type.json");
+function cacheFilePath(providerId: string, basePath?: string): string {
+  return path.join(getOutputBase(basePath), providerId, "login-form-type.json");
 }
 
 /**
  * Load the previously detected login form type from the cache file.
  * Returns null if no cache exists or the file cannot be read.
+ *
+ * @param basePath - Optional Electron download folder override.
  */
-export function loadDetectedLoginFormType(providerId: string): "two-step" | "single-page" | null {
+export function loadDetectedLoginFormType(providerId: string, basePath?: string): "two-step" | "single-page" | null {
   try {
-    const filePath = cacheFilePath(providerId);
+    const filePath = cacheFilePath(providerId, basePath);
     if (!fs.existsSync(filePath)) return null;
     const raw = fs.readFileSync(filePath, "utf-8");
     const parsed = JSON.parse(raw) as { loginForm?: string };
@@ -46,13 +49,16 @@ export function loadDetectedLoginFormType(providerId: string): "two-step" | "sin
 
 /**
  * Save a detected login form type to the cache file so future runs skip detection.
+ *
+ * @param basePath - Optional Electron download folder override.
  */
 export function saveDetectedLoginFormType(
   providerId: string,
   loginForm: "two-step" | "single-page",
+  basePath?: string,
 ): void {
   try {
-    const filePath = cacheFilePath(providerId);
+    const filePath = cacheFilePath(providerId, basePath);
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, JSON.stringify({ loginForm }, null, 2), "utf-8");
   } catch (err) {

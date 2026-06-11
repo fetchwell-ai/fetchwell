@@ -11,7 +11,7 @@ import * as readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { type BrowserProvider, type ObserveResult } from "../browser/interface.js";
 import { clearSession, saveSession, loadSavedSession } from "../session.js";
-const OUTPUT_BASE = path.join(import.meta.dirname, "..", "..", "output");
+import { getOutputBase } from "../paths.js";
 
 // ---------------------------------------------------------------------------
 // Login function registry for ensureLoggedIn
@@ -40,8 +40,9 @@ export function registerLoginFn(providerId: string, fn: LoginFn): void {
 }
 
 /** Return the output dir for a provider. Falls back to base output dir. */
-export function resolveOutputDir(providerId?: string): string {
-  return providerId ? path.join(OUTPUT_BASE, providerId) : OUTPUT_BASE;
+export function resolveOutputDir(providerId?: string, basePath?: string): string {
+  const base = getOutputBase(basePath);
+  return providerId ? path.join(base, providerId) : base;
 }
 
 export function isAuthPage(url: string): boolean {
@@ -270,11 +271,12 @@ export async function ensureLoggedIn(
   credentials?: { username?: string; password?: string },
   providerId?: string,
   authenticatedSelectors?: string[],
+  basePath?: string,
 ): Promise<void> {
   // Navigate to the saved home URL (e.g. /UCSFMyChart/Home/) to put us in a
   // known state for act() navigation and to verify the session is alive.
   // Do NOT navigate to the login URL -- that triggers ?action=logout when already authenticated.
-  const savedSession = loadSavedSession(providerId);
+  const savedSession = loadSavedSession(providerId, basePath);
   const homeUrl = savedSession?.homeUrl;
   if (homeUrl) {
     await browser.navigate(homeUrl);
@@ -286,7 +288,7 @@ export async function ensureLoggedIn(
   if (isAuthPage(currentUrl)) {
     console.log(`[session] Session expired — on auth page: ${currentUrl}`);
     console.log("[session] Re-authenticating...");
-    clearSession(providerId);
+    clearSession(providerId, basePath);
     await browser.navigate(loginUrl);
     await new Promise((r) => setTimeout(r, 2000));
     const loginFn = providerId ? loginFnRegistry.get(providerId) : undefined;
@@ -296,7 +298,7 @@ export async function ensureLoggedIn(
     if (browser.saveSession) {
       const session = await browser.saveSession();
       session.homeUrl = await browser.url();
-      saveSession(session, providerId);
+      saveSession(session, providerId, basePath);
       console.log("[session] Session re-saved.");
     }
     return;

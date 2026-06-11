@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { OUTPUT_BASE } from "../extract/helpers.js";
+import { getOutputBase } from "../paths.js";
 
 export interface NavMapSection {
   steps: string[];           // act() instructions to navigate to this section
@@ -29,8 +29,7 @@ export interface NavMap {
  * otherwise falls back to the dirname-relative OUTPUT_BASE default.
  */
 function navMapPath(providerId: string, basePath?: string): string {
-  const base = basePath ?? OUTPUT_BASE;
-  return path.join(base, providerId, "nav-map.json");
+  return path.join(getOutputBase(basePath), providerId, "nav-map.json");
 }
 
 /**
