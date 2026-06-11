@@ -128,10 +128,34 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
     emit({ type: 'status-message', phase: 'extract', message: `Downloading lab result ${i + 1} of ${maxPanels}...` });
     console.log(`[extract] Doc ${i + 1}/${maxPanels}: ${link.description}`);
     try {
-      await browser.act(`Click the element: ${link.description}`);
-      await new Promise((r) => setTimeout(r, 1000));
+      const urlBefore = await browser.url();
+      // Selector-first: direct CSS/XPath click avoids redundant LLM calls and prompt-injection risk
+      if (browser.clickSelector && link.selector) {
+        await browser.clickSelector(link.selector);
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+      // Fall back to act() if selector click didn't navigate (or no selector available)
+      if ((await browser.url()) === urlBefore) {
+        await browser.act(`Click the element: ${link.description}`);
+        await new Promise((r) => setTimeout(r, 1000));
+      }
       // Wait for async content (imaging reports load via AJAX after page ready)
       try { await browser.waitFor({ type: "networkIdle" }); } catch {}
+
+      // Verify we actually navigated — skip PDF if still on the list page
+      if ((await browser.url()) === urlBefore) {
+        console.log(`[extract]   → navigation failed — skipping PDF, saving screenshot`);
+        try {
+          const ss = await browser.screenshot();
+          fs.writeFileSync(
+            path.join(labsDir, `${String(i + 1).padStart(3, "0")}_nav-failed.png`),
+            Buffer.from(ss, "base64"),
+          );
+        } catch {}
+        await navigateWithRetry(browser, listUrl);
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
 
       // Get a descriptive name from the detail page (handles shadow DOM elements
       // where observe() returns "an element inside a shadow DOM" instead of the real name)
@@ -148,8 +172,8 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
         emit({ type: 'status-message', phase: 'extract', message: `Downloading ${itemLabel.slice(0, 60)}...` });
         fs.writeFileSync(path.join(labsDir, filename), pdfBuf);
         extracted++;
+        console.log(`[extract]   → saved ${filename}`);
       }
-      console.log(`[extract]   → saved ${filename}`);
     } catch (err: unknown) {
       console.log(`[extract]   → error: ${err instanceof Error ? err.message : String(err)}`);
       try {

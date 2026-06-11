@@ -125,9 +125,30 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
     emit({ type: 'status-message', phase: 'extract', message: `Downloading visit ${i + 1} of ${maxVisits}...` });
     console.log(`[extract] Visit ${i + 1}/${maxVisits}: ${link.description}`);
     try {
-      await browser.act(`Click the element: ${link.description}`);
-      await new Promise((r) => setTimeout(r, 1000));
+      const urlBefore = await browser.url();
+      // Selector-first: direct CSS/XPath click avoids redundant LLM calls and prompt-injection risk
+      if (browser.clickSelector && link.selector) {
+        await browser.clickSelector(link.selector);
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+      // Fall back to act() if selector click didn't navigate (or no selector available)
+      if ((await browser.url()) === urlBefore) {
+        await browser.act(`Click the element: ${link.description}`);
+        await new Promise((r) => setTimeout(r, 1000));
+      }
       try { await browser.waitFor({ type: "networkIdle" }); } catch {}
+
+      // Verify we actually navigated — skip PDF if still on the list page
+      if ((await browser.url()) === urlBefore) {
+        console.log(`[extract]   Navigation failed — skipping PDF, saving screenshot`);
+        try {
+          const ss = await browser.screenshot();
+          fs.writeFileSync(path.join(visitsDir, `visit-${i + 1}-nav-failed.png`), Buffer.from(ss, "base64"));
+        } catch {}
+        await navigateWithRetry(browser, listUrl);
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
 
       const pageTitle = await browser.title();
       const desc = link.description.toLowerCase().includes("shadow dom")
@@ -139,8 +160,8 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
         emit({ type: 'status-message', phase: 'extract', message: `Downloading ${desc.slice(0, 60)}...` });
         fs.writeFileSync(path.join(visitsDir, filename), pdfBuf);
         extracted++;
+        console.log(`[extract]   Saved ${filename}`);
       }
-      console.log(`[extract]   Saved ${filename}`);
     } catch (err: unknown) {
       console.log(`[extract]   Error: ${err instanceof Error ? err.message : String(err)}`);
       try {
