@@ -23,7 +23,10 @@ export async function probeVisits(browser: BrowserProvider, portalUrl: string, p
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
-    '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.';
+    '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar. ' +
+    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
+    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
+    'only navigate to view existing records.';
   const defaultObserve = "Find all document links within past visit entries on this page. " +
     "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
     "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +
@@ -76,7 +79,10 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Click the Visits link in the navigation menu. It may be labeled "Visits", ' +
-    '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar.';
+    '"Past Visits", or "Appointments". It is usually in the top navigation bar or sidebar. ' +
+    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
+    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
+    'only navigate to view existing records.';
   const defaultObserve = "Find all document links within past visit entries on this page. " +
     "Return links labeled 'After Visit Summary', 'Clinical notes', 'View notes', or similar document types. " +
     "Do NOT return the visit row or header entries themselves — only the document links inside each visit. " +

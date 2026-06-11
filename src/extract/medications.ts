@@ -16,7 +16,10 @@ export async function probeMedications(browser: BrowserProvider, portalUrl: stri
 
   const fallbackAct = 'Click the Medications or Medicines link in the navigation menu, sidebar, or home page. ' +
     'Look for text that says "Medications", "Medicines", "My Medications", or "Medication List". ' +
-    'It may be in a left sidebar under a Medical Record section.';
+    'It may be in a left sidebar under a Medical Record section. ' +
+    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
+    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
+    'only navigate to view existing records.';
   await navigateToSection(browser, providerId, "medications", { act: fallbackAct }, portalUrl);
   await new Promise((r) => setTimeout(r, 3000));
   try { await browser.waitFor({ type: "networkIdle" }); } catch {}
@@ -53,7 +56,10 @@ export async function extractMedications(ctx: ExtractionContext): Promise<number
 
   const fallbackAct = 'Click the Medications or Medicines link in the navigation menu, sidebar, or home page. ' +
     'Look for text that says "Medications", "Medicines", "My Medications", or "Medication List". ' +
-    'It may be in a left sidebar under a Medical Record section.';
+    'It may be in a left sidebar under a Medical Record section. ' +
+    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
+    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
+    'only navigate to view existing records.';
   const { navigationFailed } = await navigateToSection(browser, providerId, "medications", { act: fallbackAct }, portalUrl);
   if (navigationFailed) {
     console.log("[extract] Medications: navigation failed — skipping section.");

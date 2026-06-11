@@ -23,7 +23,10 @@ export async function probeLabsDocs(browser: BrowserProvider, portalUrl: string,
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
-    'labeled "Test Results", "Labs", "Lab Results", or similar.';
+    'labeled "Test Results", "Labs", "Lab Results", or similar. ' +
+    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
+    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
+    'only navigate to view existing records.';
   const defaultObserve = "Find all clickable lab result or test result entries on this page. " +
     "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
     "Return each one as a separate result.";
@@ -80,7 +83,10 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
   const fallbackAct = 'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
-    'labeled "Test Results", "Labs", "Lab Results", or similar.';
+    'labeled "Test Results", "Labs", "Lab Results", or similar. ' +
+    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
+    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
+    'only navigate to view existing records.';
   const defaultObserve = "Find all clickable lab result or test result entries on this page. " +
     "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
     "Return each one as a separate result.";

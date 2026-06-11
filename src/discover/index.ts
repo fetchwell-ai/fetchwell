@@ -20,29 +20,37 @@ type SectionKey = "labs" | "visits" | "medications" | "messages";
 
 const PORTAL_CONTEXT =
   "in this patient health portal. Look in navigation bars, hamburger/menu buttons, " +
-  "sidebars, or card links. Do NOT click public hospital website navigation (Doctors, Clinics, About Us, etc.).";
+  "sidebars, or card links. Do NOT click public hospital website navigation (Doctors, Clinics, About Us, etc.). " +
+  "NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, " +
+  "Request Refill, Schedule Appointment, or any button that submits a form or sends data — " +
+  "only navigate to view existing records.";
+
+const GUARDRAIL =
+  "NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, " +
+  "Request Refill, Schedule Appointment, or any button that submits a form or sends data — " +
+  "only navigate to view existing records.";
 
 // Two act() instructions per section: primary attempt, then hamburger-menu fallback.
 export const SECTION_INSTRUCTIONS: Record<SectionKey, [string, string]> = {
   labs: [
     `Find and navigate to the test results or lab results page ${PORTAL_CONTEXT} ` +
     "It may be called Test Results, Lab Results, Results, My Medical Record, Diagnostics, Pathology, Imaging, or Radiology.",
-    "Try opening the hamburger menu or any expandable sidebar to find Test Results, Lab Results, Results, Diagnostics, Pathology, Imaging, or My Medical Record.",
+    `Try opening the hamburger menu or any expandable sidebar to find Test Results, Lab Results, Results, Diagnostics, Pathology, Imaging, or My Medical Record. ${GUARDRAIL}`,
   ],
   visits: [
     `Find and navigate to the visits or appointments page ${PORTAL_CONTEXT} ` +
     "It may be called Visits, Appointments, Past Visits, After-Visit Summaries, Encounter History, or Office Visits.",
-    "Try opening the hamburger menu or any expandable sidebar to find Visits, Appointments, Past Visits, After-Visit Summaries, or Encounter History.",
+    `Try opening the hamburger menu or any expandable sidebar to find Visits, Appointments, Past Visits, After-Visit Summaries, or Encounter History. ${GUARDRAIL}`,
   ],
   medications: [
     `Find and navigate to the medications page ${PORTAL_CONTEXT} ` +
     "It may be called Medications, Medicines, Prescriptions, Pharmacy, Current Medications, or Active Medications.",
-    "Try opening the hamburger menu or any expandable sidebar to find Medications, Medicines, Prescriptions, Pharmacy, or Current Medications.",
+    `Try opening the hamburger menu or any expandable sidebar to find Medications, Medicines, Prescriptions, Pharmacy, or Current Medications. ${GUARDRAIL}`,
   ],
   messages: [
     `Find and navigate to the messages or inbox page ${PORTAL_CONTEXT} ` +
     "It may be called Messages, Inbox, Message Center, Secure Messages, or Conversations.",
-    "Try opening the hamburger menu or any expandable sidebar to find Messages, Inbox, Message Center, Secure Messages, or Conversations.",
+    `Try opening the hamburger menu or any expandable sidebar to find Messages, Inbox, Message Center, Secure Messages, or Conversations. ${GUARDRAIL}`,
   ],
 };
 
