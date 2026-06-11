@@ -39,7 +39,7 @@ export function redact(line: string): string {
   // Replace full https URLs with just the hostname token
   let result = line.replace(/https?:\/\/([^/\s]+)[^\s]*/g, '[portal:$1]');
   // Redact item descriptions after "Doc N/M:" or similar extract progress prefixes
-  result = result.replace(/(\[extract\] \S+ \d+\/\d+: ).+/, '$1[redacted]');
+  result = result.replace(/(\[extract\] \S+ \d+\/\d+: ).+/gm, '$1[redacted]');
   return result;
 }
 
