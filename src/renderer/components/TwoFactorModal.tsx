@@ -52,10 +52,10 @@ export default function TwoFactorModal({ portalId, deliveryHint, onDismiss }: Tw
       }
     };
 
-    window.electronAPI.on2FAResult(handle2FAResult);
+    const unsubResult = window.electronAPI.on2FAResult(handle2FAResult);
 
     return () => {
-      window.electronAPI.removeAllListeners('2fa:result');
+      unsubResult();
     };
   }, [portalId, onDismiss]);
 

@@ -78,6 +78,17 @@ function createWindow(): void {
     },
   });
 
+  // Block all new-window / popup opens from the renderer.
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+
+  // Block navigations to any origin other than the local file loaded at startup.
+  win.webContents.on('will-navigate', (event, navigationUrl) => {
+    const parsed = new URL(navigationUrl);
+    if (parsed.protocol !== 'file:') {
+      event.preventDefault();
+    }
+  });
+
   win.loadFile(path.join(__dirname, '..', 'dist-renderer', 'index.html'));
 }
 

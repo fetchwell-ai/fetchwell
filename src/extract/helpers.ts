@@ -330,13 +330,14 @@ export async function navigateToSection(
           // Update (or create) nav-map with new URL and instruction.
           // When navMap is null (first run, no nav-map file exists) we construct a
           // fresh skeleton so the discovery is persisted for the next run.
+          // Hoist baseNavMap/existingEntry so they are accessible at the return below.
+          const baseNavMap: NavMap = navMap ?? {
+            discoveredAt: new Date().toISOString(),
+            portalName: "",
+            sections: {},
+          };
+          const existingEntry = baseNavMap.sections?.[section];
           if (providerId) {
-            const baseNavMap: NavMap = navMap ?? {
-              discoveredAt: new Date().toISOString(),
-              portalName: "",
-              sections: {},
-            };
-            const existingEntry = baseNavMap.sections?.[section];
             const updatedNavMap = {
               ...baseNavMap,
               sections: {
@@ -355,7 +356,7 @@ export async function navigateToSection(
               console.log(`[nav] ${section}: nav-map updated with new URL`);
             } catch { /* non-fatal */ }
           }
-          return { listInstruction: entry?.listInstruction };
+          return { listInstruction: existingEntry?.listInstruction ?? entry?.listInstruction };
         }
       } catch (err: unknown) {
         console.log(`[nav] ${section}: agentic attempt ${attempt + 1} error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);

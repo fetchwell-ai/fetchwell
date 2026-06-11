@@ -89,19 +89,18 @@ interface ElectronAPI {
   openInFinder(folderPath: string): Promise<void>;
   revealInFinder(folderPath: string): Promise<void>;
   getPortalCredentials(portalId: string): Promise<{ username: string; hasPassword: boolean } | null>;
-  onProgress(callback: (message: string) => void): void;
-  onComplete(callback: (operation: string, data: { portalId: string }) => void): void;
-  onError(callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void): void;
-  onStructuredProgress(callback: (operation: string, event: StructuredProgressEvent) => void): void;
-  on2FARequest(callback: (payload: { portalId: string; twoFactorType: 'none' | 'email' | 'manual' | 'ui'; deliveryHint?: string; error?: string }) => void): void;
-  on2FAResult(callback: (payload: { portalId: string; success: boolean; error?: string }) => void): void;
+  onProgress(callback: (message: string) => void): () => void;
+  onComplete(callback: (operation: string, data: { portalId: string }) => void): () => void;
+  onError(callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void): () => void;
+  onStructuredProgress(callback: (operation: string, event: StructuredProgressEvent) => void): () => void;
+  on2FARequest(callback: (payload: { portalId: string; twoFactorType: 'none' | 'email' | 'manual' | 'ui'; deliveryHint?: string; error?: string }) => void): () => void;
+  on2FAResult(callback: (payload: { portalId: string; success: boolean; error?: string }) => void): () => void;
   submit2FACode(payload: { portalId: string; code: string | null }): void;
-  removeAllListeners(channel: string): void;
 
   // --- Dark mode ---
   darkModeShouldUseDark(): Promise<boolean>;
   darkModeSetTheme(theme: ThemePreference): Promise<boolean>;
-  onDarkModeUpdated(callback: (isDark: boolean) => void): void;
+  onDarkModeUpdated(callback: (isDark: boolean) => void): () => void;
 }
 
 interface Window {

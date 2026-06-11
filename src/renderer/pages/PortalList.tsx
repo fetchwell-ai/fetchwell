@@ -466,10 +466,10 @@ export default function PortalList({ onOpenSettings, selectedPortalId, onPortals
       setTwoFaDeliveryHint(payload.deliveryHint);
     };
 
-    window.electronAPI.on2FARequest(handle2FARequest);
+    const unsubRequest = window.electronAPI.on2FARequest(handle2FARequest);
 
     return () => {
-      window.electronAPI.removeAllListeners('2fa:request');
+      unsubRequest();
     };
   }, [runningOperation]);
 

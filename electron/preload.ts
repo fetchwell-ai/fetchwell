@@ -31,43 +31,76 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getPortalCredentials: (portalId: string) => ipcRenderer.invoke('getPortalCredentials', portalId),
 
   // --- Progress event listeners ---
-  onProgress: (callback: (message: string) => void) => {
-    ipcRenderer.on('extraction:log', (_event, message: string) => callback(message));
-    ipcRenderer.on('discovery:log', (_event, message: string) => callback(message));
+  // Each on* helper registers listeners and returns an unsubscribe function
+  // that removes exactly those listeners (not all listeners on those channels).
+  onProgress: (callback: (message: string) => void): (() => void) => {
+    const logHandler = (_event: Electron.IpcRendererEvent, message: string) => callback(message);
+    const discoveryHandler = (_event: Electron.IpcRendererEvent, message: string) => callback(message);
+    ipcRenderer.on('extraction:log', logHandler);
+    ipcRenderer.on('discovery:log', discoveryHandler);
+    return () => {
+      ipcRenderer.removeListener('extraction:log', logHandler);
+      ipcRenderer.removeListener('discovery:log', discoveryHandler);
+    };
   },
-  onComplete: (callback: (operation: string, data: { portalId: string }) => void) => {
-    ipcRenderer.on('extraction:complete', (_event, data: { portalId: string }) => callback('extraction', data));
-    ipcRenderer.on('discovery:complete', (_event, data: { portalId: string }) => callback('discovery', data));
+  onComplete: (callback: (operation: string, data: { portalId: string }) => void): (() => void) => {
+    const extractionHandler = (_event: Electron.IpcRendererEvent, data: { portalId: string }) => callback('extraction', data);
+    const discoveryHandler = (_event: Electron.IpcRendererEvent, data: { portalId: string }) => callback('discovery', data);
+    ipcRenderer.on('extraction:complete', extractionHandler);
+    ipcRenderer.on('discovery:complete', discoveryHandler);
+    return () => {
+      ipcRenderer.removeListener('extraction:complete', extractionHandler);
+      ipcRenderer.removeListener('discovery:complete', discoveryHandler);
+    };
   },
-  onError: (callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void) => {
-    ipcRenderer.on('extraction:error', (_event, data: { type: string; category: string; message: string; suggestion: string }) => callback('extraction', data));
-    ipcRenderer.on('discovery:error', (_event, data: { type: string; category: string; message: string; suggestion: string }) => callback('discovery', data));
+  onError: (callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void): (() => void) => {
+    const extractionHandler = (_event: Electron.IpcRendererEvent, data: { type: string; category: string; message: string; suggestion: string }) => callback('extraction', data);
+    const discoveryHandler = (_event: Electron.IpcRendererEvent, data: { type: string; category: string; message: string; suggestion: string }) => callback('discovery', data);
+    ipcRenderer.on('extraction:error', extractionHandler);
+    ipcRenderer.on('discovery:error', discoveryHandler);
+    return () => {
+      ipcRenderer.removeListener('extraction:error', extractionHandler);
+      ipcRenderer.removeListener('discovery:error', discoveryHandler);
+    };
   },
-  onStructuredProgress: (callback: (operation: string, event: unknown) => void) => {
-    ipcRenderer.on('extraction:progress', (_event, data: unknown) => callback('extraction', data));
-    ipcRenderer.on('discovery:progress', (_event, data: unknown) => callback('discovery', data));
+  onStructuredProgress: (callback: (operation: string, event: unknown) => void): (() => void) => {
+    const extractionHandler = (_event: Electron.IpcRendererEvent, data: unknown) => callback('extraction', data);
+    const discoveryHandler = (_event: Electron.IpcRendererEvent, data: unknown) => callback('discovery', data);
+    ipcRenderer.on('extraction:progress', extractionHandler);
+    ipcRenderer.on('discovery:progress', discoveryHandler);
+    return () => {
+      ipcRenderer.removeListener('extraction:progress', extractionHandler);
+      ipcRenderer.removeListener('discovery:progress', discoveryHandler);
+    };
   },
 
   // --- 2FA ---
-  on2FARequest: (callback: (payload: { portalId: string; twoFactorType: 'none' | 'email' | 'manual' | 'ui'; error?: string }) => void) => {
-    ipcRenderer.on('2fa:request', (_event, data: { portalId: string; twoFactorType: 'none' | 'email' | 'manual' | 'ui'; error?: string }) => callback(data));
+  on2FARequest: (callback: (payload: { portalId: string; twoFactorType: 'none' | 'email' | 'manual' | 'ui'; error?: string }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: { portalId: string; twoFactorType: 'none' | 'email' | 'manual' | 'ui'; error?: string }) => callback(data);
+    ipcRenderer.on('2fa:request', handler);
+    return () => {
+      ipcRenderer.removeListener('2fa:request', handler);
+    };
   },
-  on2FAResult: (callback: (payload: { portalId: string; success: boolean; error?: string }) => void) => {
-    ipcRenderer.on('2fa:result', (_event, data: { portalId: string; success: boolean; error?: string }) => callback(data));
+  on2FAResult: (callback: (payload: { portalId: string; success: boolean; error?: string }) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: { portalId: string; success: boolean; error?: string }) => callback(data);
+    ipcRenderer.on('2fa:result', handler);
+    return () => {
+      ipcRenderer.removeListener('2fa:result', handler);
+    };
   },
   submit2FACode: (payload: { portalId: string; code: string | null }) => {
     ipcRenderer.send('2fa:submit', payload);
   },
 
-  // --- Cleanup ---
-  removeAllListeners: (channel: string) => {
-    ipcRenderer.removeAllListeners(channel);
-  },
-
   // --- Dark mode ---
   darkModeShouldUseDark: () => ipcRenderer.invoke('darkMode:shouldUseDark'),
   darkModeSetTheme: (theme: 'system' | 'light' | 'dark') => ipcRenderer.invoke('darkMode:setTheme', theme),
-  onDarkModeUpdated: (callback: (isDark: boolean) => void) => {
-    ipcRenderer.on('darkMode:updated', (_event, isDark: boolean) => callback(isDark));
+  onDarkModeUpdated: (callback: (isDark: boolean) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, isDark: boolean) => callback(isDark);
+    ipcRenderer.on('darkMode:updated', handler);
+    return () => {
+      ipcRenderer.removeListener('darkMode:updated', handler);
+    };
   },
 });

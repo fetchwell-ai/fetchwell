@@ -1,4 +1,6 @@
+import * as path from 'path';
 import { ipcMain, safeStorage, app, BrowserWindow, dialog, shell } from 'electron';
+import { z } from 'zod';
 import { ConfigManager, PortalEntry, PortalInputSchema, PortalInput, ThemePreference, ApiKeySource } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
 import { runExtraction, cancelOperation, CategoryCounts } from './pipeline-bridge';
@@ -125,14 +127,25 @@ export function registerIpcHandlers(userDataPath?: string): void {
     };
   });
 
-  ipcMain.handle('updateSettings', (_event, updates: {
-    downloadFolder?: string;
-    showBrowser?: boolean;
-    incrementalExtraction?: boolean;
-    theme?: ThemePreference;
-    apiKeySource?: ApiKeySource;
-    apiKey?: string;
-  }): void => {
+  const UpdateSettingsSchema = z.object({
+    downloadFolder: z.string().refine((v) => path.isAbsolute(v), {
+      message: 'downloadFolder must be an absolute path',
+    }).optional(),
+    showBrowser: z.boolean().optional(),
+    incrementalExtraction: z.boolean().optional(),
+    theme: z.enum(['system', 'light', 'dark']).optional(),
+    apiKeySource: z.enum(['bundled', 'custom']).optional(),
+    apiKey: z.string().regex(/^sk-ant-/, { message: 'apiKey must start with sk-ant-' }).optional(),
+  });
+
+  ipcMain.handle('updateSettings', (_event, rawUpdates: unknown): void => {
+    let updates: z.infer<typeof UpdateSettingsSchema>;
+    try {
+      updates = UpdateSettingsSchema.parse(rawUpdates);
+    } catch (err) {
+      throw new Error(`Invalid settings update: ${(err as Error).message}`);
+    }
+
     const { apiKey, ...configUpdates } = updates;
 
     if (Object.keys(configUpdates).length > 0) {
@@ -152,7 +165,14 @@ export function registerIpcHandlers(userDataPath?: string): void {
 
   // --- Pipeline operations ---
 
-  ipcMain.handle('runExtraction', async (_event, portalId: string): Promise<void> => {
+  ipcMain.handle('runExtraction', async (_event, rawPortalId: unknown): Promise<void> => {
+    let portalId: string;
+    try {
+      portalId = z.string().min(1, 'portalId must not be empty').parse(rawPortalId);
+    } catch (err) {
+      throw new Error(`Invalid runExtraction argument: ${(err as Error).message}`);
+    }
+
     const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
     if (!win) throw new Error('No active window');
 
@@ -217,14 +237,38 @@ export function registerIpcHandlers(userDataPath?: string): void {
 
   // --- Open in Finder ---
 
-  ipcMain.handle('openInFinder', async (_event, folderPath: string): Promise<void> => {
-    await shell.openPath(folderPath);
+  ipcMain.handle('openInFinder', async (_event, rawPath: unknown): Promise<void> => {
+    let folderPath: string;
+    try {
+      folderPath = z.string().min(1).parse(rawPath);
+    } catch (err) {
+      throw new Error(`Invalid openInFinder argument: ${(err as Error).message}`);
+    }
+    const downloadFolder = config().getSettings().downloadFolder;
+    const normalizedPath = path.resolve(folderPath);
+    const normalizedDownload = path.resolve(downloadFolder);
+    if (!normalizedPath.startsWith(normalizedDownload + path.sep) && normalizedPath !== normalizedDownload) {
+      throw new Error('openInFinder: path is outside the configured download folder');
+    }
+    await shell.openPath(normalizedPath);
   });
 
   // --- Reveal in Finder (select/highlight the item) ---
 
-  ipcMain.handle('revealInFinder', (_event, folderPath: string): void => {
-    shell.showItemInFolder(folderPath);
+  ipcMain.handle('revealInFinder', (_event, rawPath: unknown): void => {
+    let folderPath: string;
+    try {
+      folderPath = z.string().min(1).parse(rawPath);
+    } catch (err) {
+      throw new Error(`Invalid revealInFinder argument: ${(err as Error).message}`);
+    }
+    const downloadFolder = config().getSettings().downloadFolder;
+    const normalizedPath = path.resolve(folderPath);
+    const normalizedDownload = path.resolve(downloadFolder);
+    if (!normalizedPath.startsWith(normalizedDownload + path.sep) && normalizedPath !== normalizedDownload) {
+      throw new Error('revealInFinder: path is outside the configured download folder');
+    }
+    shell.showItemInFolder(normalizedPath);
   });
 
   // --- Portal credentials (read-only for display — password never sent to renderer) ---

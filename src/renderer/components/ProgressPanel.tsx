@@ -304,20 +304,16 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
       });
     };
 
-    window.electronAPI.onProgress(handleProgress);
-    window.electronAPI.onComplete(handleComplete);
-    window.electronAPI.onError(handleError);
-    window.electronAPI.onStructuredProgress(handleStructuredProgress);
+    const unsubProgress = window.electronAPI.onProgress(handleProgress);
+    const unsubComplete = window.electronAPI.onComplete(handleComplete);
+    const unsubError = window.electronAPI.onError(handleError);
+    const unsubStructured = window.electronAPI.onStructuredProgress(handleStructuredProgress);
 
     return () => {
-      window.electronAPI.removeAllListeners('extraction:log');
-      window.electronAPI.removeAllListeners('discovery:log');
-      window.electronAPI.removeAllListeners('extraction:complete');
-      window.electronAPI.removeAllListeners('discovery:complete');
-      window.electronAPI.removeAllListeners('extraction:error');
-      window.electronAPI.removeAllListeners('discovery:error');
-      window.electronAPI.removeAllListeners('extraction:progress');
-      window.electronAPI.removeAllListeners('discovery:progress');
+      unsubProgress();
+      unsubComplete();
+      unsubError();
+      unsubStructured();
     };
   }, [operation]);
 

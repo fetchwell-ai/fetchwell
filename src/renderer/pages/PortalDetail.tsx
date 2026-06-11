@@ -348,9 +348,9 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
       }
       setTwoFaDeliveryHint(payload.deliveryHint);
     };
-    window.electronAPI.on2FARequest(handle2FARequest);
+    const unsubRequest = window.electronAPI.on2FARequest(handle2FARequest);
     return () => {
-      window.electronAPI.removeAllListeners('2fa:request');
+      unsubRequest();
     };
   }, [runningOperation]);
 
