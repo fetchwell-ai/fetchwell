@@ -27,23 +27,41 @@ import { type ProviderConfig } from './config.js';
 
 let logStream: fs.WriteStream | null = null;
 
+/**
+ * Redact PHI from a log line before persisting to disk.
+ *
+ * Two categories are redacted:
+ *  1. Full portal URLs (https://...) → "[portal:<hostname>]"
+ *  2. Item descriptions in extract progress lines
+ *     e.g. "[extract] Doc 3/12: CBC with Differential 2024-01-15" → "[extract] Doc 3/12: [redacted]"
+ */
+export function redact(line: string): string {
+  // Replace full https URLs with just the hostname token
+  let result = line.replace(/https?:\/\/([^/\s]+)[^\s]*/g, '[portal:$1]');
+  // Redact item descriptions after "Doc N/M:" or similar extract progress prefixes
+  result = result.replace(/(\[extract\] \S+ \d+\/\d+: ).+/, '$1[redacted]');
+  return result;
+}
+
 function initLogFile(downloadFolder: string, portalId: string): void {
   const outputDir = path.join(downloadFolder, portalId);
   fs.mkdirSync(outputDir, { recursive: true });
   const logPath = path.join(outputDir, 'latest.log');
-  logStream = fs.createWriteStream(logPath, { flags: 'w' });
+  logStream = fs.createWriteStream(logPath, { flags: 'w', mode: 0o600 });
   logStream.write(`[fetchwell] Log started: ${new Date().toISOString()}\n`);
 
   const origStdoutWrite = process.stdout.write.bind(process.stdout);
   const origStderrWrite = process.stderr.write.bind(process.stderr);
 
   process.stdout.write = (chunk: string | Uint8Array, ...args: unknown[]): boolean => {
-    logStream?.write(chunk);
+    const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+    logStream?.write(redact(text));
     return origStdoutWrite(chunk, ...(args as [BufferEncoding?, ((err?: Error | null) => void)?]));
   };
 
   process.stderr.write = (chunk: string | Uint8Array, ...args: unknown[]): boolean => {
-    logStream?.write(chunk);
+    const text = typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
+    logStream?.write(redact(text));
     return origStderrWrite(chunk, ...(args as [BufferEncoding?, ((err?: Error | null) => void)?]));
   };
 }

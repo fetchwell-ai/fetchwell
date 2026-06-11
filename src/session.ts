@@ -61,8 +61,8 @@ export function loadSavedSession(providerId?: string, basePath?: string): Serial
 
 export function saveSession(session: SerializedSession, providerId?: string, basePath?: string): void {
   const filePath = sessionPath(providerId, basePath);
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(session, null, 2));
+  fs.mkdirSync(path.dirname(filePath), { recursive: true, mode: 0o700 });
+  fs.writeFileSync(filePath, JSON.stringify(session, null, 2), { mode: 0o600 });
 }
 
 export function clearSession(providerId?: string, basePath?: string): void {

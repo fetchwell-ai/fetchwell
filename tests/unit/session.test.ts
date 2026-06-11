@@ -187,4 +187,30 @@ describe('loadSavedSession — Zod validation', () => {
     expect(loaded?.homeUrl).toBe('https://example.com/dashboard');
     expect(loaded?.cookies[0].name).toBe('token');
   });
+
+  it('saveSession writes session.json with mode 0o600', () => {
+    const session = {
+      cookies: [],
+      savedAt: new Date().toISOString(),
+    };
+    saveSession(session, providerId, tmpDir);
+    const filePath = path.join(tmpDir, providerId, 'session.json');
+    const stat = fs.statSync(filePath);
+    // Extract the permission bits (last 9 bits)
+    const mode = stat.mode & 0o777;
+    expect(mode).toBe(0o600);
+  });
+
+  it('saveSession creates the session directory with mode 0o700', () => {
+    const newProviderId = 'new-provider-permissions';
+    const session = {
+      cookies: [],
+      savedAt: new Date().toISOString(),
+    };
+    saveSession(session, newProviderId, tmpDir);
+    const dirPath = path.join(tmpDir, newProviderId);
+    const stat = fs.statSync(dirPath);
+    const mode = stat.mode & 0o777;
+    expect(mode).toBe(0o700);
+  });
 });
