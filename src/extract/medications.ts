@@ -5,6 +5,7 @@ import { logDepth, navigateToSection } from "./helpers.js";
 import { type ExtractionContext } from "./context.js";
 import { type BrowserProvider } from "../browser/interface.js";
 import { type StructuredProgressEvent } from "../progress-events.js";
+import { MEDICATIONS_PROMPTS } from "../prompts.js";
 
 /**
  * Probe mode: navigate to medications page, log URL, take a screenshot.
@@ -14,13 +15,7 @@ export async function probeMedications(browser: BrowserProvider, portalUrl: stri
   console.log("[probe] Medications: navigating...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
-  const fallbackAct = 'Click the Medications or Medicines link in the navigation menu, sidebar, or home page. ' +
-    'Look for text that says "Medications", "Medicines", "My Medications", or "Medication List". ' +
-    'It may be in a left sidebar under a Medical Record section. ' +
-    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
-    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
-    'only navigate to view existing records.';
-  await navigateToSection(browser, providerId, "medications", { act: fallbackAct }, portalUrl);
+  await navigateToSection(browser, providerId, "medications", { act: MEDICATIONS_PROMPTS.fallbackAct }, portalUrl);
   await new Promise((r) => setTimeout(r, 3000));
   try { await browser.waitFor({ type: "networkIdle" }); } catch {}
 
@@ -54,13 +49,7 @@ export async function extractMedications(ctx: ExtractionContext): Promise<number
   console.log("[extract] Navigating to medications...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
-  const fallbackAct = 'Click the Medications or Medicines link in the navigation menu, sidebar, or home page. ' +
-    'Look for text that says "Medications", "Medicines", "My Medications", or "Medication List". ' +
-    'It may be in a left sidebar under a Medical Record section. ' +
-    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
-    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
-    'only navigate to view existing records.';
-  const { navigationFailed } = await navigateToSection(browser, providerId, "medications", { act: fallbackAct }, portalUrl);
+  const { navigationFailed } = await navigateToSection(browser, providerId, "medications", { act: MEDICATIONS_PROMPTS.fallbackAct }, portalUrl);
   if (navigationFailed) {
     console.log("[extract] Medications: navigation failed — skipping section.");
     return 0;

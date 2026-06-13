@@ -13,6 +13,7 @@ import {
 import { type ExtractionContext } from "./context.js";
 import { type BrowserProvider } from "../browser/interface.js";
 import { type StructuredProgressEvent } from "../progress-events.js";
+import { MESSAGES_PROMPTS } from "../prompts.js";
 
 /**
  * Probe mode: navigate to messages inbox, observe threads, log count + titles,
@@ -22,19 +23,12 @@ export async function probeMessages(browser: BrowserProvider, portalUrl: string,
   console.log("[probe] Messages: navigating...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
-  const fallbackAct = 'Click the Messages or Inbox link in the navigation menu. ' +
-    'It may be labeled "Messages", "Inbox", or "MyChart Messages". ' +
-    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
-    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
-    'only navigate to view existing records.';
-  const defaultObserve = "Find all clickable message threads or conversations on this page. " +
-    "Each entry is a row with a subject line, sender, and date. Include the message date exactly as shown. Return each one separately.";
-  const { listInstruction } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct }, portalUrl);
+  const { listInstruction } = await navigateToSection(browser, providerId, "messages", { act: MESSAGES_PROMPTS.fallbackAct }, portalUrl);
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "messages");
 
-  const observeInstruction = listInstruction ?? defaultObserve;
+  const observeInstruction = listInstruction ?? MESSAGES_PROMPTS.defaultObserve;
   const threadLinks = await browser.observe(
     (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
@@ -73,14 +67,7 @@ export async function extractMessages(ctx: ExtractionContext): Promise<number> {
   console.log("[extract] Navigating to messages...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
-  const fallbackAct = 'Click the Messages or Inbox link in the navigation menu. ' +
-    'It may be labeled "Messages", "Inbox", or "MyChart Messages". ' +
-    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
-    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
-    'only navigate to view existing records.';
-  const defaultObserve = "Find all clickable message threads or conversations on this page. " +
-    "Each entry is a row with a subject line, sender, and date. Include the message date exactly as shown. Return each one separately.";
-  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct }, portalUrl);
+  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "messages", { act: MESSAGES_PROMPTS.fallbackAct }, portalUrl);
   if (navigationFailed) {
     console.log("[extract] Messages: navigation failed — skipping section.");
     return 0;
@@ -88,7 +75,7 @@ export async function extractMessages(ctx: ExtractionContext): Promise<number> {
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "messages");
-  const observeInstruction = listInstruction ?? defaultObserve;
+  const observeInstruction = listInstruction ?? MESSAGES_PROMPTS.defaultObserve;
   let threadLinks: Awaited<ReturnType<typeof browser.observe>>;
   try {
     threadLinks = await browser.observe(

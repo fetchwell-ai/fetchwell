@@ -13,6 +13,7 @@ import {
 import { type ExtractionContext } from "./context.js";
 import { type BrowserProvider } from "../browser/interface.js";
 import { type StructuredProgressEvent } from "../progress-events.js";
+import { VISITS_PROMPTS } from "../prompts.js";
 
 /**
  * Probe mode: navigate to visits list, observe items, log count + titles,
@@ -22,21 +23,12 @@ export async function probeVisits(browser: BrowserProvider, portalUrl: string, p
   console.log("[probe] Visits: navigating...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
-  const fallbackAct = 'Click the Visits or Past Visits link in the navigation menu. It may be labeled "Visits", ' +
-    '"Past Visits", or "Appointments". If you land on a page showing Upcoming appointments, click the Past tab. ' +
-    'It is usually in the top navigation bar or sidebar. ' +
-    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
-    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
-    'only navigate to view existing records.';
-  const defaultObserve = "Find all clickable past visit rows on this page. " +
-    "Each entry is a row or link representing a specific past visit or after-visit summary. " +
-    "Include the visit date exactly as shown. Return each one as a separate result.";
-  const { listInstruction } = await navigateToSection(browser, providerId, "visits", { act: fallbackAct }, portalUrl);
+  const { listInstruction } = await navigateToSection(browser, providerId, "visits", { act: VISITS_PROMPTS.fallbackAct }, portalUrl);
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "visits");
 
-  const observeInstruction = listInstruction ?? defaultObserve;
+  const observeInstruction = listInstruction ?? VISITS_PROMPTS.defaultObserve;
   const visitLinks = await browser.observe(
     (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
@@ -78,16 +70,7 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
   console.log("[extract] Navigating to visits...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
-  const fallbackAct = 'Click the Visits or Past Visits link in the navigation menu. It may be labeled "Visits", ' +
-    '"Past Visits", or "Appointments". If you land on a page showing Upcoming appointments, click the Past tab. ' +
-    'It is usually in the top navigation bar or sidebar. ' +
-    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
-    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
-    'only navigate to view existing records.';
-  const defaultObserve = "Find all clickable past visit rows on this page. " +
-    "Each entry is a row or link representing a specific past visit or after-visit summary. " +
-    "Include the visit date exactly as shown. Return each one as a separate result.";
-  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "visits", { act: fallbackAct }, portalUrl);
+  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "visits", { act: VISITS_PROMPTS.fallbackAct }, portalUrl);
   if (navigationFailed) {
     console.log("[extract] Visits: navigation failed — skipping section.");
     return 0;
@@ -95,7 +78,7 @@ export async function extractVisits(ctx: ExtractionContext): Promise<number> {
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "visits");
-  const observeInstruction = listInstruction ?? defaultObserve;
+  const observeInstruction = listInstruction ?? VISITS_PROMPTS.defaultObserve;
   let visitLinks: Awaited<ReturnType<typeof browser.observe>>;
   try {
     visitLinks = await browser.observe(

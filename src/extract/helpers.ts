@@ -5,7 +5,7 @@ import { PDFDocument } from "pdf-lib";
 import { type BrowserProvider } from "../browser/interface.js";
 import { loadNavMap, saveNavMap, type NavMap } from "../discover/nav-map.js";
 import { loadSavedSession } from "../session.js";
-import { SECTION_INSTRUCTIONS, VERIFY_INSTRUCTIONS } from "../discover/index.js";
+import { SECTION_INSTRUCTIONS, VERIFY_INSTRUCTIONS, buildListInstruction } from "../discover/index.js";
 import { getOutputBase } from "../paths.js";
 
 /**
@@ -346,7 +346,7 @@ export async function navigateToSection(
                   ...(existingEntry ?? {}),
                   steps: [actInstruction],
                   url: newUrl,
-                  listInstruction: existingEntry?.listInstruction,
+                  listInstruction: existingEntry?.listInstruction ?? buildListInstruction(section),
                   itemInstruction: existingEntry?.itemInstruction,
                 },
               },
@@ -356,7 +356,7 @@ export async function navigateToSection(
               console.log(`[nav] ${section}: nav-map updated with new URL`);
             } catch { /* non-fatal */ }
           }
-          return { listInstruction: existingEntry?.listInstruction ?? entry?.listInstruction };
+          return { listInstruction: existingEntry?.listInstruction ?? entry?.listInstruction ?? buildListInstruction(section) };
         }
       } catch (err: unknown) {
         console.log(`[nav] ${section}: agentic attempt ${attempt + 1} error: ${(err instanceof Error ? err.message : String(err)).slice(0, 80)}`);

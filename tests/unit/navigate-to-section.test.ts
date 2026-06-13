@@ -42,6 +42,7 @@ vi.mock('../../src/discover/index.js', () => ({
     medications: 'Is this page showing a list of medications?',
     messages: 'Is this page showing a list of messages or an inbox?',
   },
+  buildListInstruction: (section: string) => `Find all ${section} entries.`,
 }));
 
 // ---------------------------------------------------------------------------
@@ -429,5 +430,45 @@ describe('navigateToSection', () => {
     expect(result.navigationFailed).toBeUndefined();
     // saveNavMap should NOT be called (cached URL was valid, no update needed)
     expect(saveNavMap).not.toHaveBeenCalled();
+  });
+
+  it('returns listInstruction from buildListInstruction on first run when no nav-map exists', async () => {
+    // Regression test for bug: tier-3 used to return undefined listInstruction
+    // on first run because existingEntry?.listInstruction was undefined.
+    // Now it falls back to buildListInstruction(section).
+    (loadNavMap as Mock).mockReturnValue(null);
+
+    const extract = vi.fn().mockResolvedValue({ isCorrectPage: true, description: 'labs page found' });
+    const browser = makeBrowser({
+      extract,
+      url: vi.fn().mockResolvedValue('https://portal.example.com/labs-new'),
+    });
+
+    const result = await runWithFakeTimers(() =>
+      navigateToSection(
+        browser as any,
+        'test-provider',
+        'labs',
+        { act: 'hardcoded fallback' },
+        'https://portal.example.com/home',
+      )
+    ) as Awaited<ReturnType<typeof navigateToSection>>;
+
+    // Navigation should succeed
+    expect(result.navigationFailed).toBeUndefined();
+    // listInstruction must be provided (not undefined) — comes from buildListInstruction fallback
+    expect(result.listInstruction).toBe('Find all labs entries.');
+    // nav-map should be saved with the generated listInstruction
+    expect(saveNavMap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sections: expect.objectContaining({
+          labs: expect.objectContaining({
+            listInstruction: 'Find all labs entries.',
+          }),
+        }),
+      }),
+      'test-provider',
+      undefined,
+    );
   });
 });

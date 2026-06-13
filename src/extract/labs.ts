@@ -13,6 +13,7 @@ import {
 import { type ExtractionContext } from "./context.js";
 import { type BrowserProvider } from "../browser/interface.js";
 import { type StructuredProgressEvent } from "../progress-events.js";
+import { LABS_PROMPTS } from "../prompts.js";
 
 /**
  * Probe mode: navigate to labs list, observe items, log count + titles,
@@ -22,20 +23,12 @@ export async function probeLabsDocs(browser: BrowserProvider, portalUrl: string,
   console.log("[probe] Labs: navigating...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
-  const fallbackAct = 'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
-    'labeled "Test Results", "Labs", "Lab Results", or similar. ' +
-    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
-    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
-    'only navigate to view existing records.';
-  const defaultObserve = "Find all clickable lab result or test result entries on this page. " +
-    "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
-    "Include the item's date exactly as shown. Return each one as a separate result.";
-  const { listInstruction } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct }, portalUrl);
+  const { listInstruction } = await navigateToSection(browser, providerId, "labs", { act: LABS_PROMPTS.fallbackAct }, portalUrl);
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "labs");
 
-  const observeInstruction = listInstruction ?? defaultObserve;
+  const observeInstruction = listInstruction ?? LABS_PROMPTS.defaultObserve;
   const panelLinks = await browser.observe(
     (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
   );
@@ -82,15 +75,7 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
   console.log("[extract] Navigating to lab/test results...");
   await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
 
-  const fallbackAct = 'Navigate to the Test Results or Lab Results section. Look for links or menu items ' +
-    'labeled "Test Results", "Labs", "Lab Results", or similar. ' +
-    'NEVER click Log Out, Sign Out, account settings, security settings, Compose Message, Send Message, ' +
-    'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
-    'only navigate to view existing records.';
-  const defaultObserve = "Find all clickable lab result or test result entries on this page. " +
-    "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
-    "Include the item's date exactly as shown. Return each one as a separate result.";
-  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct }, portalUrl);
+  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "labs", { act: LABS_PROMPTS.fallbackAct }, portalUrl);
   if (navigationFailed) {
     console.log("[extract] Labs: navigation failed — skipping section.");
     return 0;
@@ -98,7 +83,7 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
   await new Promise((r) => setTimeout(r, 3000));
 
   await logDepth(browser, "labs");
-  const observeInstruction = listInstruction ?? defaultObserve;
+  const observeInstruction = listInstruction ?? LABS_PROMPTS.defaultObserve;
   let panelLinks: Awaited<ReturnType<typeof browser.observe>>;
   try {
     panelLinks = await browser.observe(
