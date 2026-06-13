@@ -28,7 +28,7 @@ export async function probeMessages(browser: BrowserProvider, portalUrl: string,
     'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
     'only navigate to view existing records.';
   const defaultObserve = "Find all clickable message threads or conversations on this page. " +
-    "Each entry is a row with a subject line, sender, and date. Return each one separately.";
+    "Each entry is a row with a subject line, sender, and date. Include the message date exactly as shown. Return each one separately.";
   const { listInstruction } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct }, portalUrl);
   await new Promise((r) => setTimeout(r, 3000));
 
@@ -79,7 +79,7 @@ export async function extractMessages(ctx: ExtractionContext): Promise<number> {
     'Request Refill, Schedule Appointment, or any button that submits a form or sends data — ' +
     'only navigate to view existing records.';
   const defaultObserve = "Find all clickable message threads or conversations on this page. " +
-    "Each entry is a row with a subject line, sender, and date. Return each one separately.";
+    "Each entry is a row with a subject line, sender, and date. Include the message date exactly as shown. Return each one separately.";
   const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "messages", { act: fallbackAct }, portalUrl);
   if (navigationFailed) {
     console.log("[extract] Messages: navigation failed — skipping section.");

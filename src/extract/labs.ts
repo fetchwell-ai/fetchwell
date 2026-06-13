@@ -29,7 +29,7 @@ export async function probeLabsDocs(browser: BrowserProvider, portalUrl: string,
     'only navigate to view existing records.';
   const defaultObserve = "Find all clickable lab result or test result entries on this page. " +
     "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
-    "Return each one as a separate result.";
+    "Include the item's date exactly as shown. Return each one as a separate result.";
   const { listInstruction } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct }, portalUrl);
   await new Promise((r) => setTimeout(r, 3000));
 
@@ -89,7 +89,7 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
     'only navigate to view existing records.';
   const defaultObserve = "Find all clickable lab result or test result entries on this page. " +
     "Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). " +
-    "Return each one as a separate result.";
+    "Include the item's date exactly as shown. Return each one as a separate result.";
   const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "labs", { act: fallbackAct }, portalUrl);
   if (navigationFailed) {
     console.log("[extract] Labs: navigation failed — skipping section.");
@@ -176,7 +176,6 @@ export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
       // Get a descriptive name from the detail page (handles shadow DOM elements
       // where observe() returns "an element inside a shadow DOM" instead of the real name)
       let itemLabel = link.description
-        .replace(/^Lab\/test result entry:\s*/i, "")
         .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
       const pageTitle = await browser.title();
       if (!itemLabel || itemLabel.toLowerCase().includes("shadow dom")) {

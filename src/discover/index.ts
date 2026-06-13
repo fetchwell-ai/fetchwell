@@ -9,7 +9,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
 import { type BrowserProvider } from "../browser/interface.js";
-import { type NavMap, saveNavMap } from "./nav-map.js";
+import { type NavMap, NAV_MAP_VERSION, saveNavMap } from "./nav-map.js";
 import { OUTPUT_BASE } from "../extract/helpers.js";
 import { type StructuredProgressEvent } from "../progress-events.js";
 
@@ -34,13 +34,15 @@ const GUARDRAIL =
 export const SECTION_INSTRUCTIONS: Record<SectionKey, [string, string]> = {
   labs: [
     `Find and navigate to the test results or lab results page ${PORTAL_CONTEXT} ` +
-    "It may be called Test Results, Lab Results, Results, My Medical Record, Diagnostics, Pathology, Imaging, or Radiology.",
-    `Try opening the hamburger menu or any expandable sidebar to find Test Results, Lab Results, Results, Diagnostics, Pathology, Imaging, or My Medical Record. ${GUARDRAIL}`,
+    "It may be called Test Results, Lab Results, Results, Diagnostics, Pathology, Imaging, or Radiology.",
+    `Try opening the hamburger menu or any expandable sidebar to find Test Results, Lab Results, Results, Diagnostics, Pathology, Imaging, or Radiology. ${GUARDRAIL}`,
   ],
   visits: [
-    `Find and navigate to the visits or appointments page ${PORTAL_CONTEXT} ` +
-    "It may be called Visits, Appointments, Past Visits, After-Visit Summaries, Encounter History, or Office Visits.",
-    `Try opening the hamburger menu or any expandable sidebar to find Visits, Appointments, Past Visits, After-Visit Summaries, or Encounter History. ${GUARDRAIL}`,
+    `Find and navigate to the past visits or visit history page ${PORTAL_CONTEXT} ` +
+    "It may be called Visits, Past Visits, After-Visit Summaries, Encounter History, or Office Visits. " +
+    "If you land on a page that shows Upcoming appointments, look for and click a 'Past' or 'Past Visits' tab.",
+    `Try opening the hamburger menu or any expandable sidebar to find Past Visits, After-Visit Summaries, or Encounter History. ` +
+    `If you land on a page showing Upcoming appointments, click the Past tab. ${GUARDRAIL}`,
   ],
   medications: [
     `Find and navigate to the medications page ${PORTAL_CONTEXT} ` +
@@ -54,12 +56,14 @@ export const SECTION_INSTRUCTIONS: Record<SectionKey, [string, string]> = {
   ],
 };
 
-const NOT_THESE = "Answer false if this is a dashboard, home page, settings page, or any other section.";
+const NOT_THESE =
+  "Answer false if this is a dashboard, home page, settings page, or any other section. " +
+  "Answer true if this is the correct section even if it is empty or shows a no-results message.";
 export const VERIFY_INSTRUCTIONS: Record<SectionKey, string> = {
-  labs: `Is this page showing a list of lab results or test results? It should display individual lab panels, blood work, imaging results, or diagnostic reports. ${NOT_THESE}`,
-  visits: `Is this page showing a list of past visits, appointments, or after-visit summaries? It should display individual visit or appointment records. ${NOT_THESE} A page about scheduling or explaining video visits is NOT correct.`,
-  medications: `Is this page showing a list of medications, prescriptions, or medicines? It should display current medications or a medication list. ${NOT_THESE}`,
-  messages: `Is this page showing a list of messages or an inbox? It should display conversations or secure message threads with healthcare providers. ${NOT_THESE}`,
+  labs: `Is this page showing a list of lab results or test results (or an empty lab results section)? It should display individual lab panels, blood work, imaging results, or diagnostic reports — or an empty/no-results state for that section. ${NOT_THESE}`,
+  visits: `Is this page showing a list of past visits or after-visit summaries (or an empty past visits section)? It must show PAST visits or visit history — NOT upcoming appointments only. A page that shows only upcoming or future appointments is NOT correct. A page about scheduling or explaining video visits is NOT correct. ${NOT_THESE}`,
+  medications: `Is this page showing a list of medications, prescriptions, or medicines (or an empty medications section)? It should display current medications or a medication list. ${NOT_THESE}`,
+  messages: `Is this page showing a list of messages or an inbox (or an empty inbox)? It should display conversations or secure message threads with healthcare providers. ${NOT_THESE}`,
 };
 
 const VerifySchema = z.object({
@@ -73,10 +77,10 @@ const VerifySchema = z.object({
 
 export function buildListInstruction(section: SectionKey): string {
   switch (section) {
-    case "labs": return "Find all clickable lab result or test result entries on this page. Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). Return each one as a separate result.";
-    case "visits": return "Find all clickable visit entries on this page. Each entry is a row or link representing a specific past visit, appointment, or after-visit summary. Return each one as a separate result.";
+    case "labs": return "Find all clickable lab result or test result entries on this page. Each entry is a row or link representing a specific lab panel or test result (e.g. CBC, MRI, Lipid Panel). Include the item's date exactly as shown. Return each one as a separate result.";
+    case "visits": return "Find all clickable past visit rows on this page. Each entry is a row or link representing a specific past visit or after-visit summary. Include the visit date exactly as shown. Return each one as a separate result.";
     case "medications": return "Find the medication list on this page. Look for a table or list of current medications, prescriptions, or medicines.";
-    case "messages": return "Find all clickable message threads on this page. Each entry is a row or link representing a message thread or conversation. Return each one as a separate result.";
+    case "messages": return "Find all clickable message threads on this page. Each entry is a row or link representing a message thread or conversation. Include the message date exactly as shown. Return each one as a separate result.";
   }
 }
 
@@ -182,6 +186,7 @@ export async function discoverPortal(
   }
 
   const navMap: NavMap = {
+    version: NAV_MAP_VERSION,
     discoveredAt: new Date().toISOString(),
     portalName: portalName || providerId,
     sections,
