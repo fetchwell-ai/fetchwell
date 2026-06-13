@@ -11,6 +11,20 @@ import {
 } from "../interface.js";
 import { getPageText, getPageHtml, stripFixedElements } from "../page-eval.js";
 
+/**
+ * Race a promise against a timeout. Rejects with a clear error if the timeout
+ * fires before the promise resolves. The original promise is not cancelled
+ * (JS has no cancellation), but the caller will receive the timeout error.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(message)), ms)
+    ),
+  ]);
+}
+
 export class StagehandLocalProvider implements BrowserProvider {
   private stagehand!: Stagehand;
   private headless: boolean;
@@ -76,6 +90,12 @@ export class StagehandLocalProvider implements BrowserProvider {
       await this.stagehand.init();
     } catch (err) {
       console.error(`[stagehand] init failed:`, err);
+      // Close the browser to prevent Chromium process leaks
+      try {
+        await this.stagehand.close();
+      } catch {
+        // best-effort cleanup
+      }
       throw err;
     }
   }
@@ -86,15 +106,27 @@ export class StagehandLocalProvider implements BrowserProvider {
   }
 
   async act(instruction: string): Promise<void> {
-    await this.stagehand.page.act({ action: instruction, iframes: true });
+    await withTimeout(
+      this.stagehand.page.act({ action: instruction, iframes: true }),
+      120_000,
+      `act() timed out after 120s (instruction: "${instruction.slice(0, 80)}")`,
+    );
   }
 
   async extract<T>(schema: ZodSchema<T>, instruction: string): Promise<T> {
-    return this.stagehand.page.extract({ instruction, schema: schema as any, iframes: true });
+    return withTimeout(
+      this.stagehand.page.extract({ instruction, schema: schema as any, iframes: true }),
+      120_000,
+      `extract() timed out after 120s (instruction: "${instruction.slice(0, 80)}")`,
+    );
   }
 
   async observe(instruction: string): Promise<ObserveResult[]> {
-    return this.stagehand.page.observe({ instruction, iframes: true });
+    return withTimeout(
+      this.stagehand.page.observe({ instruction, iframes: true }),
+      120_000,
+      `observe() timed out after 120s (instruction: "${instruction.slice(0, 80)}")`,
+    );
   }
 
   async screenshot(): Promise<string> {
@@ -108,16 +140,22 @@ export class StagehandLocalProvider implements BrowserProvider {
 
   async waitFor(condition: WaitCondition): Promise<void> {
     switch (condition.type) {
-      case "navigation":
-        await this.stagehand.page.waitForURL("**/*");
+      case "navigation": {
+        // waitForURL('**/*') matches the current URL and resolves immediately (no-op).
+        // Instead, capture the current URL and wait until it changes.
+        const currentUrl = this.stagehand.page.url();
+        await this.stagehand.page.waitForURL((url) => url.toString() !== currentUrl);
         break;
+      }
       case "selector":
         await this.stagehand.page.waitForSelector(condition.selector, {
           timeout: condition.timeout ?? 30_000,
         });
         break;
       case "networkIdle":
-        await this.stagehand.page.waitForLoadState("networkidle");
+        await this.stagehand.page.waitForLoadState("networkidle", {
+          timeout: condition.timeout ?? 30_000,
+        });
         break;
     }
   }

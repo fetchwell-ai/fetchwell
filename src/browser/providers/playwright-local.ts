@@ -65,16 +65,22 @@ export class PlaywrightLocalProvider implements BrowserProvider {
 
   async waitFor(condition: WaitCondition): Promise<void> {
     switch (condition.type) {
-      case "navigation":
-        await this.page.waitForURL("**/*");
+      case "navigation": {
+        // waitForURL('**/*') matches the current URL and resolves immediately (no-op).
+        // Instead, capture the current URL and wait until it changes.
+        const currentUrl = this.page.url();
+        await this.page.waitForURL((url) => url.toString() !== currentUrl);
         break;
+      }
       case "selector":
         await this.page.waitForSelector(condition.selector, {
           timeout: condition.timeout ?? 30_000,
         });
         break;
       case "networkIdle":
-        await this.page.waitForLoadState("networkidle");
+        await this.page.waitForLoadState("networkidle", {
+          timeout: condition.timeout ?? 30_000,
+        });
         break;
     }
   }
