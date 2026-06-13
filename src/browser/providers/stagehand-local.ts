@@ -15,13 +15,20 @@ import { getPageText, getPageHtml, stripFixedElements } from "../page-eval.js";
  * Race a promise against a timeout. Rejects with a clear error if the timeout
  * fires before the promise resolves. The original promise is not cancelled
  * (JS has no cancellation), but the caller will receive the timeout error.
+ * The timer handle is cleared when the original promise wins to avoid keeping
+ * a live Node.js timer for the full 120s after a fast response.
  */
 function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  let handle: ReturnType<typeof setTimeout>;
+  const timer = new Promise<T>((_, reject) => {
+    handle = setTimeout(() => reject(new Error(message)), ms);
+  });
   return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(message)), ms)
+    promise.then(
+      (v) => { clearTimeout(handle); return v; },
+      (e) => { clearTimeout(handle); throw e; },
     ),
+    timer,
   ]);
 }
 
