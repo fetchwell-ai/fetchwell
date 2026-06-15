@@ -274,8 +274,7 @@ async function extractProvider(provider: ProviderConfig, incremental = false) {
     console.error(err);
     console.error();
     if (process.stdout.isTTY) {
-      console.error("[extract] Browser is being kept open for inspection.");
-      console.error("[extract] Press Enter to close it.");
+      console.error("[extract] Press Enter to exit.");
       await prompt("");
     }
     process.exit(1);
