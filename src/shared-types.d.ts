@@ -27,7 +27,7 @@ declare type LoginFormValue = 'two-step' | 'single-page' | 'auto';
 // ---------------------------------------------------------------------------
 
 declare interface RunnerCommand {
-  command: 'extract' | 'discover';
+  command: 'extract';
   portalId: string;
   incremental: boolean;
   downloadFolder?: string;

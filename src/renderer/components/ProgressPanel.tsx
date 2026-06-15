@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import ErrorSummary, { resetFailureCount } from './ErrorSummary';
+import ErrorSummary from './ErrorSummary';
 import { Button } from './ui/button';
 
 export interface PortalCounts {
@@ -14,7 +14,6 @@ export interface ProgressPanelProps {
   portalId: string;
   operation: 'extraction';
   onClose: () => void;
-  onReDiscover?: () => void;
   portalCounts?: PortalCounts;
 }
 
@@ -218,7 +217,7 @@ function isNoisyLogLine(line: string): boolean {
 
 // -- Main component --
 
-export default function ProgressPanel({ portalId, operation, onClose, onReDiscover, portalCounts }: ProgressPanelProps) {
+export default function ProgressPanel({ portalId, operation, onClose, portalCounts }: ProgressPanelProps) {
   const [logs, setLogs] = useState<string[]>([]);
   const [panelState, setPanelState] = useState<PanelState>('running');
   const [errorData, setErrorData] = useState<ErrorData | null>(null);
@@ -246,7 +245,6 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
 
     const handleComplete = (op: string, data: { portalId: string }) => {
       if (op === operation) {
-        resetFailureCount(data.portalId);
         setCompletedPortalId(data.portalId);
         setPanelState('complete');
         setStatusMessage(null);
@@ -489,10 +487,8 @@ export default function ProgressPanel({ portalId, operation, onClose, onReDiscov
         {panelState === 'error' && errorData && (
           <div className="progress-panel-footer flex-shrink-0 border-t border-[var(--color-fw-border)] px-6 pb-5 pt-4">
             <ErrorSummary
-              portalId={portalId}
               error={errorData}
               logs={logs}
-              onReDiscover={onReDiscover}
             />
             <div className="mt-3 flex justify-end gap-2">
               <Button

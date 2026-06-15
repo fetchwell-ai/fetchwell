@@ -1,32 +1,16 @@
 import { BrowserProvider } from "./interface.js";
 import { StagehandLocalProvider } from "./providers/stagehand-local.js";
-import { PlaywrightLocalProvider } from "./providers/playwright-local.js";
 
-export type ProviderType = "stagehand-local" | "local";
+export type ProviderType = "stagehand-local";
 
 export async function createBrowserProvider(
   type?: ProviderType,
   apiKey?: string,
 ): Promise<BrowserProvider> {
-  const providerType = type ?? "stagehand-local";
-
-  let provider: BrowserProvider & { init(): Promise<void> };
-
-  switch (providerType) {
-    case "stagehand-local":
-      provider = new StagehandLocalProvider({
-        headless: process.env.HEADLESS === "true",
-        apiKey,
-      });
-      break;
-    case "local":
-      provider = new PlaywrightLocalProvider({
-        headless: process.env.HEADLESS === "true",
-      });
-      break;
-    default:
-      throw new Error(`Unknown browser provider: ${providerType}`);
-  }
+  const provider = new StagehandLocalProvider({
+    headless: process.env.HEADLESS === "true",
+    apiKey,
+  });
 
   await provider.init();
   return provider;

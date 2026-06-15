@@ -31,7 +31,7 @@ export type LoginFormValue = (typeof LOGIN_FORM_VALUES)[number];
 // ---------------------------------------------------------------------------
 
 export interface RunnerCommand {
-  command: 'extract' | 'discover';
+  command: 'extract';
   portalId: string;
   incremental: boolean;
   downloadFolder?: string;

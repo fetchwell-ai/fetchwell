@@ -35,42 +35,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // that removes exactly those listeners (not all listeners on those channels).
   onProgress: (callback: (message: string) => void): (() => void) => {
     const logHandler = (_event: Electron.IpcRendererEvent, message: string) => callback(message);
-    const discoveryHandler = (_event: Electron.IpcRendererEvent, message: string) => callback(message);
     ipcRenderer.on('extraction:log', logHandler);
-    ipcRenderer.on('discovery:log', discoveryHandler);
     return () => {
       ipcRenderer.removeListener('extraction:log', logHandler);
-      ipcRenderer.removeListener('discovery:log', discoveryHandler);
     };
   },
   onComplete: (callback: (operation: string, data: { portalId: string }) => void): (() => void) => {
     const extractionHandler = (_event: Electron.IpcRendererEvent, data: { portalId: string }) => callback('extraction', data);
-    const discoveryHandler = (_event: Electron.IpcRendererEvent, data: { portalId: string }) => callback('discovery', data);
     ipcRenderer.on('extraction:complete', extractionHandler);
-    ipcRenderer.on('discovery:complete', discoveryHandler);
     return () => {
       ipcRenderer.removeListener('extraction:complete', extractionHandler);
-      ipcRenderer.removeListener('discovery:complete', discoveryHandler);
     };
   },
   onError: (callback: (operation: string, data: { type: string; category: string; message: string; suggestion: string }) => void): (() => void) => {
     const extractionHandler = (_event: Electron.IpcRendererEvent, data: { type: string; category: string; message: string; suggestion: string }) => callback('extraction', data);
-    const discoveryHandler = (_event: Electron.IpcRendererEvent, data: { type: string; category: string; message: string; suggestion: string }) => callback('discovery', data);
     ipcRenderer.on('extraction:error', extractionHandler);
-    ipcRenderer.on('discovery:error', discoveryHandler);
     return () => {
       ipcRenderer.removeListener('extraction:error', extractionHandler);
-      ipcRenderer.removeListener('discovery:error', discoveryHandler);
     };
   },
   onStructuredProgress: (callback: (operation: string, event: unknown) => void): (() => void) => {
     const extractionHandler = (_event: Electron.IpcRendererEvent, data: unknown) => callback('extraction', data);
-    const discoveryHandler = (_event: Electron.IpcRendererEvent, data: unknown) => callback('discovery', data);
     ipcRenderer.on('extraction:progress', extractionHandler);
-    ipcRenderer.on('discovery:progress', discoveryHandler);
     return () => {
       ipcRenderer.removeListener('extraction:progress', extractionHandler);
-      ipcRenderer.removeListener('discovery:progress', discoveryHandler);
     };
   },
 

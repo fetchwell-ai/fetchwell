@@ -1,8 +1,8 @@
 /**
  * Pipeline Bridge — Electron ↔ Pipeline Subprocess Communication
  *
- * Wraps the extraction and discovery pipelines for use from the Electron main
- * process. Each run is launched as a child process (via fork) that executes
+ * Wraps the extraction pipeline for use from the Electron main process.
+ * Each run is launched as a child process (via fork) that executes
  * src/electron-runner.ts under tsx.
  *
  * IPC protocol with the child:
@@ -11,11 +11,11 @@
  *   Parent → Child: { type: '2fa:response', code: string | null }
  *
  * IPC events emitted to the BrowserWindow renderer:
- *   extraction:log / discovery:log         — progress message string (stdout)
- *   extraction:progress / discovery:progress — StructuredProgressEvent (IPC)
- *   extraction:complete / discovery:complete — success (no payload)
- *   extraction:error / discovery:error     — PipelineErrorEvent payload
- *   2fa:request                             — triggers the OTP modal
+ *   extraction:log       — progress message string (stdout)
+ *   extraction:progress  — StructuredProgressEvent (IPC)
+ *   extraction:complete  — success (no payload)
+ *   extraction:error     — PipelineErrorEvent payload
+ *   2fa:request          — triggers the OTP modal
  */
 
 import { fork } from 'child_process';
@@ -107,13 +107,11 @@ function ensureTwoFaHandler(): void {
  * Fork the electron-runner subprocess, wire up IPC, and return a Promise
  * that resolves on success or rejects with an Error on failure.
  *
- * @param command    - 'extract' or 'discover'
  * @param win        - The BrowserWindow to receive IPC events
  * @param config     - Run configuration
  * @param logChannel - IPC channel name for log events (e.g. 'extraction:log')
  */
 function runSubprocess(
-  command: 'extract' | 'discover',
   win: BrowserWindow,
   config: RunConfig,
   logChannel: string,
@@ -258,16 +256,15 @@ function runSubprocess(
           message.type === 'category-complete' ||
           message.type === 'status-message')
       ) {
-        const progressChannel = command === 'extract' ? 'extraction:progress' : 'discovery:progress';
         if (!win.isDestroyed()) {
-          win.webContents.send(progressChannel, message);
+          win.webContents.send('extraction:progress', message);
         }
       }
     });
 
     // Build the command payload
     const runnerCommand: RunnerCommand = {
-      command,
+      command: 'extract',
       portalId: config.portalId,
       incremental: config.incremental,
       downloadFolder: config.downloadFolder || undefined,
@@ -322,7 +319,7 @@ function runSubprocess(
  */
 export async function runExtraction(portalId: string, win: BrowserWindow, config: RunConfig): Promise<CategoryCounts> {
   try {
-    const counts = await runSubprocess('extract', win, { ...config, portalId }, 'extraction:log');
+    const counts = await runSubprocess(win, { ...config, portalId }, 'extraction:log');
     if (!win.isDestroyed()) {
       win.webContents.send('extraction:complete', { portalId });
     }
@@ -352,25 +349,4 @@ export function cancelOperation(portalId: string): boolean {
   return true;
 }
 
-/**
- * Run the discovery pipeline for a portal.
- * Emits discovery:log, discovery:complete, or discovery:error to the window.
- * Rejects on error so callers can distinguish success from failure.
- */
-export async function runDiscovery(portalId: string, win: BrowserWindow, config: RunConfig): Promise<void> {
-  try {
-    await runSubprocess('discover', win, { ...config, portalId }, 'discovery:log');
-    if (!win.isDestroyed()) {
-      win.webContents.send('discovery:complete', { portalId });
-    }
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    const { category, suggestion } = categorizeError(message);
-    const errorEvent: PipelineErrorEvent = { type: 'error', category, message, suggestion };
-    if (!win.isDestroyed()) {
-      win.webContents.send('discovery:error', errorEvent);
-    }
-    throw err;
-  }
-}
 

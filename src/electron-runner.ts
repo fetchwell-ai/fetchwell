@@ -210,7 +210,7 @@ async function main(): Promise<void> {
     const handler = (msg: unknown) => {
       if (typeof msg !== 'object' || msg === null || !('command' in msg)) return;
       const command = msg as RunnerCommand;
-      if (command.command === 'extract' || command.command === 'discover') {
+      if (command.command === 'extract') {
         process.off('message', handler);
         resolve(command);
       }
@@ -229,18 +229,11 @@ async function main(): Promise<void> {
     initLogFile(cmd.downloadFolder, provider.id);
   }
 
-  if (cmd.command === 'extract') {
-    // Dynamically import to avoid top-level side effects (dotenv, arg parsing, run())
-    const { extractProvider } = await import('./extract/runner.js');
-    await runWithTwoFARetry(() =>
-      extractProvider(provider, cmd.incremental, cmd.downloadFolder, sendProgressEvent),
-    );
-  } else if (cmd.command === 'discover') {
-    const { discoverProviderById } = await import('./discover/runner.js');
-    await runWithTwoFARetry(() =>
-      discoverProviderById(provider, cmd.downloadFolder, sendProgressEvent),
-    );
-  }
+  // Dynamically import to avoid top-level side effects (dotenv, arg parsing, run())
+  const { extractProvider } = await import('./extract/runner.js');
+  await runWithTwoFARetry(() =>
+    extractProvider(provider, cmd.incremental, cmd.downloadFolder, sendProgressEvent),
+  );
 }
 
 /**
