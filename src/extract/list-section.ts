@@ -21,8 +21,6 @@ import * as path from "node:path";
 import { ensureLoggedIn } from "../auth.js";
 import {
   readDirSafe,
-  makeItemFilename,
-  makeVisitFilename,
   mergePdfs,
   navigateWithRetry,
   navigateToSection,
