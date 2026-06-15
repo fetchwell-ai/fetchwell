@@ -36,8 +36,8 @@ export interface RunConfig {
   downloadFolder: string;
   showBrowser: boolean;
   incremental: boolean;
-  loginForm: 'two-step' | 'single-page' | 'auto';
-  twoFactor: 'none' | 'email' | 'manual' | 'ui';
+  loginForm: LoginFormValue;
+  twoFactor: TwoFactorValue;
 }
 
 export interface CategoryCounts {
@@ -58,39 +58,9 @@ interface PipelineErrorEvent {
   suggestion: string;
 }
 
-interface TwoFARequest {
-  type: '2fa:request';
-  message: string;
-  deliveryHint?: string;
-  error?: string;
-}
-
-interface TwoFAResponse {
-  type: '2fa:response';
-  code: string | null;
-}
-
-interface TwoFAResult {
-  type: '2fa:result';
-  success: boolean;
-  error?: string;
-}
-
-interface RunnerCommand {
-  command: 'extract' | 'discover';
-  portalId: string;
-  incremental: boolean;
-  downloadFolder?: string;
-  providerConfig: {
-    id: string;
-    name: string;
-    url: string;
-    username: string;
-    password: string;
-    loginForm: 'two-step' | 'single-page' | 'auto';
-    twoFactor: 'none' | 'email' | 'manual' | 'ui';
-  };
-}
+// RunnerCommand, TwoFARequest, TwoFAResponse, TwoFAResult, LoginFormValue, TwoFactorValue
+// are declared as global ambient types in src/shared-types.d.ts,
+// included in electron/tsconfig.json. No local re-declaration needed.
 
 // StructuredProgressEvent is declared as a global ambient type in src/shared-types.d.ts,
 // included in electron/tsconfig.json. No local re-declaration needed.

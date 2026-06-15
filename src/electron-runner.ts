@@ -66,44 +66,8 @@ function initLogFile(downloadFolder: string, portalId: string): void {
   };
 }
 import { type StructuredProgressEvent } from './progress-events.js';
-
-// ---------------------------------------------------------------------------
-// IPC message types
-// ---------------------------------------------------------------------------
-
-interface RunnerCommand {
-  command: 'extract' | 'discover';
-  portalId: string;
-  incremental: boolean;
-  downloadFolder?: string;
-  providerConfig: {
-    id: string;
-    name: string;
-    url: string;
-    username: string;
-    password: string;
-    loginForm: 'two-step' | 'single-page' | 'auto';
-    twoFactor: 'none' | 'email' | 'manual' | 'ui';
-  };
-}
-
-interface TwoFARequest {
-  type: '2fa:request';
-  message: string;
-  deliveryHint?: string;
-  error?: string;
-}
-
-interface TwoFAResponse {
-  type: '2fa:response';
-  code: string | null;
-}
-
-interface TwoFAResult {
-  type: '2fa:result';
-  success: boolean;
-  error?: string;
-}
+import { TwoFactorError } from './ipc-types.js';
+import type { RunnerCommand, TwoFARequest, TwoFAResponse, TwoFAResult } from './ipc-types.js';
 
 // ---------------------------------------------------------------------------
 // Structured progress event emitter
@@ -301,15 +265,7 @@ async function runWithTwoFARetry(operation: () => Promise<void>): Promise<void> 
       }
       return;
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      const is2FAError =
-        message.toLowerCase().includes('2fa') ||
-        message.toLowerCase().includes('verification') ||
-        message.toLowerCase().includes('otp') ||
-        message.toLowerCase().includes('code not provided') ||
-        message.toLowerCase().includes('cancelled');
-
-      if (is2FAError && attempt < MAX_2FA_RETRIES) {
+      if (TwoFactorError.is2FAError(err) && attempt < MAX_2FA_RETRIES) {
         attempt++;
         twoFAWasRequested = false; // Reset so the next attempt can track a fresh request
         // Notify renderer: code failed, re-prompt

@@ -8,12 +8,13 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
+import { TWO_FACTOR_VALUES, LOGIN_FORM_VALUES } from "./ipc-types.js";
 
 const PROJECT_ROOT = path.join(import.meta.dirname, "..");
 
 const AuthSchema = z.object({
-  loginForm: z.enum(["two-step", "single-page", "auto"]).default("auto"),
-  twoFactor: z.enum(["none", "email", "manual", "ui"]).default("manual"),
+  loginForm: z.enum(LOGIN_FORM_VALUES).default("auto"),
+  twoFactor: z.enum(TWO_FACTOR_VALUES).default("manual"),
 });
 
 export type AuthSettings = z.infer<typeof AuthSchema>;

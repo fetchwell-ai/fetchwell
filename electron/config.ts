@@ -3,12 +3,18 @@ import * as path from 'path';
 import * as os from 'os';
 import { z } from 'zod';
 
+// Runtime enum value arrays — derived from the shared TwoFactorValue / LoginFormValue
+// ambient types declared in src/shared-types.d.ts (included via electron/tsconfig.json).
+// These must be defined here since src/ files cannot be imported across the rootDir boundary.
+const TWO_FACTOR_VALUES = ['none', 'email', 'manual', 'ui'] as const satisfies readonly TwoFactorValue[];
+const LOGIN_FORM_VALUES = ['two-step', 'single-page', 'auto'] as const satisfies readonly LoginFormValue[];
+
 export interface PortalEntry {
   id: string;
   name: string;
   url: string;
-  loginForm: 'two-step' | 'single-page' | 'auto';
-  twoFactor: 'none' | 'email' | 'manual' | 'ui';
+  loginForm: LoginFormValue;
+  twoFactor: TwoFactorValue;
   hasCredentials: boolean;
   discoveredAt: string | null;
   lastExtractedAt: string | null;
@@ -26,8 +32,8 @@ export type ApiKeySource = 'bundled' | 'custom';
 export const PortalInputSchema = z.object({
   name: z.string().min(1, 'Portal name must not be empty'),
   url: z.string().min(1, 'Portal URL must not be empty'),
-  loginForm: z.enum(['two-step', 'single-page', 'auto']).optional(),
-  twoFactor: z.enum(['none', 'email', 'manual', 'ui']),
+  loginForm: z.enum(LOGIN_FORM_VALUES).optional(),
+  twoFactor: z.enum(TWO_FACTOR_VALUES),
   username: z.string().optional(),
   password: z.string().optional(),
 });
@@ -48,8 +54,8 @@ const PortalEntrySchema = z.object({
   id: z.string(),
   name: z.string(),
   url: z.string(),
-  loginForm: z.enum(['two-step', 'single-page', 'auto']),
-  twoFactor: z.enum(['none', 'email', 'manual', 'ui']),
+  loginForm: z.enum(LOGIN_FORM_VALUES),
+  twoFactor: z.enum(TWO_FACTOR_VALUES),
   hasCredentials: z.boolean(),
   discoveredAt: z.string().nullable(),
   lastExtractedAt: z.string().nullable(),
@@ -130,7 +136,7 @@ export class ConfigManager {
     return this.config.portals.find((p) => p.id === id);
   }
 
-  addPortal(input: Omit<PortalEntry, 'id' | 'hasCredentials' | 'discoveredAt' | 'lastExtractedAt'> & { loginForm?: 'two-step' | 'single-page' | 'auto' }): PortalEntry {
+  addPortal(input: Omit<PortalEntry, 'id' | 'hasCredentials' | 'discoveredAt' | 'lastExtractedAt'> & { loginForm?: LoginFormValue }): PortalEntry {
     const id = slugify(input.name);
     if (!id) {
       throw new Error('Portal name must produce a valid slug');

@@ -5,10 +5,60 @@
  *   - tsconfig.json (src/, ESM)
  *   - electron/tsconfig.json (electron/, CJS)
  *
- * The canonical runtime implementations are exported from src/progress-events.ts
- * (for use within the src/ module graph via import). The ambient declarations here
- * allow electron/ code to reference these types without a cross-tsconfig import.
+ * The canonical runtime implementations are exported from:
+ *   - src/progress-events.ts — StructuredProgressEvent and friends
+ *   - src/ipc-types.ts       — IPC protocol types (RunnerCommand, TwoFA*, TwoFactorError)
+ *
+ * The ambient declarations here allow electron/ code to reference these types
+ * without a cross-tsconfig import (which is blocked by rootDir constraints).
  */
+
+// ---------------------------------------------------------------------------
+// twoFactor / loginForm type aliases
+// (runtime values live in src/ipc-types.ts)
+// ---------------------------------------------------------------------------
+
+declare type TwoFactorValue = 'none' | 'email' | 'manual' | 'ui';
+declare type LoginFormValue = 'two-step' | 'single-page' | 'auto';
+
+// ---------------------------------------------------------------------------
+// IPC protocol types
+// (runtime definitions live in src/ipc-types.ts)
+// ---------------------------------------------------------------------------
+
+declare interface RunnerCommand {
+  command: 'extract' | 'discover';
+  portalId: string;
+  incremental: boolean;
+  downloadFolder?: string;
+  providerConfig: {
+    id: string;
+    name: string;
+    url: string;
+    username: string;
+    password: string;
+    loginForm: LoginFormValue;
+    twoFactor: TwoFactorValue;
+  };
+}
+
+declare interface TwoFARequest {
+  type: '2fa:request';
+  message: string;
+  deliveryHint?: string;
+  error?: string;
+}
+
+declare interface TwoFAResponse {
+  type: '2fa:response';
+  code: string | null;
+}
+
+declare interface TwoFAResult {
+  type: '2fa:result';
+  success: boolean;
+  error?: string;
+}
 
 // ---------------------------------------------------------------------------
 // Structured progress event types
