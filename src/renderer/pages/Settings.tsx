@@ -1,11 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Monitor, Sun, Moon } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card } from '../components/ui/card';
 import { Checkbox } from '../components/ui/checkbox';
-import { cn } from '../lib/utils';
+import SegmentedControl from '../components/SegmentedControl';
+import { useSettings, useSavedFeedback } from '../hooks/useSettings';
 import { strings } from '../strings';
 
 interface SettingsProps {
@@ -46,6 +47,12 @@ function PageLayout({ title, lede, children }: PageLayoutProps) {
 
 const s_appearance = strings.settings.appearance;
 
+const THEME_SEGMENTS: { value: ThemeOption; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
+  { value: 'system', label: s_appearance.system, Icon: Monitor },
+  { value: 'light',  label: s_appearance.light,  Icon: Sun },
+  { value: 'dark',   label: s_appearance.dark,   Icon: Moon },
+];
+
 function AppearancePage() {
   const [theme, setTheme] = useState<ThemeOption>(() => {
     return (localStorage.getItem('fw-theme') as ThemeOption) ?? 'system';
@@ -63,39 +70,14 @@ function AppearancePage() {
     }
   };
 
-  const SEGMENTS: { value: ThemeOption; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
-    { value: 'system', label: s_appearance.system, Icon: Monitor },
-    { value: 'light',  label: s_appearance.light,  Icon: Sun },
-    { value: 'dark',   label: s_appearance.dark,   Icon: Moon },
-  ];
-
   return (
     <PageLayout title={s_appearance.title} lede={s_appearance.lede}>
       <Card className="max-w-[560px] px-6 py-5">
-        <div
-          className="grid gap-2 p-1 rounded-[var(--radius-md)] border border-[var(--color-fw-border)]"
-          style={{
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            background: 'var(--color-fw-bg-deep)',
-          }}
-        >
-          {SEGMENTS.map(({ value, label, Icon }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => handleThemeChange(value)}
-              className={cn(
-                'inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-[6px] text-[13px] font-medium border cursor-pointer transition-colors duration-[var(--fw-dur-fast,120ms)]',
-                theme === value
-                  ? 'bg-[var(--color-fw-sage-100)] border-[var(--color-fw-border-focus)] text-[var(--color-fw-ink-900)]'
-                  : 'bg-transparent border-transparent text-[var(--color-fw-ink-700)] hover:text-[var(--color-fw-ink-900)] hover:bg-[var(--color-fw-card-bg)]',
-              )}
-            >
-              <Icon size={14} />
-              {label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          options={THEME_SEGMENTS}
+          value={theme}
+          onChange={(v) => { void handleThemeChange(v); }}
+        />
         <p className="mt-3 text-[12px] text-[var(--color-fw-fg-muted)]">
           {s_appearance.hint}
         </p>
@@ -115,25 +97,23 @@ const API_KEY_SEGMENTS: { value: ApiKeySource; label: string }[] = [
 ];
 
 function ApiKeyPage() {
+  const { settings, loading } = useSettings();
+  const { savedVisible, showSaved } = useSavedFeedback();
+
   const [apiKeySource, setApiKeySource] = useState<ApiKeySource>('bundled');
   const [apiKeyConfigured, setApiKeyConfigured] = useState(false);
   const [editingApiKey, setEditingApiKey] = useState(false);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [apiKeyError, setApiKeyError] = useState<string | null>(null);
   const [apiKeyValidating, setApiKeyValidating] = useState(false);
-  const [savedVisible, setSavedVisible] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    window.electronAPI
-      .getSettings()
-      .then((settings) => {
-        setApiKeySource(settings.apiKeySource);
-        setApiKeyConfigured(settings.apiKeyConfigured);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  // Sync state from loaded settings
+  React.useEffect(() => {
+    if (settings) {
+      setApiKeySource(settings.apiKeySource);
+      setApiKeyConfigured(settings.apiKeyConfigured);
+    }
+  }, [settings]);
 
   const handleSourceChange = async (newSource: ApiKeySource) => {
     setApiKeySource(newSource);
@@ -145,11 +125,6 @@ function ApiKeyPage() {
     } catch {
       // Best-effort — UI already updated
     }
-  };
-
-  const showSaved = () => {
-    setSavedVisible(true);
-    setTimeout(() => setSavedVisible(false), 1800);
   };
 
   const handleStartEdit = () => {
@@ -203,29 +178,11 @@ function ApiKeyPage() {
     >
       <Card className="max-w-[560px] px-6 py-5 flex flex-col gap-5">
         {/* Source selector */}
-        <div
-          className="grid gap-2 p-1 rounded-[var(--radius-md)] border border-[var(--color-fw-border)]"
-          style={{
-            gridTemplateColumns: 'repeat(2, 1fr)',
-            background: 'var(--color-fw-bg-deep)',
-          }}
-        >
-          {API_KEY_SEGMENTS.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              onClick={() => handleSourceChange(value)}
-              className={cn(
-                'inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-[6px] text-[13px] font-medium border cursor-pointer transition-colors duration-[var(--fw-dur-fast,120ms)]',
-                apiKeySource === value
-                  ? 'bg-[var(--color-fw-sage-100)] border-[var(--color-fw-border-focus)] text-[var(--color-fw-ink-900)]'
-                  : 'bg-transparent border-transparent text-[var(--color-fw-ink-700)] hover:text-[var(--color-fw-ink-900)] hover:bg-[var(--color-fw-card-bg)]',
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          options={API_KEY_SEGMENTS}
+          value={apiKeySource}
+          onChange={(v) => { void handleSourceChange(v); }}
+        />
 
         {/* Bundled key confirmation */}
         {apiKeySource === 'bundled' && (
@@ -325,24 +282,16 @@ function ApiKeyPage() {
 const s_storage = strings.settings.storage;
 
 function StoragePage() {
+  const { settings, loading } = useSettings();
+  const { savedVisible, showSaved } = useSavedFeedback();
   const [downloadFolder, setDownloadFolder] = useState('');
-  const [savedVisible, setSavedVisible] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    window.electronAPI
-      .getSettings()
-      .then((settings) => {
-        setDownloadFolder(settings.downloadFolder);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
-
-  const showSaved = () => {
-    setSavedVisible(true);
-    setTimeout(() => setSavedVisible(false), 1800);
-  };
+  // Sync from loaded settings
+  React.useEffect(() => {
+    if (settings) {
+      setDownloadFolder(settings.downloadFolder);
+    }
+  }, [settings]);
 
   const handleChooseFolder = async () => {
     const chosen = await window.electronAPI.chooseFolder();
@@ -389,18 +338,15 @@ function StoragePage() {
 const s_browser = strings.settings.browser;
 
 function BrowserPage() {
+  const { settings, loading } = useSettings();
   const [showBrowser, setShowBrowser] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    window.electronAPI
-      .getSettings()
-      .then((settings) => {
-        setShowBrowser(settings.showBrowser);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  // Sync from loaded settings
+  React.useEffect(() => {
+    if (settings) {
+      setShowBrowser(settings.showBrowser);
+    }
+  }, [settings]);
 
   const handleShowBrowserChange = async (checked: boolean) => {
     setShowBrowser(checked);

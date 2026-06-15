@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
 import {
   Activity,
   Clock,
@@ -11,13 +10,13 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-react';
 import AddPortal from './AddPortal';
-import ProgressPanel from '../components/ProgressPanel';
-import TwoFactorModal from '../components/TwoFactorModal';
+import PipelineOverlays from '../components/PipelineOverlays';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { SkeletonBar } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { strings } from '../strings';
+import { usePipelineOperation } from '../hooks/usePipelineOperation';
 
 interface PortalListProps {
   onOpenSettings: () => void;
@@ -31,10 +30,7 @@ type View =
   | { type: 'add' }
   | { type: 'edit'; portal: PortalEntry };
 
-interface RunningOperation {
-  portalId: string;
-  operation: 'extraction';
-}
+type RunningOperation = { portalId: string; operation: 'extraction' };
 
 function formatDate(iso: string | null): string {
   if (!iso) return '';
@@ -400,11 +396,10 @@ export default function PortalList({ onOpenSettings, selectedPortalId, onPortals
   const [view, setView] = useState<View>(initialView === 'add' ? { type: 'add' } : { type: 'list' });
   const [portals, setPortals] = useState<PortalEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
-  const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
-  const [twoFaType, setTwoFaType] = useState<string | undefined>(undefined);
-  const [twoFaDeliveryHint, setTwoFaDeliveryHint] = useState<string | undefined>(undefined);
   const [downloadFolder, setDownloadFolder] = useState<string>('~/Documents/HealthRecords');
+
+  const { runningOperation, twoFa, startExtraction, clearTwoFa, clearOperation } =
+    usePipelineOperation();
 
   const loadPortals = useCallback(() => {
     window.electronAPI
@@ -455,24 +450,6 @@ export default function PortalList({ onOpenSettings, selectedPortalId, onPortals
     };
   }, [loadSettings]);
 
-  useEffect(() => {
-    if (runningOperation === null) return;
-
-    const handle2FARequest = (payload: { portalId: string; twoFactorType?: string; deliveryHint?: string }) => {
-      setTwoFaPortalId(payload.portalId);
-      if (payload.twoFactorType) {
-        setTwoFaType(payload.twoFactorType);
-      }
-      setTwoFaDeliveryHint(payload.deliveryHint);
-    };
-
-    const unsubRequest = window.electronAPI.on2FARequest(handle2FARequest);
-
-    return () => {
-      unsubRequest();
-    };
-  }, [runningOperation]);
-
   const handleSave = () => {
     setView({ type: 'list' });
     loadPortals();
@@ -493,18 +470,12 @@ export default function PortalList({ onOpenSettings, selectedPortalId, onPortals
     }
   };
 
-  const handleExtract = async (portalId: string) => {
-    if (runningOperation !== null) return;
-    setRunningOperation({ portalId, operation: 'extraction' });
-    try {
-      await window.electronAPI.runExtraction(portalId);
-    } catch {
-      // Errors are surfaced via the ProgressPanel error state
-    }
+  const handleExtract = (portalId: string) => {
+    void startExtraction(portalId);
   };
 
   const handleProgressPanelClose = () => {
-    setRunningOperation(null);
+    clearOperation();
     loadPortals();
   };
 
@@ -594,29 +565,17 @@ export default function PortalList({ onOpenSettings, selectedPortalId, onPortals
         </div>
       )}
 
-      <AnimatePresence>
-        {runningOperation !== null && (
-          <ProgressPanel
-            key="progress-panel"
-            portalId={runningOperation.portalId}
-            operation={runningOperation.operation}
-            onClose={handleProgressPanelClose}
-            portalCounts={portals.find((p) => p.id === runningOperation.portalId)}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {twoFaPortalId !== null && (
-          <TwoFactorModal
-            key="2fa-modal"
-            portalId={twoFaPortalId}
-            twoFactorType={twoFaType as 'none' | 'email' | 'manual' | 'ui' | undefined}
-            deliveryHint={twoFaDeliveryHint}
-            onDismiss={() => { setTwoFaPortalId(null); setTwoFaType(undefined); setTwoFaDeliveryHint(undefined); }}
-          />
-        )}
-      </AnimatePresence>
+      <PipelineOverlays
+        runningOperation={runningOperation}
+        twoFa={twoFa}
+        onProgressClose={handleProgressPanelClose}
+        onTwoFaDismiss={clearTwoFa}
+        portalCounts={
+          runningOperation !== null
+            ? portals.find((p) => p.id === runningOperation.portalId)
+            : undefined
+        }
+      />
     </div>
   );
 }

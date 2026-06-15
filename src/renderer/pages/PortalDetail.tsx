@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
 import {
   Activity,
   ArrowLeft,
@@ -9,12 +8,12 @@ import {
   MessageSquare,
   Pill,
 } from 'lucide-react';
-import ProgressPanel from '../components/ProgressPanel';
-import TwoFactorModal from '../components/TwoFactorModal';
+import PipelineOverlays from '../components/PipelineOverlays';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { cn } from '../lib/utils';
+import { usePipelineOperation } from '../hooks/usePipelineOperation';
 
 export interface PortalDetailProps {
   portalId: string;
@@ -23,11 +22,6 @@ export interface PortalDetailProps {
 }
 
 type PortalState = 'ready' | 'fetched';
-
-interface RunningOperation {
-  portalId: string;
-  operation: 'extraction';
-}
 
 function derivePortalState(portal: PortalEntry): PortalState {
   if (portal.lastExtractedAt !== null) return 'fetched';
@@ -317,11 +311,16 @@ function deriveHistory(portal: PortalEntry): HistoryItem[] {
 export default function PortalDetail({ portalId, onBack, downloadFolder }: PortalDetailProps) {
   const [portal, setPortal] = useState<PortalEntry | null>(null);
   const [credentials, setCredentials] = useState<{ username: string; hasPassword: boolean } | null>(null);
-  const [runningOperation, setRunningOperation] = useState<RunningOperation | null>(null);
-  const [twoFaPortalId, setTwoFaPortalId] = useState<string | null>(null);
-  const [twoFaType, setTwoFaType] = useState<string | undefined>(undefined);
-  const [twoFaDeliveryHint, setTwoFaDeliveryHint] = useState<string | undefined>(undefined);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
+  // folderPath is kept in local state so that in-page folder changes (via the Change button)
+  // take effect immediately. We also sync from the downloadFolder prop in an effect so that
+  // external changes (e.g. user updates folder in Settings then navigates here) are reflected.
   const [folderPath, setFolderPath] = useState(`${downloadFolder}/${portalId}`);
+
+  const { runningOperation, twoFa, startExtraction, clearTwoFa, clearOperation } =
+    usePipelineOperation((message) => {
+      setExtractionError(message);
+    });
 
   // Load portal data
   useEffect(() => {
@@ -338,39 +337,14 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
     }).catch(() => {});
   }, [portalId]);
 
-  // 2FA listener
+  // Sync folderPath when the parent downloadFolder prop changes (e.g. user updates folder in Settings)
   useEffect(() => {
-    if (runningOperation === null) return;
-    const handle2FARequest = (payload: { portalId: string; twoFactorType?: string; deliveryHint?: string }) => {
-      setTwoFaPortalId(payload.portalId);
-      if (payload.twoFactorType) {
-        setTwoFaType(payload.twoFactorType);
-      }
-      setTwoFaDeliveryHint(payload.deliveryHint);
-    };
-    const unsubRequest = window.electronAPI.on2FARequest(handle2FARequest);
-    return () => {
-      unsubRequest();
-    };
-  }, [runningOperation]);
+    setFolderPath(`${downloadFolder}/${portalId}`);
+  }, [downloadFolder, portalId]);
 
-  const [extractionError, setExtractionError] = useState<string | null>(null);
-
-  const handleExtract = async () => {
-    if (runningOperation !== null) return;
+  const handleExtract = () => {
     setExtractionError(null);
-    setRunningOperation({ portalId, operation: 'extraction' });
-    try {
-      await window.electronAPI.runExtraction(portalId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      // Pipeline errors are surfaced in ProgressPanel via IPC events.
-      // Pre-launch errors (bad key, missing creds) need to be shown here.
-      if (!message.includes('Pipeline process exited')) {
-        setRunningOperation(null);
-        setExtractionError(message);
-      }
-    }
+    void startExtraction(portalId);
   };
 
   const handleRemove = async () => {
@@ -391,7 +365,7 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
   };
 
   const handleProgressPanelClose = () => {
-    setRunningOperation(null);
+    clearOperation();
     // Reload portal data after operation
     window.electronAPI.getPortals().then((portals) => {
       const found = portals.find((p) => p.id === portalId);
@@ -654,31 +628,13 @@ export default function PortalDetail({ portalId, onBack, downloadFolder }: Porta
         </Card>
       </section>
 
-      {/* Progress panel overlay */}
-      <AnimatePresence>
-        {runningOperation !== null && (
-          <ProgressPanel
-            key="progress-panel"
-            portalId={runningOperation.portalId}
-            operation={runningOperation.operation}
-            onClose={handleProgressPanelClose}
-            portalCounts={portal ?? undefined}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* 2FA modal overlay */}
-      <AnimatePresence>
-        {twoFaPortalId !== null && (
-          <TwoFactorModal
-            key="2fa-modal"
-            portalId={twoFaPortalId}
-            twoFactorType={twoFaType as 'none' | 'email' | 'manual' | 'ui' | undefined}
-            deliveryHint={twoFaDeliveryHint}
-            onDismiss={() => { setTwoFaPortalId(null); setTwoFaType(undefined); setTwoFaDeliveryHint(undefined); }}
-          />
-        )}
-      </AnimatePresence>
+      <PipelineOverlays
+        runningOperation={runningOperation}
+        twoFa={twoFa}
+        onProgressClose={handleProgressPanelClose}
+        onTwoFaDismiss={clearTwoFa}
+        portalCounts={portal ?? undefined}
+      />
     </div>
   );
 }
