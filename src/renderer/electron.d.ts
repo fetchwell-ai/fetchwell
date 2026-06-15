@@ -6,29 +6,24 @@
  * declarations since the renderer cannot import from electron/ (main process).
  */
 
-// Pull progress event types from the canonical source via import type.
-// Using 'type' imports in a .d.ts file is valid; they become type aliases in
-// the global scope via declare global {}.
-import type {
-  ProgressPhase,
-  ProgressCategory,
-  ProgressStatus,
-  PhaseChangeEvent,
-  ItemProgressEvent,
-  CategoryCompleteEvent,
-  StatusMessageEvent,
-  StructuredProgressEvent,
-} from '../progress-events';
+// This import makes the file a TypeScript module, which is required for
+// 'declare global {}' augmentations. The import itself is empty (no named
+// imports) so ESLint cannot flag any individual name as unused.
+// The inline import(...) expressions inside declare global {} pull types
+// directly from the canonical source (src/progress-events.ts).
+import type {} from '../progress-events';
 
 declare global {
-  // Re-export progress event types as global ambient types for the renderer
+  // Re-export progress event types as global type aliases for the renderer.
+  // Using 'type' (not 'interface extends import(...)') because ESLint's
+  // TypeScript parser does not support the 'extends import(...)' form.
   type ProgressPhase = import('../progress-events').ProgressPhase;
   type ProgressCategory = import('../progress-events').ProgressCategory;
   type ProgressStatus = import('../progress-events').ProgressStatus;
-  interface PhaseChangeEvent extends import('../progress-events').PhaseChangeEvent {}
-  interface ItemProgressEvent extends import('../progress-events').ItemProgressEvent {}
-  interface CategoryCompleteEvent extends import('../progress-events').CategoryCompleteEvent {}
-  interface StatusMessageEvent extends import('../progress-events').StatusMessageEvent {}
+  type PhaseChangeEvent = import('../progress-events').PhaseChangeEvent;
+  type ItemProgressEvent = import('../progress-events').ItemProgressEvent;
+  type CategoryCompleteEvent = import('../progress-events').CategoryCompleteEvent;
+  type StatusMessageEvent = import('../progress-events').StatusMessageEvent;
   type StructuredProgressEvent = import('../progress-events').StructuredProgressEvent;
 
   interface PortalEntry {
