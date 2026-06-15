@@ -1,160 +1,76 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { ensureLoggedIn } from "../auth.js";
-import {
-  readDirSafe,
-  makeItemFilename,
-  mergePdfs,
-  navigateWithRetry,
-  navigateToSection,
-  logDepth,
-  shouldSkipIncremental,
-} from "./helpers.js";
+import { makeItemFilename } from "./helpers.js";
 import { type ExtractionContext } from "./context.js";
 import { type BrowserProvider } from "../browser/interface.js";
-import { type StructuredProgressEvent } from "../progress-events.js";
 import { MESSAGES_PROMPTS } from "../prompts.js";
+import { extractListSection, probeListSection, type SectionSpec } from "./list-section.js";
+
+// ---------------------------------------------------------------------------
+// Messages SectionSpec
+// ---------------------------------------------------------------------------
+
+export const MESSAGES_SPEC: SectionSpec = {
+  name: "Messages",
+  sectionKey: "messages",
+  subDir: "messages",
+  mergedName: "messages",
+  // FORCE_MSGS previously also deleted the messages directory before re-extracting.
+  // That behavior has been removed to match FORCE_LABS/FORCE_VISITS (bypass-only).
+  forceEnvVar: "FORCE_MSGS",
+  fallbackAct: MESSAGES_PROMPTS.fallbackAct,
+  defaultObserve: MESSAGES_PROMPTS.defaultObserve,
+  makeFilename: (index, _description, pageTitle, providerId) => {
+    // Use page title as the label for messages (consistent with prior behavior)
+    return makeItemFilename(index, pageTitle || _description, ".pdf", providerId);
+  },
+  itemLabel: (_description, pageTitle, index) => {
+    return pageTitle || _description || `message-${index + 1}`;
+  },
+  // Messages use act-first: try act() first, then fall back to clickSelector.
+  // This matches the prior behavior where act() was the primary click mechanism.
+  clickOrder: "act-first",
+};
+
+// ---------------------------------------------------------------------------
+// Probe mode
+// ---------------------------------------------------------------------------
 
 /**
  * Probe mode: navigate to messages inbox, observe threads, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeMessages(browser: BrowserProvider, portalUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string, authenticatedSelectors?: string[]): Promise<void> {
-  console.log("[probe] Messages: navigating...");
-  await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
-
-  const { listInstruction } = await navigateToSection(browser, providerId, "messages", { act: MESSAGES_PROMPTS.fallbackAct }, portalUrl);
-  await new Promise((r) => setTimeout(r, 3000));
-
-  await logDepth(browser, "messages");
-
-  const observeInstruction = listInstruction ?? MESSAGES_PROMPTS.defaultObserve;
-  const threadLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
+export async function probeMessages(
+  browser: BrowserProvider,
+  portalUrl: string,
+  probeDir: string,
+  navNotes = "",
+  credentials?: { username?: string; password?: string },
+  providerId?: string,
+  authenticatedSelectors?: string[],
+): Promise<void> {
+  await probeListSection(
+    MESSAGES_SPEC,
+    browser,
+    portalUrl,
+    probeDir,
+    navNotes,
+    credentials,
+    providerId,
+    authenticatedSelectors,
   );
-
-  console.log(`[probe] Messages: ${threadLinks.length} thread(s) found`);
-  threadLinks.slice(0, 5).forEach((link, i) => {
-    console.log(`[probe]   ${i + 1}. ${link.description}`);
-  });
-  if (threadLinks.length > 5) {
-    console.log(`[probe]   ... and ${threadLinks.length - 5} more`);
-  }
-
-  const ss = await browser.screenshot();
-  fs.writeFileSync(path.join(probeDir, "messages.png"), Buffer.from(ss, "base64"));
-  console.log(`[probe] Messages: screenshot saved to ${probeDir}/messages.png`);
 }
+
+// ---------------------------------------------------------------------------
+// Extraction
+// ---------------------------------------------------------------------------
 
 /**
  * Returns the number of PDFs written in this run (0 if none extracted).
- * The caller should only record a timestamp in last-extracted.json when the count is > 0.
+ * The caller should only record a timestamp in last-extracted.json when count > 0.
+ *
+ * Incremental skip: if <outputDir>/messages/ already has .pdf files and
+ * incremental=true, the section is skipped unless FORCE_MSGS=1.
+ * (This skip was missing in prior versions — messages now behaves like labs/visits.)
  */
 export async function extractMessages(ctx: ExtractionContext): Promise<number> {
-  const { browser, portalUrl, navNotes = "", credentials, outputDir, providerId, cutoff, incremental = false, authenticatedSelectors, emitProgress } = ctx;
-  const emit = (event: StructuredProgressEvent) => {
-    if (emitProgress) emitProgress(event);
-  };
-  const baseDir = outputDir ?? process.cwd();
-  const msgsDir = path.join(baseDir, "messages");
-  fs.mkdirSync(msgsDir, { recursive: true });
-
-  // Clear dir for a forced full re-run; otherwise partial runs resume per-thread
-  if (process.env.FORCE_MSGS === "1") {
-    readDirSafe(msgsDir).forEach((f) => fs.unlinkSync(path.join(msgsDir, f)));
-  }
-
-  console.log("[extract] Navigating to messages...");
-  await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
-
-  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "messages", { act: MESSAGES_PROMPTS.fallbackAct }, portalUrl);
-  if (navigationFailed) {
-    console.log("[extract] Messages: navigation failed — skipping section.");
-    return 0;
-  }
-  await new Promise((r) => setTimeout(r, 3000));
-
-  await logDepth(browser, "messages");
-  const observeInstruction = listInstruction ?? MESSAGES_PROMPTS.defaultObserve;
-  let threadLinks: Awaited<ReturnType<typeof browser.observe>>;
-  try {
-    threadLinks = await browser.observe(
-      (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
-    );
-  } catch (err) {
-    console.error(`[extract] Messages: observe() failed: ${err instanceof Error ? err.message : String(err)}`);
-    try {
-      const ss = await browser.screenshot();
-      fs.writeFileSync(path.join(msgsDir, "messages-observe-error.png"), Buffer.from(ss, "base64"));
-    } catch {}
-    return 0;
-  }
-  console.log(`[extract] Found ${threadLinks.length} message thread(s).`);
-  if (threadLinks.length > 0) {
-    emit({ type: 'status-message', phase: 'extract', message: `Found ${threadLinks.length} messages to fetch...` });
-  }
-
-  if (threadLinks.length === 0) {
-    console.log("[extract] No messages found — saving screenshot.");
-    const ss = await browser.screenshot();
-    fs.writeFileSync(path.join(msgsDir, "inbox.png"), Buffer.from(ss, "base64"));
-    return 0;
-  }
-
-  const listUrl = await browser.url();
-  const maxThreads = Math.min(threadLinks.length, 50);
-  const savedFiles = readDirSafe(msgsDir);
-  let extracted = 0;
-
-  for (let i = 0; i < maxThreads; i++) {
-    const link = threadLinks[i];
-    const prefix = String(i + 1).padStart(3, "0") + "_";
-    if (incremental && savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
-      console.log(`[extract]   Thread ${i + 1}/${maxThreads}: already saved — skipping`);
-      continue;
-    }
-    if (shouldSkipIncremental(link.description, cutoff ?? null)) {
-      console.log(`[extract]   Thread ${i + 1}/${maxThreads}: before cutoff — skipping (${link.description})`);
-      continue;
-    }
-
-    emit({ type: 'status-message', phase: 'extract', message: `Downloading message ${i + 1} of ${maxThreads}...` });
-    console.log(`[extract]   Thread ${i + 1}/${maxThreads}: ${link.description}`);
-    try {
-      const urlBefore = await browser.url();
-      await browser.act(`Click the element: ${link.description}`);
-      await new Promise((r) => setTimeout(r, 1000));
-      // If act() silently failed (shadow DOM element), fall back to direct selector click
-      if ((await browser.url()) === urlBefore && browser.clickSelector && link.selector) {
-        console.log(`[extract]   (act() didn't navigate — trying direct selector click)`);
-        await browser.clickSelector(link.selector);
-        await new Promise((r) => setTimeout(r, 1000));
-      }
-      try { await browser.waitFor({ type: "networkIdle" }); } catch {}
-
-      const pageTitle = await browser.title();
-      const filename = makeItemFilename(i, pageTitle || link.description, ".pdf", providerId);
-      if (browser.pdf) {
-        const pdfBuf = await browser.pdf();
-        const msgLabel = pageTitle || link.description;
-        emit({ type: 'status-message', phase: 'extract', message: `Downloading ${msgLabel.slice(0, 60)}...` });
-        fs.writeFileSync(path.join(msgsDir, filename), pdfBuf);
-        extracted++;
-      }
-      console.log(`[extract]   Saved ${filename}`);
-    } catch (err: unknown) {
-      console.log(`[extract]   Error: ${err instanceof Error ? err.message : String(err)}`);
-      try {
-        const ss = await browser.screenshot();
-        fs.writeFileSync(path.join(msgsDir, `thread-${i + 1}-error.png`), Buffer.from(ss, "base64"));
-      } catch {}
-    }
-    await navigateWithRetry(browser, listUrl);
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-
-  console.log(`[extract] Messages saved to ${msgsDir}`);
-  const mergedFilename = providerId ? `messages-${providerId}.pdf` : "messages.pdf";
-  await mergePdfs(msgsDir, path.join(baseDir, mergedFilename), "threads");
-  return extracted;
+  return extractListSection(MESSAGES_SPEC, ctx);
 }

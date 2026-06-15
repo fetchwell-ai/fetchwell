@@ -1,194 +1,81 @@
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { ensureLoggedIn } from "../auth.js";
-import {
-  readDirSafe,
-  makeItemFilename,
-  mergePdfs,
-  navigateWithRetry,
-  navigateToSection,
-  logDepth,
-  shouldSkipIncremental,
-} from "./helpers.js";
+import { makeItemFilename } from "./helpers.js";
 import { type ExtractionContext } from "./context.js";
 import { type BrowserProvider } from "../browser/interface.js";
-import { type StructuredProgressEvent } from "../progress-events.js";
 import { LABS_PROMPTS } from "../prompts.js";
+import { extractListSection, probeListSection, type SectionSpec } from "./list-section.js";
+
+// ---------------------------------------------------------------------------
+// Labs SectionSpec
+// ---------------------------------------------------------------------------
+
+export const LABS_SPEC: SectionSpec = {
+  name: "Labs",
+  sectionKey: "labs",
+  subDir: "labs",
+  mergedName: "labs",
+  forceEnvVar: "FORCE_LABS",
+  fallbackAct: LABS_PROMPTS.fallbackAct,
+  defaultObserve: LABS_PROMPTS.defaultObserve,
+  makeFilename: (index, description, _pageTitle, providerId) => {
+    // Strip section qualifiers from the label (e.g. "(Lab)", "(Imaging)")
+    const label = description
+      .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
+    return makeItemFilename(index, label, ".pdf", providerId);
+  },
+  itemLabel: (description, pageTitle, _index) => {
+    let label = description
+      .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
+    if (!label || label.toLowerCase().includes("shadow dom")) {
+      label = pageTitle || "lab-result";
+    }
+    return label;
+  },
+  clickOrder: "selector-first",
+};
+
+// ---------------------------------------------------------------------------
+// Probe mode
+// ---------------------------------------------------------------------------
 
 /**
  * Probe mode: navigate to labs list, observe items, log count + titles,
  * take a screenshot. Does NOT extract any PDFs.
  */
-export async function probeLabsDocs(browser: BrowserProvider, portalUrl: string, probeDir: string, navNotes = "", credentials?: { username?: string; password?: string }, providerId?: string, authenticatedSelectors?: string[]): Promise<void> {
-  console.log("[probe] Labs: navigating...");
-  await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
-
-  const { listInstruction } = await navigateToSection(browser, providerId, "labs", { act: LABS_PROMPTS.fallbackAct }, portalUrl);
-  await new Promise((r) => setTimeout(r, 3000));
-
-  await logDepth(browser, "labs");
-
-  const observeInstruction = listInstruction ?? LABS_PROMPTS.defaultObserve;
-  const panelLinks = await browser.observe(
-    (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
+export async function probeLabsDocs(
+  browser: BrowserProvider,
+  portalUrl: string,
+  probeDir: string,
+  navNotes = "",
+  credentials?: { username?: string; password?: string },
+  providerId?: string,
+  authenticatedSelectors?: string[],
+): Promise<void> {
+  await probeListSection(
+    LABS_SPEC,
+    browser,
+    portalUrl,
+    probeDir,
+    navNotes,
+    credentials,
+    providerId,
+    authenticatedSelectors,
   );
-
-  console.log(`[probe] Labs: ${panelLinks.length} item(s) found`);
-  panelLinks.slice(0, 5).forEach((link, i) => {
-    console.log(`[probe]   ${i + 1}. ${link.description}`);
-  });
-  if (panelLinks.length > 5) {
-    console.log(`[probe]   ... and ${panelLinks.length - 5} more`);
-  }
-
-  const ss = await browser.screenshot();
-  fs.writeFileSync(path.join(probeDir, "labs.png"), Buffer.from(ss, "base64"));
-  console.log(`[probe] Labs: screenshot saved to ${probeDir}/labs.png`);
 }
+
+// ---------------------------------------------------------------------------
+// Extraction
+// ---------------------------------------------------------------------------
 
 /**
  * Drill into every lab/test-result panel and save each one as a PDF.
  * Merges all into <outputDir>/labs.pdf for Claude.ai upload.
  *
- * Skip (incremental mode only): if <outputDir>/labs/ already has .pdf files (set FORCE_LABS=1 to re-run).
+ * Skip (incremental mode only): if <outputDir>/labs/ already has .pdf files
+ * (set FORCE_LABS=1 to re-run).
  *
  * Returns the number of PDFs written in this run (0 if none extracted).
- * The caller should only record a timestamp in last-extracted.json when the count is > 0.
+ * The caller should only record a timestamp in last-extracted.json when count > 0.
  */
 export async function extractLabsDocs(ctx: ExtractionContext): Promise<number> {
-  const { browser, portalUrl, navNotes = "", credentials, outputDir, providerId, cutoff, incremental = false, authenticatedSelectors, emitProgress } = ctx;
-  const emit = (event: StructuredProgressEvent) => {
-    if (emitProgress) emitProgress(event);
-  };
-  const baseDir = outputDir ?? process.cwd();
-  const labsDir = path.join(baseDir, "labs");
-  fs.mkdirSync(labsDir, { recursive: true });
-
-  const existingPdfs = readDirSafe(labsDir).filter((f) => f.endsWith(".pdf"));
-  if (incremental && existingPdfs.length > 0 && process.env.FORCE_LABS !== "1") {
-    console.log(
-      `[extract] Labs already extracted (${existingPdfs.length} .pdf files) — skipping (FORCE_LABS=1 to re-run).`,
-    );
-    return 0;
-  }
-
-  console.log("[extract] Navigating to lab/test results...");
-  await ensureLoggedIn(browser, portalUrl, credentials, providerId, authenticatedSelectors);
-
-  const { listInstruction, navigationFailed } = await navigateToSection(browser, providerId, "labs", { act: LABS_PROMPTS.fallbackAct }, portalUrl);
-  if (navigationFailed) {
-    console.log("[extract] Labs: navigation failed — skipping section.");
-    return 0;
-  }
-  await new Promise((r) => setTimeout(r, 3000));
-
-  await logDepth(browser, "labs");
-  const observeInstruction = listInstruction ?? LABS_PROMPTS.defaultObserve;
-  let panelLinks: Awaited<ReturnType<typeof browser.observe>>;
-  try {
-    panelLinks = await browser.observe(
-      (navNotes ? navNotes + "\n\n" : "") + observeInstruction,
-    );
-  } catch (err) {
-    console.error(`[extract] Labs: observe() failed: ${err instanceof Error ? err.message : String(err)}`);
-    try {
-      const ss = await browser.screenshot();
-      fs.writeFileSync(path.join(labsDir, "labs-observe-error.png"), Buffer.from(ss, "base64"));
-    } catch {}
-    return 0;
-  }
-  console.log(`[extract] Found ${panelLinks.length} panel link(s).`);
-  if (panelLinks.length > 0) {
-    emit({ type: 'status-message', phase: 'extract', message: `Found ${panelLinks.length} lab results to fetch...` });
-  }
-
-  if (panelLinks.length === 0) {
-    console.log("[extract] No panels found — saving screenshot.");
-    const ss = await browser.screenshot();
-    fs.writeFileSync(path.join(labsDir, "labs-list.png"), Buffer.from(ss, "base64"));
-    return 0;
-  }
-
-  const listUrl = await browser.url();
-  const maxPanels = Math.min(panelLinks.length, 50);
-  const savedFiles = readDirSafe(labsDir);
-  let extracted = 0;
-
-  for (let i = 0; i < maxPanels; i++) {
-    const link = panelLinks[i];
-    const prefix = String(i + 1).padStart(3, "0") + "_";
-    if (incremental && savedFiles.some((f) => f.startsWith(prefix) && f.endsWith(".pdf"))) {
-      console.log(`[extract] Doc ${i + 1}/${maxPanels}: already saved — skipping`);
-      continue;
-    }
-    if (shouldSkipIncremental(link.description, cutoff ?? null)) {
-      console.log(`[extract] Doc ${i + 1}/${maxPanels}: before cutoff — skipping (${link.description})`);
-      continue;
-    }
-
-    emit({ type: 'status-message', phase: 'extract', message: `Downloading lab result ${i + 1} of ${maxPanels}...` });
-    console.log(`[extract] Doc ${i + 1}/${maxPanels}: ${link.description}`);
-    try {
-      const urlBefore = await browser.url();
-      // Selector-first: direct CSS/XPath click avoids redundant LLM calls and prompt-injection risk
-      if (browser.clickSelector && link.selector) {
-        await browser.clickSelector(link.selector);
-        await new Promise((r) => setTimeout(r, 1000));
-      }
-      // Fall back to act() if selector click didn't navigate (or no selector available)
-      if ((await browser.url()) === urlBefore) {
-        await browser.act(`Click the element: ${link.description}`);
-        await new Promise((r) => setTimeout(r, 1000));
-      }
-      // Wait for async content (imaging reports load via AJAX after page ready)
-      try { await browser.waitFor({ type: "networkIdle" }); } catch {}
-
-      // Verify we actually navigated — skip PDF if still on the list page
-      if ((await browser.url()) === urlBefore) {
-        console.log(`[extract]   → navigation failed — skipping PDF, saving screenshot`);
-        try {
-          const ss = await browser.screenshot();
-          fs.writeFileSync(
-            path.join(labsDir, `${String(i + 1).padStart(3, "0")}_nav-failed.png`),
-            Buffer.from(ss, "base64"),
-          );
-        } catch {}
-        await navigateWithRetry(browser, listUrl);
-        await new Promise((r) => setTimeout(r, 1500));
-        continue;
-      }
-
-      // Get a descriptive name from the detail page (handles shadow DOM elements
-      // where observe() returns "an element inside a shadow DOM" instead of the real name)
-      let itemLabel = link.description
-        .replace(/\s*\((Lab|Imaging|Radiology|Pathology)\)/gi, "");
-      const pageTitle = await browser.title();
-      if (!itemLabel || itemLabel.toLowerCase().includes("shadow dom")) {
-        itemLabel = pageTitle || `lab-result-${i + 1}`;
-      }
-      const filename = makeItemFilename(i, itemLabel, ".pdf", providerId);
-      if (browser.pdf) {
-        const pdfBuf = await browser.pdf();
-        emit({ type: 'status-message', phase: 'extract', message: `Downloading ${itemLabel.slice(0, 60)}...` });
-        fs.writeFileSync(path.join(labsDir, filename), pdfBuf);
-        extracted++;
-        console.log(`[extract]   → saved ${filename}`);
-      }
-    } catch (err: unknown) {
-      console.log(`[extract]   → error: ${err instanceof Error ? err.message : String(err)}`);
-      try {
-        const ss = await browser.screenshot();
-        fs.writeFileSync(
-          path.join(labsDir, `${String(i + 1).padStart(3, "0")}_error.png`),
-          Buffer.from(ss, "base64"),
-        );
-      } catch {}
-    }
-    await navigateWithRetry(browser, listUrl);
-    await new Promise((r) => setTimeout(r, 1500));
-  }
-
-  const mergedFilename = providerId ? `labs-${providerId}.pdf` : "labs.pdf";
-  await mergePdfs(labsDir, path.join(baseDir, mergedFilename), "labs");
-  return extracted;
+  return extractListSection(LABS_SPEC, ctx);
 }

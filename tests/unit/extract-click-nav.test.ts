@@ -36,6 +36,7 @@ vi.mock('../../src/extract/helpers.js', () => ({
   navigateToSection: vi.fn().mockResolvedValue({ listInstruction: null, navigationFailed: false }),
   logDepth: vi.fn().mockResolvedValue(undefined),
   shouldSkipIncremental: vi.fn().mockReturnValue(false),
+  sleep: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { extractLabsDocs } from '../../src/extract/labs.js';

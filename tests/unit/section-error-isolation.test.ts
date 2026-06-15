@@ -40,6 +40,7 @@ vi.mock('../../src/extract/helpers.js', () => ({
   readNavNotes: vi.fn().mockReturnValue(''),
   getLastExtractedDate: vi.fn().mockReturnValue(null),
   setLastExtractedDate: vi.fn(),
+  sleep: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { extractLabsDocs } from '../../src/extract/labs.js';

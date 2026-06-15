@@ -498,3 +498,7 @@ export function shouldSkipIncremental(description: string, cutoff: Date | null):
   const cutoffDay = new Date(cutoff.getFullYear(), cutoff.getMonth(), cutoff.getDate()).getTime();
   return itemDay <= cutoffDay;
 }
+
+export function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
