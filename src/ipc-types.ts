@@ -2,8 +2,9 @@
  * IPC protocol types for communication between the Electron main process
  * (electron/pipeline-bridge.ts) and the subprocess (src/electron-runner.ts).
  *
- * This is the canonical source for these types. electron/ipc-types.ts
- * re-exports from here for use within the electron/ CJS module graph.
+ * This is the canonical source for these types. The ambient declarations in
+ * src/shared-types.d.ts (included by electron/tsconfig.json) make them
+ * available to electron/ without a cross-rootDir import.
  *
  * Protocol:
  *   Parent → Child: RunnerCommand (sent once, right after fork)
