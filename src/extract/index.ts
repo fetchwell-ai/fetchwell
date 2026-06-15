@@ -37,17 +37,14 @@ import { loginOrRestoreSession } from "../auth/login-session.js";
 import { loadProviders, findProvider, type ProviderConfig } from "../config.js";
 import {
   getOutputDir,
-  buildIndex,
   readNavNotes,
-  getLastExtractedDate,
-  setLastExtractedDate,
-  type IncrementalSection,
 } from "./helpers.js";
 import { loadNavMap } from "../discover/nav-map.js";
-import { extractLabsDocs, probeLabsDocs } from "./labs.js";
-import { extractVisits, probeVisits } from "./visits.js";
-import { extractMedications, probeMedications } from "./medications.js";
-import { extractMessages, probeMessages } from "./messages.js";
+import { probeLabsDocs } from "./labs.js";
+import { probeVisits } from "./visits.js";
+import { probeMedications } from "./medications.js";
+import { probeMessages } from "./messages.js";
+import { extractProvider as runnerExtractProvider } from "./runner.js";
 
 // ---------------------------------------------------------------------------
 // CLI argument parsing
@@ -257,153 +254,31 @@ async function probeProvider(provider: ProviderConfig) {
 }
 
 // ---------------------------------------------------------------------------
-// Main extraction (per provider)
+// Main extraction (per provider) — thin CLI wrapper around runner.extractProvider
 // ---------------------------------------------------------------------------
+
+/**
+ * CLI wrapper around runner.extractProvider.
+ *
+ * Delegates the full extraction pipeline to the shared runner, then:
+ *   - On error: prompts the user to press Enter before exiting (only when
+ *     stdout is a TTY so that scripted / CI invocations do not hang).
+ *   - Calls process.exit(1) on failure.
+ */
 async function extractProvider(provider: ProviderConfig, incremental = false) {
-  const portalUrl = provider.url;
-  const providerCredentials = provider.username || provider.password
-    ? { username: provider.username, password: provider.password }
-    : undefined;
-  const authModule = getAuthModule(provider.auth, provider.id);
-
-  console.log("=".repeat(60));
-  console.log("  Fetchwell — Record Extraction");
-  console.log(`  Provider: ${provider.name} (${provider.id})`);
-  if (incremental) {
-    console.log("  Incremental: ON (skipping items already extracted)");
-  }
-  console.log("=".repeat(60));
-  console.log();
-
-  const outputDir = getOutputDir(provider.id);
-  const savedSession = loadSavedSession(provider.id);
-  if (savedSession) {
-    console.log(`[session] Found saved session from ${savedSession.savedAt} — will skip login.`);
-    console.log(`[session] (Delete output/${provider.id}/session.json to force a fresh login.)`);
-    console.log();
-  }
-
-  fs.mkdirSync(outputDir, { recursive: true });
-
-  console.log("[pipeline] Creating browser session...");
-  const browser = await createBrowserProvider(undefined, process.env.ANTHROPIC_API_KEY);
-  console.log("[pipeline] Browser session created!");
-
-  const debugUrl = await browser.getDebugUrl();
-  if (debugUrl) {
-    console.log();
-    console.log("+---------------------------------------------------------+");
-    console.log("|  DEBUG URL — open this in your browser:                  |");
-    console.log(`|  ${debugUrl}`);
-    console.log("+---------------------------------------------------------+");
-  } else if (process.env.HEADLESS !== 'true') {
-    console.log("[pipeline] A browser window should have opened on your screen.");
-  }
-  console.log();
-
-  let failed = false;
-
   try {
-    console.log(`[pipeline] Navigating to ${portalUrl}...`);
-    await browser.navigate(portalUrl);
-    console.log("[pipeline] Page loaded.");
-    console.log();
-
-    // Login or restore session
-    // homeUrl = the authenticated dashboard URL (NOT the login URL).
-    // IMPORTANT: Do NOT navigate to portalUrl (the login URL) before checking
-    // for a saved session — MyChart triggers ?action=logout when you visit the
-    // login URL while already authenticated, destroying the session.
-    const homeUrl = await loginOrRestoreSession(browser, {
-      portalUrl,
-      providerId: provider.id,
-      authModule,
-      credentials: providerCredentials,
-      authenticatedSelectors: provider.authenticatedSelectors,
-    });
-    console.log(`[pipeline] Dashboard URL: ${homeUrl}`);
-    console.log();
-
-    const navNotes = readNavNotes(outputDir);
-
-    if (incremental) {
-      // Log the last-extracted timestamps so the user can see what the cutoff is
-      const sections: IncrementalSection[] = ["labs", "visits", "medications", "messages"];
-      console.log("[extract] Incremental cutoffs (items on/before these dates will be skipped):");
-      for (const sec of sections) {
-        const cutoff = getLastExtractedDate(outputDir, sec);
-        console.log(`[extract]   ${sec.padEnd(12)}: ${cutoff?.toISOString() ?? "none (full run)"}`);
-      }
-      console.log();
-    }
-
-    const labsCutoff = incremental ? getLastExtractedDate(outputDir, "labs") : null;
-    // Only record the timestamp when items were actually extracted; a 0-item run should not
-    // advance the cutoff, or the section would be skipped as "already extracted" on the next run.
-    try {
-      const labsCount = await extractLabsDocs({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: labsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
-      if (labsCount > 0) setLastExtractedDate(outputDir, "labs");
-    } catch (err) {
-      console.error(`[extract] Labs section failed: ${err instanceof Error ? err.message : String(err)}`);
-      console.error("[extract] Continuing to next section...");
-    }
-    console.log();
-
-    const visitsCutoff = incremental ? getLastExtractedDate(outputDir, "visits") : null;
-    try {
-      const visitsCount = await extractVisits({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: visitsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
-      if (visitsCount > 0) setLastExtractedDate(outputDir, "visits");
-    } catch (err) {
-      console.error(`[extract] Visits section failed: ${err instanceof Error ? err.message : String(err)}`);
-      console.error("[extract] Continuing to next section...");
-    }
-    console.log();
-
-    try {
-      const medsCount = await extractMedications({ browser, portalUrl: homeUrl, credentials: providerCredentials, outputDir, providerId: provider.id, incremental, authenticatedSelectors: provider.authenticatedSelectors });
-      if (medsCount > 0) setLastExtractedDate(outputDir, "medications");
-    } catch (err) {
-      console.error(`[extract] Medications section failed: ${err instanceof Error ? err.message : String(err)}`);
-      console.error("[extract] Continuing to next section...");
-    }
-    console.log();
-
-    const msgsCutoff = incremental ? getLastExtractedDate(outputDir, "messages") : null;
-    try {
-      const msgsCount = await extractMessages({ browser, portalUrl: homeUrl, navNotes, credentials: providerCredentials, outputDir, providerId: provider.id, cutoff: msgsCutoff, incremental, authenticatedSelectors: provider.authenticatedSelectors });
-      if (msgsCount > 0) setLastExtractedDate(outputDir, "messages");
-    } catch (err) {
-      console.error(`[extract] Messages section failed: ${err instanceof Error ? err.message : String(err)}`);
-      console.error("[extract] Continuing to next section...");
-    }
-    console.log();
-
-    buildIndex(outputDir, provider.id);
-
-    console.log("=".repeat(60));
-    console.log("  EXTRACTION COMPLETE");
-    console.log("=".repeat(60));
-    console.log();
-    console.log(`  [ok] output/${provider.id}/labs-${provider.id}.pdf`);
-    console.log(`  [ok] output/${provider.id}/visits-${provider.id}.pdf`);
-    console.log(`  [ok] output/${provider.id}/medications-${provider.id}.pdf`);
-    console.log(`  [ok] output/${provider.id}/messages-${provider.id}.pdf`);
-    console.log(`  [ok] output/${provider.id}/index.html  (upload PDFs to Claude.ai)`);
-    console.log();
+    await runnerExtractProvider(provider, incremental);
   } catch (err) {
-    failed = true;
     console.error();
     console.error("[extract] Extraction failed with error:");
     console.error(err);
     console.error();
-    console.error("[extract] Browser is being kept open for inspection.");
-    console.error("[extract] Press Enter to close it.");
-    await prompt("");
-  } finally {
-    console.log("[pipeline] Cleaning up session...");
-    await browser.close();
-    console.log("[pipeline] Done.");
-    if (failed) process.exit(1);
+    if (process.stdout.isTTY) {
+      console.error("[extract] Browser is being kept open for inspection.");
+      console.error("[extract] Press Enter to close it.");
+      await prompt("");
+    }
+    process.exit(1);
   }
 }
 
