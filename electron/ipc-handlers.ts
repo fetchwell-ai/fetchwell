@@ -1,7 +1,7 @@
 import * as path from 'path';
 import { ipcMain, safeStorage, app, BrowserWindow, dialog, shell } from 'electron';
 import { z } from 'zod';
-import { ConfigManager, PortalEntry, PortalInputSchema, PortalInput, ThemePreference, ApiKeySource } from './config';
+import { ConfigManager, PortalEntry, PortalInputSchema, PortalInput } from './config';
 import { CredentialsManager, SafeStorageBackend, validateApiKeyFormat } from './credentials';
 import { runExtraction, cancelOperation, CategoryCounts } from './pipeline-bridge';
 import { getBundledApiKey, hasBundledApiKey } from './bundled-key';
@@ -48,7 +48,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     try {
       input = PortalInputSchema.parse(rawInput);
     } catch (err) {
-      throw new Error(`Invalid portal input: ${(err as Error).message}`);
+      throw new Error(`Invalid portal input: ${(err as Error).message}`, { cause: err });
     }
 
     const entry = config().addPortal({
@@ -75,7 +75,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     try {
       updates = PortalInputSchema.partial().parse(rawUpdates);
     } catch (err) {
-      throw new Error(`Invalid portal update input: ${(err as Error).message}`);
+      throw new Error(`Invalid portal update input: ${(err as Error).message}`, { cause: err });
     }
 
     const configUpdates: Partial<Omit<PortalEntry, 'id'>> = {};
@@ -143,7 +143,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     try {
       updates = UpdateSettingsSchema.parse(rawUpdates);
     } catch (err) {
-      throw new Error(`Invalid settings update: ${(err as Error).message}`);
+      throw new Error(`Invalid settings update: ${(err as Error).message}`, { cause: err });
     }
 
     const { apiKey, ...configUpdates } = updates;
@@ -170,7 +170,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     try {
       portalId = z.string().min(1, 'portalId must not be empty').parse(rawPortalId);
     } catch (err) {
-      throw new Error(`Invalid runExtraction argument: ${(err as Error).message}`);
+      throw new Error(`Invalid runExtraction argument: ${(err as Error).message}`, { cause: err });
     }
 
     const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
@@ -242,7 +242,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     try {
       folderPath = z.string().min(1).parse(rawPath);
     } catch (err) {
-      throw new Error(`Invalid openInFinder argument: ${(err as Error).message}`);
+      throw new Error(`Invalid openInFinder argument: ${(err as Error).message}`, { cause: err });
     }
     const downloadFolder = config().getSettings().downloadFolder;
     const normalizedPath = path.resolve(folderPath);
@@ -260,7 +260,7 @@ export function registerIpcHandlers(userDataPath?: string): void {
     try {
       folderPath = z.string().min(1).parse(rawPath);
     } catch (err) {
-      throw new Error(`Invalid revealInFinder argument: ${(err as Error).message}`);
+      throw new Error(`Invalid revealInFinder argument: ${(err as Error).message}`, { cause: err });
     }
     const downloadFolder = config().getSettings().downloadFolder;
     const normalizedPath = path.resolve(folderPath);

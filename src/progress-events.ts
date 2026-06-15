@@ -60,3 +60,22 @@ export type StructuredProgressEvent =
   | ItemProgressEvent
   | CategoryCompleteEvent
   | StatusMessageEvent;
+
+/** Optional callback for emitting structured progress events (Electron mode). */
+export type ProgressEmitter = (event: StructuredProgressEvent) => void;
+
+/**
+ * Create a safe emit helper from an optional progress emitter.
+ *
+ * Replaces the repeated inline pattern:
+ *   const emit = (event: StructuredProgressEvent) => { if (emitProgress) emitProgress(event); }
+ *
+ * Usage:
+ *   const emit = makeEmitter(emitProgress);
+ *   emit({ type: 'status-message', phase: 'login', message: '...' });
+ */
+export function makeEmitter(emitProgress?: ProgressEmitter): (event: StructuredProgressEvent) => void {
+  return (event: StructuredProgressEvent) => {
+    if (emitProgress) emitProgress(event);
+  };
+}

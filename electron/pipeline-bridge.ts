@@ -66,6 +66,64 @@ interface PipelineErrorEvent {
 // included in electron/tsconfig.json. No local re-declaration needed.
 
 // ---------------------------------------------------------------------------
+// Pure message router (exported for unit testing)
+// ---------------------------------------------------------------------------
+
+export interface ChildMessageHandlers {
+  /** Called when the child sends a 2FA challenge. */
+  onTwoFARequest: (msg: TwoFARequest) => void;
+  /** Called when the child reports a 2FA result (success or failure). */
+  onTwoFAResult: (msg: TwoFAResult) => void;
+  /** Called for every category-complete event (for count accumulation). */
+  onCategoryComplete: (category: string, count: number) => void;
+  /** Called for every structured progress event to forward to the renderer. */
+  onProgress: (event: StructuredProgressEvent) => void;
+}
+
+/**
+ * Route a raw IPC message from the child process to the appropriate handler.
+ *
+ * This pure function is extracted from the child.on('message') callback so
+ * it can be unit-tested without spawning an actual child process or
+ * BrowserWindow.
+ *
+ * Returns true if the message was recognised and dispatched, false otherwise.
+ */
+export function routeChildMessage(msg: unknown, handlers: ChildMessageHandlers): boolean {
+  if (typeof msg !== 'object' || msg === null || !('type' in msg)) return false;
+  const message = msg as TwoFARequest | TwoFAResult | StructuredProgressEvent;
+
+  if (message.type === '2fa:request') {
+    handlers.onTwoFARequest(message as TwoFARequest);
+    return true;
+  }
+
+  if (message.type === '2fa:result') {
+    handlers.onTwoFAResult(message as TwoFAResult);
+    return true;
+  }
+
+  if (message.type === 'category-complete') {
+    const evt = message as { type: 'category-complete'; category: string; count: number };
+    handlers.onCategoryComplete(evt.category, evt.count);
+    // Also forward as a structured progress event
+    handlers.onProgress(message as StructuredProgressEvent);
+    return true;
+  }
+
+  if (
+    message.type === 'phase-change' ||
+    message.type === 'item-progress' ||
+    message.type === 'status-message'
+  ) {
+    handlers.onProgress(message as StructuredProgressEvent);
+    return true;
+  }
+
+  return false;
+}
+
+// ---------------------------------------------------------------------------
 // 2FA IPC relay
 // ---------------------------------------------------------------------------
 
@@ -202,64 +260,47 @@ function runSubprocess(
 
     // Handle IPC messages from child (2FA requests, 2FA results, and structured progress events)
     child.on('message', (msg: unknown) => {
-      if (typeof msg !== 'object' || msg === null || !('type' in msg)) return;
-      const message = msg as TwoFARequest | TwoFAResult | StructuredProgressEvent;
-
-      if (message && message.type === '2fa:request') {
-        const twoFaMsg = message as TwoFARequest;
-        // Forward 2FA request to renderer (include twoFactor type and optional error for retries)
-        if (!win.isDestroyed()) {
-          win.webContents.send('2fa:request', {
-            portalId: config.portalId,
-            twoFactorType: config.twoFactor,
-            deliveryHint: twoFaMsg.deliveryHint,
-            error: twoFaMsg.error,
+      routeChildMessage(msg, {
+        onTwoFARequest: (twoFaMsg) => {
+          // Forward 2FA request to renderer (include twoFactor type and optional error for retries)
+          if (!win.isDestroyed()) {
+            win.webContents.send('2fa:request', {
+              portalId: config.portalId,
+              twoFactorType: config.twoFactor,
+              deliveryHint: twoFaMsg.deliveryHint,
+              error: twoFaMsg.error,
+            });
+          }
+          // Wait for renderer to call 2fa:submit
+          pendingOtpResolvers.set(config.portalId, (code: string | null) => {
+            const response: TwoFAResponse = { type: '2fa:response', code };
+            child.send(response);
           });
-        }
-
-        // Wait for renderer to call 2fa:submit
-        pendingOtpResolvers.set(config.portalId, (code: string | null) => {
-          const response: TwoFAResponse = { type: '2fa:response', code };
-          child.send(response);
-        });
-        return;
-      }
-
-      if (message && message.type === '2fa:result') {
-        const resultMsg = message as TwoFAResult;
-        // Forward 2FA result to renderer so the modal can update its state
-        if (!win.isDestroyed()) {
-          win.webContents.send('2fa:result', {
-            portalId: config.portalId,
-            success: resultMsg.success,
-            error: resultMsg.error,
-          });
-        }
-        return;
-      }
-
-      // Accumulate category-complete counts
-      if (message && message.type === 'category-complete') {
-        const cat = (message as { type: 'category-complete'; category: string; count: number }).category;
-        const count = (message as { type: 'category-complete'; category: string; count: number }).count;
-        if (cat === 'labs') counts.labCount = count;
-        else if (cat === 'visits') counts.visitCount = count;
-        else if (cat === 'medications') counts.medicationCount = count;
-        else if (cat === 'messages') counts.messageCount = count;
-      }
-
-      // Forward structured progress events to the renderer
-      if (
-        message &&
-        (message.type === 'phase-change' ||
-          message.type === 'item-progress' ||
-          message.type === 'category-complete' ||
-          message.type === 'status-message')
-      ) {
-        if (!win.isDestroyed()) {
-          win.webContents.send('extraction:progress', message);
-        }
-      }
+        },
+        onTwoFAResult: (resultMsg) => {
+          // Forward 2FA result to renderer so the modal can update its state
+          if (!win.isDestroyed()) {
+            win.webContents.send('2fa:result', {
+              portalId: config.portalId,
+              success: resultMsg.success,
+              error: resultMsg.error,
+            });
+          }
+        },
+        onCategoryComplete: (cat, count) => {
+          // Accumulate category-complete counts
+          if (cat === 'labs') counts.labCount = count;
+          else if (cat === 'visits') counts.visitCount = count;
+          else if (cat === 'medications') counts.medicationCount = count;
+          else if (cat === 'messages') counts.messageCount = count;
+        },
+        onProgress: (event) => {
+          // Forward structured progress events to the renderer
+          if (!win.isDestroyed()) {
+            win.webContents.send('extraction:progress', event);
+          }
+        },
+      });
     });
 
     // Build the command payload

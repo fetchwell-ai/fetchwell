@@ -29,9 +29,9 @@ exports.default = async function afterPack(context) {
     fs.rmSync(nodeModulesDir, { recursive: true });
   }
 
-  // Install production deps with npm (reliable flat resolution)
-  console.log('  • installing production dependencies via npm...');
-  execSync('npm install --omit=dev --no-package-lock --ignore-scripts --no-audit --no-fund', {
+  // Install production deps with npm ci (respects lockfile for reproducible builds)
+  console.log('  • installing production dependencies via npm ci...');
+  execSync('npm ci --omit=dev --ignore-scripts --no-audit --no-fund', {
     cwd: appResourcesDir,
     stdio: 'inherit',
     env: { ...process.env, NODE_ENV: 'production' },

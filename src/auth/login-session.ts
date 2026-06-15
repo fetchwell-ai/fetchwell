@@ -17,10 +17,9 @@ import { type BrowserProvider } from "../browser/interface.js";
 import { type AuthModule } from "./interface.js";
 import { isAuthPage, checkAuthenticatedElement } from "./shared.js";
 import { loadSavedSession, saveSession, clearSession } from "../session.js";
-import { type StructuredProgressEvent } from "../progress-events.js";
+import { makeEmitter, type ProgressEmitter } from "../progress-events.js";
 
-/** Optional callback for emitting structured progress events (Electron mode). */
-export type ProgressEmitter = (event: StructuredProgressEvent) => void;
+export type { ProgressEmitter };
 
 export interface LoginOrRestoreSessionOptions {
   /** The provider's login page URL. Used for fresh-login navigation. */
@@ -73,7 +72,7 @@ export async function loginOrRestoreSession(
   opts: LoginOrRestoreSessionOptions,
 ): Promise<string> {
   const { portalUrl, providerId, basePath, authModule, credentials, authenticatedSelectors, emitProgress } = opts;
-  const emit = (event: StructuredProgressEvent) => { if (emitProgress) emitProgress(event); };
+  const emit = makeEmitter(emitProgress);
   const authConfig = { url: portalUrl, credentials, providerId };
 
   const savedSession = loadSavedSession(providerId, basePath);
