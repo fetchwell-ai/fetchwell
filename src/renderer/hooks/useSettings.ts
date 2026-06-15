@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * Fetches app settings from the Electron main process.
@@ -34,10 +34,28 @@ export function useSettings() {
  */
 export function useSavedFeedback(durationMs = 1800) {
   const [savedVisible, setSavedVisible] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Clear any pending timer on unmount so we don't call setState on an
+  // unmounted component (belt-and-suspenders; React 18 no longer warns but
+  // it's still a memory/correctness smell).
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
 
   const showSaved = () => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+    }
     setSavedVisible(true);
-    setTimeout(() => setSavedVisible(false), durationMs);
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null;
+      setSavedVisible(false);
+    }, durationMs);
   };
 
   return { savedVisible, showSaved };

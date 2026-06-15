@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-interface RunningOperation {
+export interface RunningOperation {
   portalId: string;
   operation: 'extraction';
 }
@@ -23,9 +23,11 @@ export interface PipelineOperationState {
  * Manages the lifecycle of a pipeline operation (extraction) including:
  * - running operation state
  * - 2FA IPC listener (active only while an operation is in progress)
- * - handleExtract with PortalDetail-style error handling (surfaces pre-launch errors)
+ * - startExtraction with PortalDetail-style error handling (surfaces pre-launch errors)
  *
- * @param onPreLaunchError - called when a pre-launch error is detected (e.g. bad API key)
+ * @param onPreLaunchError - called when a pre-launch error is detected (e.g. bad API key).
+ *   Captured via a ref so callers can pass an inline arrow without causing
+ *   startExtraction to be recreated on every render.
  */
 export function usePipelineOperation(
   onPreLaunchError?: (message: string) => void,
@@ -36,6 +38,17 @@ export function usePipelineOperation(
     twoFactorType: undefined,
     deliveryHint: undefined,
   });
+
+  // Stable ref so startExtraction can call the latest callback without being
+  // recreated every time the caller's inline arrow changes identity.
+  const onErrorRef = useRef(onPreLaunchError);
+  useEffect(() => {
+    onErrorRef.current = onPreLaunchError;
+  }, [onPreLaunchError]);
+
+  // Ref-backed guard so startExtraction can stay stable (empty deps) while
+  // still correctly preventing concurrent launches. Updated in sync with the state.
+  const isRunningRef = useRef(false);
 
   // 2FA listener — active only while an operation is running
   useEffect(() => {
@@ -60,8 +73,9 @@ export function usePipelineOperation(
     };
   }, [runningOperation]);
 
-  const startExtraction = async (portalId: string): Promise<void> => {
-    if (runningOperation !== null) return;
+  const startExtraction = useCallback(async (portalId: string): Promise<void> => {
+    if (isRunningRef.current) return;
+    isRunningRef.current = true;
     setRunningOperation({ portalId, operation: 'extraction' });
     try {
       await window.electronAPI.runExtraction(portalId);
@@ -70,19 +84,21 @@ export function usePipelineOperation(
       // Pipeline errors are surfaced in ProgressPanel via IPC events.
       // Pre-launch errors (bad key, missing creds) need to be surfaced to the caller.
       if (!message.includes('Pipeline process exited')) {
+        isRunningRef.current = false;
         setRunningOperation(null);
-        onPreLaunchError?.(message);
+        onErrorRef.current?.(message);
       }
     }
-  };
+  }, []); // stable — all mutable values accessed via refs
 
-  const clearTwoFa = () => {
+  const clearTwoFa = useCallback(() => {
     setTwoFa({ portalId: null, twoFactorType: undefined, deliveryHint: undefined });
-  };
+  }, []);
 
-  const clearOperation = () => {
+  const clearOperation = useCallback(() => {
+    isRunningRef.current = false;
     setRunningOperation(null);
-  };
+  }, []);
 
   return {
     runningOperation,

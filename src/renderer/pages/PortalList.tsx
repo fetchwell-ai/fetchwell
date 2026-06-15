@@ -16,7 +16,7 @@ import { Card } from '../components/ui/card';
 import { SkeletonBar } from '../components/ui/skeleton';
 import { cn } from '../lib/utils';
 import { strings } from '../strings';
-import { usePipelineOperation } from '../hooks/usePipelineOperation';
+import { usePipelineOperation, type RunningOperation } from '../hooks/usePipelineOperation';
 
 interface PortalListProps {
   onOpenSettings: () => void;
@@ -29,8 +29,6 @@ type View =
   | { type: 'list' }
   | { type: 'add' }
   | { type: 'edit'; portal: PortalEntry };
-
-type RunningOperation = { portalId: string; operation: 'extraction' };
 
 function formatDate(iso: string | null): string {
   if (!iso) return '';
